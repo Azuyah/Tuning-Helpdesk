@@ -43,7 +43,6 @@
       <% } %>
     </div>
 
-    <!-- Senaste ämnen -->
 <!-- Senaste ämnen -->
 <div>
   <h2 class="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
@@ -63,9 +62,9 @@
               <%= new Date(t.updated_at).toLocaleDateString('sv-SE') %>
             </span>
           </div>
-          <a href="/admin/edit-topic/<%= t.id %>"
+          <a href="/topic/<%= t.id %>"
              class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-1.5 font-medium shadow hover:bg-sky-700 transition">
-            <i class="ti ti-edit"></i> Redigera
+            <i class="ti ti-eye"></i> Visa
           </a>
         </li>
       <% }) %>

@@ -13,10 +13,44 @@
 
       <!-- Desktop nav -->
       <nav class="ml-4 hidden md:flex items-center gap-1 text-sm">
-        <a href="/" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 after:transition">Hem</a>
-        <a href="/ask" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 after:transition">Ställ fråga</a>
-        <a href="/resources" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
+<a href="/" 
+   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+          dark:text-slate-200 dark:hover:bg-white/5 
+          relative after:pointer-events-none after:absolute after:inset-x-3 
+          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+          after:transition">
+  Hem
+</a>
+
+<a href="/ask" 
+   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+          dark:text-slate-200 dark:hover:bg-white/5 
+          relative after:pointer-events-none after:absolute after:inset-x-3 
+          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+          after:transition">
+  Ställ fråga
+</a>
+
+<a href="/resources" 
+   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+          dark:text-slate-200 dark:hover:bg-white/5 
+          relative after:pointer-events-none after:absolute after:inset-x-3 
+          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+          after:transition">
   Resurser
+</a>
+
+<a href="/explore" 
+   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+          dark:text-slate-200 dark:hover:bg-white/5 
+          relative after:pointer-events-none after:absolute after:inset-x-3 
+          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+          after:transition">
+  Utforska
 </a>
         <% if (user && user.role === 'admin') { %>
           <a href="/admin" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-amber-500 after:scale-x-0 hover:after:scale-x-100 after:transition">

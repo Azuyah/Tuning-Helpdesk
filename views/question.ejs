@@ -1,9 +1,10 @@
 <section class="mx-auto max-w-4xl px-4 py-10">
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-bold text-slate-900">Fråga #<%= q.id %></h1>
-    <a href="/profile" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
-      <i class="ti ti-arrow-left"></i> Tillbaka
-    </a>
+<a href="javascript:window.history.back()" 
+   class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
+  <i class="ti ti-arrow-left"></i> Tillbaka
+</a>
   </div>
 
   <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -52,8 +53,8 @@ Status: <%= statusLabels[q.status] || q.status %>
   <% const hasLinked = Array.isArray(linked) && linked.length > 0; %>
   <h3 class="text-lg font-semibold text-slate-900 mb-3">
     <%= hasLinked
-        ? (linked.length > 1 ? 'Svar: guider vi hänvisar till för den här frågan' 
-                             : 'Svar: guiden vi hänvisar till för den här frågan')
+        ? (linked.length > 1 ? 'Din fråga har blivit besvarad' 
+                             : 'Din fråga har blivit besvarad')
         : 'Svar' %>
   </h3>
 
@@ -72,7 +73,7 @@ Status: <%= statusLabels[q.status] || q.status %>
             <a href="/topic/<%= t.id %>" class="hover:underline"><%= t.title %></a>
           </h4>
           <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Rekommenderad
+            Besvarad fråga
           </span>
         </div>
         <% if (t.excerpt) { %>
@@ -80,7 +81,7 @@ Status: <%= statusLabels[q.status] || q.status %>
         <% } %>
         <div class="mt-3">
           <a href="/topic/<%= t.id %>" class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50">
-            <i class="ti ti-eye"></i> Öppna guiden
+            <i class="ti ti-eye"></i> Visa svar
           </a>
         </div>
       </article>

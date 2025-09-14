@@ -1,55 +1,70 @@
 <section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-10">
-  <!-- Vänsterspalt: själva topic -->
-  <div class="lg:col-span-2">
-    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+  <!-- Vänsterkolumn -->
+  <div class="lg:col-span-2 space-y-8">
 
-      <!-- RESURS-CALL OUT (överst) -->
-<% if (topic.is_resource && topic.download_url) { %>
-  <div class="mb-6 rounded-xl border border-slate-200 bg-white p-5 flex items-center justify-between">
-    <div>
-      <div class="text-sm uppercase text-slate-500">Resurs</div>
-      <div class="font-semibold text-slate-900"><%= topic.title %></div>
-    </div>
-    <a href="<%= topic.download_url %>"
-       class="rounded-lg bg-sky-600 text-white px-4 py-2 hover:bg-sky-700">
-      Ladda ner
-    </a>
-  </div>
-<% } %>
+    <!-- FRÅGA (eget kort) -->
+    <% if (sourceQuestion) { %>
+      <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+        <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Fråga</div>
 
-      <!-- Rubrik + admin-knapp -->
-      <div class="flex items-start justify-between gap-4">
-        <div class="min-w-0">
-          <h1 class="text-3xl font-bold text-slate-900 break-words"><%= topic.title %></h1>
-          <% if (topic.excerpt && !(topic.is_resource && topic.download_url)) { %>
-            <p class="mt-2 text-slate-600"><%= topic.excerpt %></p>
-          <% } %>
+        <h1 class="text-2xl font-bold text-slate-900 mb-2">
+          Fråga: <%= sourceQuestion.title %>
+        </h1>
+
+        <% if (sourceQuestion.body) { %>
+          <p class="text-slate-700 whitespace-pre-line"><%= sourceQuestion.body %></p>
+        <% } else { %>
+          <p class="text-slate-500 italic">Ingen beskrivning bifogad.</p>
+        <% } %>
+
+        <div class="mt-4 text-sm text-slate-500">
+          Från: <span class="font-medium"><%= sourceQuestion.user_name || 'Anonym' %></span>
+          • Skapad: <%= new Date(sourceQuestion.created_at).toLocaleString('sv-SE') %>
         </div>
+      </article>
+    <% } %>
+
+    <!-- SVAR (eget kort under frågan) -->
+    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+      <div class="flex items-start justify-between mb-4">
+        <h2 class="text-xl font-semibold text-slate-900">Svar</h2>
 
         <% if (user && user.role === 'admin') { %>
-          <a href="/admin/edit-topic/<%= topic.id %>"
-             class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
-            <i class="ti ti-edit"></i>
-            Redigera
-          </a>
+          <div class="flex items-center gap-2">
+            <a href="/admin/edit-topic/<%= encodeURIComponent(topic.id) %>"
+               class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+              <i class="ti ti-edit"></i> Redigera
+            </a>
+
+            <form method="POST"
+                  action="/admin/topics/<%= encodeURIComponent(topic.id) %>/delete"
+                  data-del-form
+                  data-title="<%- (topic.title || '').replace(/"/g,'&quot;') %>">
+              <button type="submit"
+                      class="inline-flex items-center gap-2 rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700">
+                Ta bort
+              </button>
+            </form>
+          </div>
         <% } %>
       </div>
 
-      <!-- Brödtext -->
-      <div class="prose prose-slate max-w-none mt-8">
+      <!-- Själva svaret (HTML) -->
+      <div class="prose prose-slate max-w-none mb-6">
         <%- topic.body %>
       </div>
 
-      <!-- Taggar -->
+      <div class="text-sm text-slate-500">
+        Svarat av: <span class="font-medium"><%= topic.author_name || 'Okänd' %></span>
+        • <%= new Date(topic.created_at).toLocaleString('sv-SE') %>
+      </div>
+
       <% if (topic.tags) { %>
         <div class="mt-8">
-          <h2 class="text-sm font-semibold text-slate-500 uppercase">Taggar</h2>
+          <h3 class="text-sm font-semibold text-slate-500 uppercase">Taggar</h3>
           <div class="mt-2 flex flex-wrap gap-2">
-            <% topic.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(tag => { %>
-              <a href="/search?q=<%= encodeURIComponent(tag) %>"
-                 class="text-xs rounded-full bg-slate-100 text-slate-700 px-3 py-1 hover:bg-slate-200">
-                <%= tag %>
-              </a>
+            <% topic.tags.split(',').forEach(function(tag){ %>
+              <span class="text-xs rounded-full bg-slate-100 text-slate-700 px-3 py-1"><%= tag.trim() %></span>
             <% }) %>
           </div>
         </div>
@@ -57,19 +72,14 @@
     </article>
   </div>
 
-  <!-- Högerspalt -->
+  <!-- Högerkolumn -->
   <aside class="space-y-8">
-    <!-- Relaterade frågor -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
       <h2 class="text-lg font-semibold text-slate-900 mb-4">Relaterade frågor</h2>
       <% if (relatedQuestions && relatedQuestions.length) { %>
         <ul class="space-y-3">
-          <% relatedQuestions.forEach(q => { %>
-            <li>
-              <a href="/questions/<%= q.id %>" class="text-sky-600 hover:underline">
-                <%= q.title %>
-              </a>
-            </li>
+          <% relatedQuestions.forEach(function(q){ %>
+            <li><a href="/questions/<%= q.id %>" class="text-sky-600 hover:underline"><%= q.title %></a></li>
           <% }) %>
         </ul>
       <% } else { %>
@@ -77,17 +87,12 @@
       <% } %>
     </div>
 
-    <!-- Fler ämnen i kategorin -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
       <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
       <% if (relatedTopics && relatedTopics.length) { %>
         <ul class="space-y-3">
-          <% relatedTopics.forEach(rt => { %>
-            <li>
-              <a href="/topic/<%= rt.id %>" class="text-slate-700 hover:text-sky-700">
-                <%= rt.title %>
-              </a>
-            </li>
+          <% relatedTopics.forEach(function(rt){ %>
+            <li><a href="/topic/<%= rt.id %>" class="text-slate-700 hover:text-sky-700"><%= rt.title %></a></li>
           <% }) %>
         </ul>
       <% } else { %>
@@ -96,3 +101,14 @@
     </div>
   </aside>
 </section>
+
+<script>
+  (function(){
+    const f = document.querySelector('[data-del-form]');
+    if(!f) return;
+    f.addEventListener('submit', function(e){
+      const t = f.dataset.title || '';
+      if(!confirm('Ta bort ämnet "' + t + '"? Detta går inte att ångra.')) e.preventDefault();
+    });
+  })();
+</script>

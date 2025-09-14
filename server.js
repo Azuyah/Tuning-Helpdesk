@@ -29,6 +29,7 @@ if (dbDir && dbDir !== '.' && !fs.existsSync(dbDir)) {
 const db = new Database(DB_PATH);
 
 /* --- SQLite setup + bootstrap --- */
+/* --- SQLite setup + bootstrap --- */
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -43,19 +44,24 @@ function initSchemaAndSeed() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       icon TEXT,
       sort_order INTEGER
     );
+
+    -- Viktigt: EN version av topics_base, med kolumnen inkluderad
     CREATE TABLE IF NOT EXISTS topics_base (
       id TEXT PRIMARY KEY,
       created_by INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
+      answer_for_question_id INTEGER,
       FOREIGN KEY(created_by) REFERENCES users(id)
     );
+
     CREATE TABLE IF NOT EXISTS topics (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -66,9 +72,11 @@ function initSchemaAndSeed() {
       download_url TEXT,
       FOREIGN KEY(id) REFERENCES topics_base(id) ON DELETE CASCADE
     );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS topics_fts USING fts5(
       id UNINDEXED, title, excerpt, body, content=''
     );
+
     CREATE TABLE IF NOT EXISTS topic_category (
       topic_id TEXT NOT NULL,
       category_id TEXT NOT NULL,
@@ -76,6 +84,7 @@ function initSchemaAndSeed() {
       FOREIGN KEY(topic_id) REFERENCES topics_base(id) ON DELETE CASCADE,
       FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
     );
+
     CREATE TABLE IF NOT EXISTS questions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -86,6 +95,7 @@ function initSchemaAndSeed() {
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
     CREATE TABLE IF NOT EXISTS question_topic (
       question_id INTEGER NOT NULL,
       topic_id TEXT NOT NULL,
@@ -95,6 +105,33 @@ function initSchemaAndSeed() {
     );
   `);
 
+  // ---- Liten migrations-hjälpare (för befintliga DB-filer) ----
+  function hasColumn(table, col){
+    const row = db.prepare(`PRAGMA table_info(${table})`).all()
+      .find(r => r.name === col);
+    return !!row;
+  }
+  function addColumnIfMissing(table, col, ddl){
+    if (!hasColumn(table, col)) {
+      db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run();
+      console.log(`[DB:migration] ${table}.${col} added (${ddl})`);
+    }
+  }
+  addColumnIfMissing('topics_base', 'answer_for_question_id', 'INTEGER');
+  addColumnIfMissing('topics', 'is_resource', 'INTEGER DEFAULT 0');
+  addColumnIfMissing('topics', 'download_url', 'TEXT');
+
+  // Se till att FTS har innehåll
+  const ftsCountRow = db.prepare(`SELECT count(*) AS n FROM topics_fts`).get();
+  if (!ftsCountRow || !ftsCountRow.n) {
+    const rows = db.prepare(`SELECT id, title, excerpt, body FROM topics`).all();
+    const ins  = db.prepare(`INSERT INTO topics_fts (id,title,excerpt,body) VALUES (?,?,?,?)`);
+    const tx   = db.transaction(arr => { arr.forEach(r => ins.run(r.id, r.title||'', r.excerpt||'', r.body||'')); });
+    tx(rows);
+    if (rows.length) console.log(`[DB] Rebuilt FTS for ${rows.length} topics`);
+  }
+
+  // Seed admin om saknas
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
   const adminExists = db.prepare(`SELECT 1 FROM users WHERE role='admin' LIMIT 1`).get();
@@ -105,16 +142,8 @@ function initSchemaAndSeed() {
       .run(ADMIN_EMAIL, hash, 'Administrator');
     console.log('[DB] Seeded admin:', ADMIN_EMAIL);
   }
-
-  const ftsCount = (db.prepare(`SELECT count(*) AS n FROM topics_fts`).get() || {n:0}).n;
-  if (!ftsCount) {
-    const rows = db.prepare(`SELECT id, title, excerpt, body FROM topics`).all();
-    const ins  = db.prepare(`INSERT INTO topics_fts (id,title,excerpt,body) VALUES (?,?,?,?)`);
-    const tx   = db.transaction(arr => { arr.forEach(r => ins.run(r.id, r.title||'', r.excerpt||'', r.body||'')); });
-    tx(rows);
-    if (rows.length) console.log(`[DB] Rebuilt FTS for ${rows.length} topics`);
-  }
 }
+
 initSchemaAndSeed();
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
@@ -136,7 +165,7 @@ app.use((req, res, next) => {
   res.locals.user  = getUser(req) || null;
 
   // Döp vilka prefix som ska DÖLJA hero
-  const noHeroPrefixes = ['/admin', '/login', '/register', '/ask', '/topic', '/profile'];
+  const noHeroPrefixes = ['/admin', '/login', '/register', '/ask', '/topic', '/profile', '/explore'];
   res.locals.showHero = !noHeroPrefixes.some(p => req.path.startsWith(p));
 
   // Populära "chips" (taggar/kategorier) – globala
@@ -152,12 +181,6 @@ app.use((req, res, next) => {
     res.locals.popularTags = [];
   }
 
-  next();
-});
-
-// Request-logg (enkelt)
-app.use((req, res, next) => {
-  console.log(`[REQ] ${req.method} ${req.url}`);
   next();
 });
 
@@ -252,33 +275,58 @@ app.post('/register', (req, res) => {
 // Visa ämne – men om det är en resurs, skicka till /resources/:id
 app.get('/topic/:id', (req, res) => {
   const topic = db.prepare(`
-    SELECT b.id, t.title, t.excerpt, t.body, t.tags, b.updated_at,
-           t.is_resource, t.download_url
+    SELECT b.id, b.created_at, b.updated_at, b.answer_for_question_id,
+           t.title, t.excerpt, t.body, t.tags, t.is_resource, t.download_url,
+           u.name AS author_name
     FROM topics_base b
     JOIN topics t ON t.id = b.id
+    LEFT JOIN users u ON u.id = b.created_by
     WHERE b.id = ?
   `).get(req.params.id);
 
-  if (!topic) {
-    return res.status(404).render('404', { title: 'Hittades inte' });
-  }
+  if (!topic) return res.status(404).render('404', { title: 'Hittades inte' });
 
-  // Om detta är en resurs → använd separata resurs-sidan
+  // 🔁 Resurs? Använd separat resurs-sida
   if (topic.is_resource) {
     return res.redirect(301, `/resources/${topic.id}`);
   }
 
-  // Relaterade frågor
-  const relatedQuestions = db.prepare(`
-    SELECT q.id, q.title
-    FROM questions q
-    JOIN question_topic qt ON qt.question_id = q.id
-    WHERE qt.topic_id = ?
-    ORDER BY q.created_at DESC
-    LIMIT 5
-  `).all(topic.id);
+  // 🧩 Källfråga (om ämnet är ett svar)
+  let sourceQuestion = null;
+  if (topic.answer_for_question_id) {
+    sourceQuestion = db.prepare(`
+      SELECT q.id, q.title, q.body, q.created_at,
+             u.name AS user_name
+      FROM questions q
+      LEFT JOIN users u ON u.id = q.user_id
+      WHERE q.id = ?
+    `).get(topic.answer_for_question_id);
+  }
 
-  // Fler ämnen i samma "kategori" (heuristik via första taggen)
+  // 🔎 Relaterade frågor (uteslut källfrågan)
+  let relatedQuestions = [];
+  if (topic.answer_for_question_id) {
+    relatedQuestions = db.prepare(`
+      SELECT DISTINCT q.id, q.title
+      FROM questions q
+      JOIN question_topic qt ON qt.question_id = q.id
+      WHERE qt.topic_id = ?
+        AND q.id <> ?
+      ORDER BY q.created_at DESC
+      LIMIT 5
+    `).all(topic.id, topic.answer_for_question_id);
+  } else {
+    relatedQuestions = db.prepare(`
+      SELECT DISTINCT q.id, q.title
+      FROM questions q
+      JOIN question_topic qt ON qt.question_id = q.id
+      WHERE qt.topic_id = ?
+      ORDER BY q.created_at DESC
+      LIMIT 5
+    `).all(topic.id);
+  }
+
+  // 📚 Relaterade ämnen (enkel heuristik via första taggen)
   const firstTag = (topic.tags || '').split(',')[0];
   const cat = firstTag ? firstTag.trim().toLowerCase() : '';
   let relatedTopics = [];
@@ -287,16 +335,18 @@ app.get('/topic/:id', (req, res) => {
       SELECT b.id, t.title
       FROM topics_base b
       JOIN topics t ON t.id = b.id
-      WHERE b.id != ? AND lower(t.tags) LIKE '%' || ? || '%'
+      WHERE b.id != ?
+        AND lower(t.tags) LIKE '%' || ? || '%'
       ORDER BY b.updated_at DESC
       LIMIT 5
     `).all(topic.id, cat);
   }
 
-  res.locals.showHero = false; // valfritt: dölj hero på ämnessidan
+  res.locals.showHero = false;
   res.render('topic', {
     title: topic.title,
-    topic,                // innehåller även is_resource & download_url (används ej här)
+    topic,
+    sourceQuestion,
     relatedQuestions,
     relatedTopics,
     user: getUser(req)
@@ -370,30 +420,116 @@ app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
   res.redirect('/admin');
 });
 
-// Visa en fråga (admin)
+// Visa en fråga i admin
 app.get('/admin/questions/:id', requireAdmin, (req, res) => {
-  const id = Number(req.params.id);
   const q = db.prepare(`
-    SELECT q.*, u.email AS user_email, u.name AS user_name
+    SELECT q.*, u.name AS user_name, u.email AS user_email
     FROM questions q
     LEFT JOIN users u ON u.id = q.user_id
-    WHERE q.id=?`).get(id);
+    WHERE q.id = ?
+  `).get(req.params.id);
 
-  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
+  if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
 
-  // Hämta ev. kopplade topics
   const linked = db.prepare(`
     SELECT t.id, t.title
     FROM question_topic qt
     JOIN topics t ON t.id = qt.topic_id
-    WHERE qt.question_id=?`).all(id);
+    WHERE qt.question_id = ?
+    ORDER BY t.title
+  `).all(q.id);
 
-  res.locals.showHero = false; // dölj hero i admin
+  const categories = db.prepare(`
+    SELECT id, title
+    FROM categories
+    ORDER BY COALESCE(sort_order, 9999), title
+  `).all();
+
   res.render('admin-question', {
-    title: `Fråga #${id}`,
+    title: `Fråga #${q.id}`,
     q,
-    linked
+    linked,
+    categories,     // <- WICHTIG: behövs för "Svara och publicera"-formuläret
+    user: getUser(req)
   });
+});
+
+// Svara och publicera (skapar nytt ämne från en fråga)
+// Admin: svara på en fråga och publicera som nytt ämne
+app.post('/admin/questions/:id/answer', requireAdmin, (req, res) => {
+  const qid = Number(req.params.id);
+  const q = db.prepare('SELECT * FROM questions WHERE id=?').get(qid);
+  if (!q) return res.status(404).render('404', { title: 'Frågan finns inte' });
+
+  const answerHtml = (req.body.body || '').trim();   // endast SVARET
+  const tags       = (req.body.tags || '').trim();
+  const categoryId = (req.body.categoryId || '').trim();
+
+  if (!answerHtml) {
+    return res.status(400).render('admin-question', {
+      title: `Fråga #${qid}`,
+      q,
+      linked: db.prepare(`
+        SELECT t.id, t.title
+        FROM question_topic qt
+        JOIN topics t ON t.id = qt.topic_id
+        WHERE qt.question_id = ?
+        ORDER BY t.title
+      `).all(qid),
+      categories: db.prepare('SELECT id,title FROM categories ORDER BY COALESCE(sort_order,9999), title').all(),
+      error: 'Innehåll krävs.'
+    });
+  }
+
+  // Titel + unik slug
+  const title    = `Svar: ${q.title}`;
+  const baseSlug = slugify(title, { lower: true, strict: true }) || `fraga-${qid}`;
+  let topicId = baseSlug, i = 2;
+  while (db.prepare('SELECT 1 FROM topics_base WHERE id=?').get(topicId)) {
+    topicId = `${baseSlug}-${i++}`;
+  }
+
+  // Excerpt från svaret (plain text)
+  const excerpt = answerHtml.replace(/<[^>]+>/g, '').slice(0, 180);
+
+  // Kör allt atomiskt
+  const tx = db.transaction(() => {
+    // Skapa ämnets basrad (sätter created_by)
+    db.prepare('INSERT INTO topics_base (id, created_by) VALUES (?,?)')
+      .run(topicId, req.user.id);
+
+    // ⬅️ Viktigt: koppla ämnet till frågan så topic-sidan kan visa FRÅGA-kortet
+    db.prepare(`
+      UPDATE topics_base
+      SET answer_for_question_id = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(qid, topicId);
+
+    // Själva ämnesinnehållet (svaret)
+    db.prepare('INSERT INTO topics (id, title, excerpt, body, tags) VALUES (?,?,?,?,?)')
+      .run(topicId, title, excerpt, answerHtml, tags);
+
+    db.prepare('INSERT INTO topics_fts (id, title, excerpt, body) VALUES (?,?,?,?)')
+      .run(topicId, title, excerpt, answerHtml);
+
+    // Valfri kategori
+    if (categoryId) {
+      db.prepare('INSERT OR REPLACE INTO topic_category (topic_id, category_id) VALUES (?,?)')
+        .run(topicId, categoryId);
+    }
+
+    // Koppla fråga↔ämne och markera frågan som besvarad
+    db.prepare('INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)')
+      .run(qid, topicId);
+
+    db.prepare(`UPDATE questions SET status=?, updated_at=datetime('now') WHERE id=?`)
+      .run('answered', qid);
+  });
+
+  tx(); // kör transaktionen
+
+  // Klart: gå till det nya ämnet
+  res.redirect(`/topic/${topicId}`);
 });
 
 // admin-only create/update/delete
@@ -633,8 +769,8 @@ app.put('/api/questions/:id/attach-topic', requireAdmin, (req, res) => {
   if (!t) return res.status(400).json({ error: 'topic not found' });
   db.prepare('INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)')
     .run(q.id, topicId);
-  db.prepare('UPDATE questions SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
-    .run('answered', q.id);
+db.prepare("UPDATE questions SET status=?, updated_at=datetime('now') WHERE id=?")
+  .run('answered', q.id);
   res.json({ ok: true });
 });
 
@@ -752,6 +888,7 @@ app.get('/question/:id', (req, res) => {
 app.get('/', (req, res) => {
   const user = getUser(req);
 
+  // Senaste ämnen (som du hade innan)
   const topics = db.prepare(`
     SELECT b.id, t.title, t.excerpt, t.tags, b.updated_at
     FROM topics_base b
@@ -760,16 +897,26 @@ app.get('/', (req, res) => {
     LIMIT 12
   `).all();
 
-  // ✅ visa bara tre kort
+  // Senaste frågor
+  const latestQuestions = db.prepare(`
+    SELECT q.id, q.title, q.status, q.created_at
+    FROM questions q
+    ORDER BY q.created_at DESC
+    LIMIT 6
+  `).all();
+
+  // Visa bara tre kategorikort
   const categoriesShow = buildCategories().slice(0, 3);
 
   res.render('home', {
     user,
     topics,
-    categoriesShow,   // <— skicka tre
+    latestQuestions,   // ⬅️ skickas till vyn
+    categoriesShow,
     q: ''
   });
 });
+
 app.get('/resources', (req, res) => {
   const rows = db.prepare(`
     SELECT b.id, t.title, t.excerpt, t.download_url, b.updated_at
@@ -779,6 +926,146 @@ app.get('/resources', (req, res) => {
     ORDER BY b.updated_at DESC
   `).all();
   res.render('resources', { title: 'Resurser', resources: rows, user: getUser(req) });
+});
+
+// Ta bort ett ämne (admin)
+app.post('/admin/topics/:id/delete', requireAdmin, (req, res) => {
+  const id = req.params.id;
+
+  // Ta bort FTS-raden först (den har ingen FK)
+  db.prepare('DELETE FROM topics_fts WHERE id=?').run(id);
+
+  // Detta raderar huvudet och CASCADE tar hand om topics + länktabeller
+  db.prepare('DELETE FROM topics_base WHERE id=?').run(id);
+
+  // Tillbaka till adminpanelen
+  res.redirect('/admin');
+});
+
+// Publik vy/redirect för frågor
+app.get('/questions/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const q = db.prepare(`SELECT * FROM questions WHERE id=?`).get(id);
+  if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
+
+  // Om det finns ett kopplat ämne → redirecta till svaret
+  const link = db.prepare(`
+    SELECT qt.topic_id
+    FROM question_topic qt
+    WHERE qt.question_id=?
+    ORDER BY rowid DESC
+    LIMIT 1
+  `).get(id);
+  if (link && link.topic_id) {
+    return res.redirect(302, `/topic/${encodeURIComponent(link.topic_id)}`);
+  }
+
+  // Annars: hämta ev. länkade (kan vara tomt)
+  const linked = db.prepare(`
+    SELECT t.id, t.title, t.excerpt
+    FROM question_topic qt
+    JOIN topics t ON t.id = qt.topic_id
+    WHERE qt.question_id = ?
+    ORDER BY t.title
+  `).all(id);
+
+  res.render('question', {
+    title: q.title,
+    q,
+    linked,               // <<— viktigt
+    user: getUser(req)
+  });
+});
+
+app.get('/explore', (req, res) => {
+  const tab = (req.query.tab === 'questions') ? 'questions' : 'topics';
+  const q    = (req.query.q || '').trim();
+  const cat  = (req.query.cat || '').trim();  // category id
+  const tag  = (req.query.tag || '').trim().toLowerCase();
+
+  // Sidebar: kategorier
+  const categories = db.prepare(`
+    SELECT id, title
+    FROM categories
+    ORDER BY COALESCE(sort_order,9999), title
+  `).all();
+
+  // Sidebar: "populära taggar" – enkel utvinning från topics.tags
+  const tagRows = db.prepare(`
+    SELECT t.tags
+    FROM topics t
+    WHERE t.is_resource=0 AND IFNULL(t.tags,'') <> ''
+  `).all();
+  const tagCounter = {};
+  for (const r of tagRows) {
+    (r.tags || '').split(',').map(s=>s.trim()).filter(Boolean).forEach(t=>{
+      const key = t.toLowerCase();
+      tagCounter[key] = (tagCounter[key]||0) + 1;
+    });
+  }
+  const allTags = Object.entries(tagCounter)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,30)        // topp 30
+    .map(([name,count])=>({ name, count }));
+
+  // Data för listan
+  let topics = [];
+  let questions = [];
+
+  if (tab === 'topics') {
+    // Baslista: alla topics (ej resurser)
+    let sql = `
+      SELECT b.id, t.title, t.excerpt, t.tags, b.updated_at
+      FROM topics_base b
+      JOIN topics t ON t.id=b.id
+      WHERE t.is_resource=0
+    `;
+    const params = [];
+
+    if (q) {
+      // enkel sök: använd FTS om du vill, men här gör vi LIKE för enkelhet
+      sql += ` AND (lower(t.title) LIKE ? OR lower(t.excerpt) LIKE ? OR lower(t.body) LIKE ?) `;
+      const like = `%${q.toLowerCase()}%`;
+      params.push(like, like, like);
+    }
+    if (cat) {
+      sql += ` AND EXISTS (SELECT 1 FROM topic_category tc WHERE tc.topic_id=b.id AND tc.category_id=?) `;
+      params.push(cat);
+    }
+    if (tag) {
+      sql += ` AND lower(IFNULL(t.tags,'')) LIKE ? `;
+      params.push(`%${tag}%`);
+    }
+
+    sql += ` ORDER BY b.updated_at DESC LIMIT 30 `;
+    topics = db.prepare(sql).all(...params);
+  } else {
+    // Senaste frågor
+    let sql = `
+      SELECT q.id, q.title, q.status, q.created_at
+      FROM questions q
+      WHERE 1=1
+    `;
+    const params = [];
+    if (q) {
+      sql += ` AND lower(q.title) LIKE ? OR lower(IFNULL(q.body,'')) LIKE ? `;
+      const like = `%${q.toLowerCase()}%`;
+      params.push(like, like);
+    }
+    sql += ` ORDER BY q.created_at DESC LIMIT 30 `;
+    questions = db.prepare(sql).all(...params);
+  }
+
+  res.render('explore', {
+    title: 'Utforska',
+    tab,
+    q, cat, tag,
+    categories,
+    tags: allTags,
+    topics,
+    questions,
+    user: getUser(req)
+  });
 });
 
 // Visa en specifik resurs (separat layout från vanliga topics)
@@ -807,7 +1094,6 @@ app.get('/resources/:id', (req, res) => {
 app.get('/api/search', (req, res) => {
   const raw = (req.query.q || '').trim();
   const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
-  console.log('[SEARCH] raw=', raw, 'clean=', q);
 
   if (!q) {
     const rows = db.prepare(`
@@ -822,7 +1108,6 @@ app.get('/api/search', (req, res) => {
 
   const terms = q.split(/\s+/).filter(Boolean);
   const ftsQuery = terms.map(t => `${t}*`).join(' AND ');
-  console.log('[SEARCH] ftsQuery=', ftsQuery);
 
   let rows = db.prepare(`
     SELECT t.id, t.title, t.excerpt, bm25(topics_fts) AS score
@@ -841,10 +1126,8 @@ app.get('/api/search', (req, res) => {
       WHERE t.title LIKE ? OR t.excerpt LIKE ? OR t.body LIKE ?
       LIMIT 50
     `).all(like, like, like);
-    console.log('[SEARCH] fallback LIKE rows=', rows.length);
   }
 
-  console.log('[SEARCH] rows', rows.length);
   res.json(rows);
 });
 
@@ -1095,13 +1378,27 @@ app.get('/ask', (req, res) => {
 
 app.get('/admin', requireAdmin, (req, res) => {
   const openQs = db.prepare(`
-    SELECT id,title,created_at FROM questions
-    WHERE status='open' ORDER BY created_at DESC LIMIT 20`).all();
+    SELECT id, title, created_at
+    FROM questions
+    WHERE status = 'open'
+    ORDER BY created_at DESC
+    LIMIT 50
+  `).all();
+
   const latestTopics = db.prepare(`
     SELECT b.id, t.title, b.updated_at
-    FROM topics_base b JOIN topics t ON t.id=b.id
-    ORDER BY b.updated_at DESC LIMIT 20`).all();
-  res.render('admin', { user: getUser(req), openQs, latestTopics, title: 'Admin' });
+    FROM topics_base b
+    JOIN topics t ON t.id = b.id
+    ORDER BY b.updated_at DESC
+    LIMIT 10
+  `).all();
+
+  res.render('admin', {
+    title: 'Adminpanel',
+    openQs,
+    latestTopics,
+    user: getUser(req)
+  });
 });
 
 // ---------- Start ----------
