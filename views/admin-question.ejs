@@ -50,51 +50,113 @@ Status: <%= statusLabels[q.status] || q.status %>
     </div>
   </div>
 
-  <!-- Åtgärder -->
-  <div class="mt-8 grid md:grid-cols-2 gap-6">
-    <!-- Byt status -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 class="font-semibold text-slate-900 mb-3">Ändra status</h3>
-      <div class="flex flex-wrap gap-2">
-        <button type="button" data-status="open"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
-          Öppen
-        </button>
-        <button type="button" data-status="answered"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
-          Besvarad
-        </button>
-        <button type="button" data-status="closed"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
-          Stängd
-        </button>
-      </div>
-    </div>
-
-    <!-- Koppla ämne -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 class="font-semibold text-slate-900 mb-3">Koppla ämne</h3>
-      <div class="relative">
-        <input id="topicSearch" type="search" placeholder="Sök ämne…"
-               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500"/>
-        <div id="suggestBox"
-             class="absolute z-10 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-lg hidden overflow-hidden"></div>
-      </div>
-
-      <% if (linked && linked.length) { %>
-        <div class="mt-4">
-          <div class="text-sm text-slate-600 mb-2">Kopplade ämnen:</div>
-          <ul class="space-y-1">
-            <% linked.forEach(function(t){ %>
-              <li>
-                <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline"><%= t.title %></a>
-              </li>
-            <% }); %>
-          </ul>
-        </div>
-      <% } %>
+<!-- Åtgärder -->
+<div class="mt-8 grid md:grid-cols-2 gap-6">
+  <!-- Byt status -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <h3 class="font-semibold text-slate-900 mb-3">Ändra status</h3>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" data-status="open"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
+        Öppen
+      </button>
+      <button type="button" data-status="answered"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
+        Besvarad
+      </button>
+      <button type="button" data-status="closed"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
+        Stängd
+      </button>
     </div>
   </div>
+
+  <!-- Koppla befintligt ämne -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <h3 class="font-semibold text-slate-900 mb-3">Koppla ämne</h3>
+    <div class="relative">
+      <input id="topicSearch" type="search" placeholder="Sök ämne…"
+             class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500"/>
+      <div id="suggestBox"
+           class="absolute z-10 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-lg hidden overflow-hidden"></div>
+    </div>
+
+    <% if (linked && linked.length) { %>
+      <div class="mt-4">
+        <div class="text-sm text-slate-600 mb-2">Kopplade ämnen:</div>
+        <ul class="space-y-1">
+          <% linked.forEach(function(t){ %>
+            <li>
+              <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline"><%= t.title %></a>
+            </li>
+          <% }); %>
+        </ul>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Svara och publicera nytt ämne -->
+  <div class="md:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <h3 class="font-semibold text-slate-900">Svara och publicera (skapar nytt ämne)</h3>
+    <% if (typeof err !== 'undefined' && err) { %>
+      <div class="mt-3 rounded-lg border border-red-200 bg-red-50 text-red-800 px-4 py-2 text-sm"><%= err %></div>
+    <% } %>
+
+    <form class="mt-4 grid gap-4" method="POST" action="/admin/questions/<%= q.id %>/answer">
+      <div>
+        <label class="block text-sm font-medium text-slate-700">Titel på ämnet</label>
+        <input name="title" required
+               value="Svar: <%= q.title %>"
+               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"/>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700">Kort beskrivning (excerpt)</label>
+        <textarea name="excerpt" rows="2"
+                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700">Ditt svar (innehåll)</label>
+        <textarea name="body" rows="8" required
+                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"></textarea>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Taggar (komma-separerade)</label>
+          <input name="tags" placeholder="ex: autotuner, virtual read"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"/>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Kategori</label>
+          <div class="relative mt-1">
+            <select name="categoryId"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                           focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+              <option value="">— Välj kategori —</option>
+              <% (categories || []).forEach(function(c){ %>
+                <option value="<%= c.id %>"><%= c.title %></option>
+              <% }) %>
+            </select>
+            <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-2 flex flex-wrap gap-3">
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2 text-white font-semibold shadow hover:bg-sky-700">
+          Publicera ämne
+        </button>
+        <a href="/admin" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-5 py-2 hover:bg-slate-50">
+          Avbryt
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
 
   <!-- Snackbar -->
   <div id="snack"

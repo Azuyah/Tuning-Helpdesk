@@ -936,6 +936,90 @@ app.get('/search', (req, res) => {
   res.render('search', { title: 'Sök', q, topics });
 });
 
+// Hjälp: unik slug om titel finns sedan innan
+function uniqueSlug(base) {
+  const baseSlug = slugify(base, { lower: true, strict: true }) || 'amne';
+  let id = baseSlug;
+  let i = 2;
+  while (db.prepare('SELECT 1 FROM topics_base WHERE id = ?').get(id)) {
+    id = `${baseSlug}-${i++}`;
+  }
+  return id;
+}
+
+// Visa fråga (liten ändring: skicka med kategorier till svardelen)
+app.get('/admin/questions/:id', requireAdmin, (req, res) => {
+  const q = db.prepare(`
+    SELECT q.*, u.name AS user_name, u.email AS user_email
+    FROM questions q
+    LEFT JOIN users u ON u.id = q.user_id
+    WHERE q.id = ?
+  `).get(req.params.id);
+
+  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
+
+  const linked = db.prepare(`
+    SELECT t.id, t.title
+    FROM question_topic qt
+    JOIN topics t ON t.id = qt.topic_id
+    WHERE qt.question_id = ?
+  `).all(q.id);
+
+  const categories = db.prepare(`
+    SELECT id, title FROM categories
+    ORDER BY COALESCE(sort_order,9999), title
+  `).all();
+
+  res.render('admin-question', { title: `Fråga #${q.id}`, q, linked, categories });
+});
+
+// Svara: skapa nytt topic + koppla + markera som besvarad
+app.post('/admin/questions/:id/answer', requireAdmin, (req, res) => {
+  const qid = Number(req.params.id);
+  const q = db.prepare(`SELECT * FROM questions WHERE id = ?`).get(qid);
+  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
+
+  const { title, excerpt, body, tags, categoryId } = req.body;
+  if (!title || !body) {
+    return res.status(400).render('admin-question', {
+      title: `Fråga #${qid}`,
+      q,
+      linked: [],
+      categories: db.prepare(`SELECT id,title FROM categories ORDER BY COALESCE(sort_order,9999), title`).all(),
+      err: 'Titel och innehåll krävs för svaret.'
+    });
+  }
+
+  const topicId = uniqueSlug(title);
+
+  // Skapa topic
+  db.prepare(`INSERT INTO topics_base (id, created_by) VALUES (?,?)`)
+    .run(topicId, req.user.id);
+
+  db.prepare(`INSERT INTO topics (id, title, excerpt, body, tags, is_resource, download_url)
+              VALUES (?,?,?,?,?,0,'')`)
+    .run(topicId, title, excerpt || '', body || '', tags || '');
+
+  db.prepare(`INSERT INTO topics_fts (id, title, excerpt, body) VALUES (?,?,?,?)`)
+    .run(topicId, title, excerpt || '', body || '');
+
+  if (categoryId) {
+    db.prepare(`INSERT OR REPLACE INTO topic_category (topic_id, category_id) VALUES (?,?)`)
+      .run(topicId, categoryId);
+  }
+
+  // Koppla till frågan
+  db.prepare(`INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)`)
+    .run(qid, topicId);
+
+  // Markera som besvarad
+  db.prepare(`UPDATE questions SET status='answered', updated_at=datetime('now') WHERE id=?`)
+    .run(qid);
+
+  // Vid lyckat → gå till det nya ämnet
+  res.redirect(`/topic/${encodeURIComponent(topicId)}`);
+});
+
 // Visa formulär
 app.get('/admin/new-topic', requireAdmin, (req, res) => {
   const categories = db.prepare(`
