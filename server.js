@@ -980,18 +980,45 @@ app.get('/api/suggest', (req, res) => {
   const raw = (req.query.q || '').trim();
   if (!raw) return res.json([]);
 
+  // Rensa och gör enkla prefix-termer
   const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
-  const terms = q.split(/\s+/).filter(Boolean).map(t => `${t}*`).join(' AND ');
+  const termsArr = q.split(/\s+/).filter(Boolean).map(t => `${t}*`);
+  const ftsQuery = termsArr.length ? termsArr.join(' OR ') : '';
 
-  const rows = db.prepare(`
-    SELECT t.id, t.title,
-           substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
-    FROM topics_fts f
-    JOIN topics t ON t.id = f.id
-    WHERE topics_fts MATCH ?
-    ORDER BY bm25(topics_fts)
-    LIMIT 5
-  `).all(terms);
+  let rows = [];
+  // 1) FTS (snällare OR + prefix)
+  if (ftsQuery) {
+    try {
+      rows = db.prepare(`
+        SELECT t.id, t.title,
+               substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+        FROM topics_fts f
+        JOIN topics t ON t.id = f.id
+        WHERE topics_fts MATCH ?
+        ORDER BY bm25(topics_fts)
+        LIMIT 8
+      `).all(ftsQuery);
+    } catch (_) {
+      rows = [];
+    }
+  }
+
+  // 2) Fallback: LIKE om FTS gav noll
+  if (!rows.length) {
+    const esc = (s) => s.replace(/[%_]/g, m => '\\' + m);
+    const like = `%${esc(q)}%`;
+    rows = db.prepare(`
+      SELECT b.id, t.title,
+             substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+      FROM topics_base b
+      JOIN topics t ON t.id = b.id
+      WHERE t.title   LIKE ? ESCAPE '\\'
+         OR t.excerpt LIKE ? ESCAPE '\\'
+         OR t.body    LIKE ? ESCAPE '\\'
+      ORDER BY b.updated_at DESC
+      LIMIT 8
+    `).all(like, like, like);
+  }
 
   res.json(rows);
 });
