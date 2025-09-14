@@ -4,22 +4,35 @@ import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import Database from 'better-sqlite3';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import slugify from 'slugify';
 import expressLayouts from 'express-ejs-layouts';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
 const app = express();
+
+/* --- DB-path + se till att katalogen finns --- */
 const DB_PATH = process.env.DB_PATH || 'helpdesk.db';
+
+// När DB_PATH är absolut (/app/data/helpdesk.db) -> skapa /app/data
+// När det är relativt (helpdesk.db) blir dir '.' och då gör vi inget.
+const dbDir = path.dirname(DB_PATH);
+if (dbDir && dbDir !== '.' && !fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+/* --- Öppna databasen EFTER att katalogen finns --- */
 const db = new Database(DB_PATH);
 
-// --- SQLite setup + bootstrap (create tables if missing, seed admin) ---
+/* --- SQLite setup + bootstrap --- */
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 function initSchemaAndSeed() {
-  // Schema (safe to run multiple times)
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,14 +43,12 @@ function initSchemaAndSeed() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
-
     CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       icon TEXT,
       sort_order INTEGER
     );
-
     CREATE TABLE IF NOT EXISTS topics_base (
       id TEXT PRIMARY KEY,
       created_by INTEGER,
@@ -45,22 +56,19 @@ function initSchemaAndSeed() {
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY(created_by) REFERENCES users(id)
     );
-
     CREATE TABLE IF NOT EXISTS topics (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       excerpt TEXT,
       body TEXT,
       tags TEXT,
-      is_resource INTEGER DEFAULT 0,      -- 0/1
-      download_url TEXT,                  -- optional for resources
+      is_resource INTEGER DEFAULT 0,
+      download_url TEXT,
       FOREIGN KEY(id) REFERENCES topics_base(id) ON DELETE CASCADE
     );
-
     CREATE VIRTUAL TABLE IF NOT EXISTS topics_fts USING fts5(
       id UNINDEXED, title, excerpt, body, content=''
     );
-
     CREATE TABLE IF NOT EXISTS topic_category (
       topic_id TEXT NOT NULL,
       category_id TEXT NOT NULL,
@@ -68,18 +76,16 @@ function initSchemaAndSeed() {
       FOREIGN KEY(topic_id) REFERENCES topics_base(id) ON DELETE CASCADE,
       FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
     );
-
     CREATE TABLE IF NOT EXISTS questions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
       title TEXT NOT NULL,
       body TEXT,
-      status TEXT NOT NULL DEFAULT 'open',  -- 'open' | 'answered' | 'closed'
+      status TEXT NOT NULL DEFAULT 'open',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
-
     CREATE TABLE IF NOT EXISTS question_topic (
       question_id INTEGER NOT NULL,
       topic_id TEXT NOT NULL,
@@ -89,11 +95,9 @@ function initSchemaAndSeed() {
     );
   `);
 
-  // Seed admin if none exists
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@example.com';
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'; // change in Railway vars!
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
   const adminExists = db.prepare(`SELECT 1 FROM users WHERE role='admin' LIMIT 1`).get();
-
   if (!adminExists) {
     const hash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
     db.prepare(`INSERT INTO users (email, password_hash, name, role)
@@ -102,18 +106,16 @@ function initSchemaAndSeed() {
     console.log('[DB] Seeded admin:', ADMIN_EMAIL);
   }
 
-  // (Optional) backfill FTS from topics if empty
-  const ftsCount = db.prepare(`SELECT count(*) AS n FROM topics_fts`).get().n || 0;
-  if (ftsCount === 0) {
+  const ftsCount = (db.prepare(`SELECT count(*) AS n FROM topics_fts`).get() || {n:0}).n;
+  if (!ftsCount) {
     const rows = db.prepare(`SELECT id, title, excerpt, body FROM topics`).all();
     const ins  = db.prepare(`INSERT INTO topics_fts (id,title,excerpt,body) VALUES (?,?,?,?)`);
-    const tx = db.transaction((arr)=>{ arr.forEach(r=>ins.run(r.id, r.title||'', r.excerpt||'', r.body||'')); });
+    const tx   = db.transaction(arr => { arr.forEach(r => ins.run(r.id, r.title||'', r.excerpt||'', r.body||'')); });
     tx(rows);
     if (rows.length) console.log(`[DB] Rebuilt FTS for ${rows.length} topics`);
   }
 }
 initSchemaAndSeed();
-
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
