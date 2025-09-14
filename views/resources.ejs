@@ -1,0 +1,114 @@
+<!-- views/resources.ejs -->
+<section class="bg-gradient-to-b from-sky-50/60 to-transparent border-b border-slate-200">
+  <div class="mx-auto max-w-6xl px-4 py-12">
+    <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">Resurser</h1>
+    <p class="mt-3 text-slate-600">
+      Här kan du ladda ner program, intyg och andra filer.
+    </p>
+
+    <!-- Sök -->
+    <div class="mt-6 max-w-xl">
+      <div class="relative">
+        <input id="resSearch" type="search" placeholder="Sök resurser…"
+               class="w-full rounded-xl border border-slate-300 px-4 py-3 pr-10 shadow-sm focus:border-sky-500 focus:ring-sky-500"
+               autocomplete="off" />
+        <i class="ti ti-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+      </div>
+      <div id="resCount" class="mt-2 text-sm text-slate-500"></div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-4 py-10">
+  <% const list = (resources || []); %>
+
+  <!-- Tom-lista state (döljs när det finns kort) -->
+  <div id="emptyState"
+       class="<%= list.length ? 'hidden' : '' %> rounded-xl border border-slate-200 bg-white p-8 text-slate-600 text-center">
+    Inga resurser tillgängliga ännu.
+  </div>
+
+  <!-- Kort-grid -->
+  <div id="resGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 <%= list.length ? '' : 'hidden' %>">
+    <% list.forEach(r => { %>
+      <article
+        class="res-card bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow transition"
+        data-title="<%= (r.title || '').toLowerCase() %>"
+        data-excerpt="<%= (r.excerpt || '').toLowerCase() %>">
+        <h3 class="text-lg font-semibold text-slate-900">
+          <a href="/topic/<%= r.id %>" class="hover:underline"><%= r.title %></a>
+        </h3>
+
+        <% if (r.excerpt) { %>
+          <p class="mt-2 text-slate-600 text-sm line-clamp-3"><%= r.excerpt %></p>
+        <% } %>
+
+        <div class="mt-5 flex items-center justify-between">
+          <span class="text-xs text-slate-500">
+            <%= new Date(r.updated_at || Date.now()).toLocaleDateString('sv-SE') %>
+          </span>
+<a href="/resources/<%= r.id %>"
+   class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2 hover:bg-sky-700">
+  <i class="ti ti-eye"></i> Visa
+</a>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var input   = document.getElementById('resSearch');
+    var grid    = document.getElementById('resGrid');
+    var cards   = Array.prototype.slice.call(document.querySelectorAll('.res-card'));
+    var empty   = document.getElementById('emptyState');
+    var counter = document.getElementById('resCount');
+
+    // normaliserar åäö etc
+    function norm(s){
+      return (s || '')
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g,''); // ta bort diakritiska tecken
+    }
+
+    function applyFilter(q){
+      var n = norm(q);
+      var visible = 0;
+
+      cards.forEach(function(card){
+        var hay = norm(card.dataset.title + ' ' + card.dataset.excerpt);
+        var show = !n || hay.indexOf(n) !== -1;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      // toggla empty/grid
+      if (cards.length === 0 || visible === 0) {
+        empty.classList.remove('hidden');
+        grid && grid.classList.add('hidden');
+      } else {
+        empty.classList.add('hidden');
+        grid && grid.classList.remove('hidden');
+      }
+
+      // uppdatera räkning
+      if (counter) {
+        var total = cards.length;
+        counter.textContent = visible === total
+          ? total + ' resurser'
+          : visible + ' av ' + total + ' resurser';
+      }
+    }
+
+    if (input){
+      input.addEventListener('input', function(){
+        applyFilter(input.value.trim());
+      });
+      // init
+      applyFilter('');
+    }
+  })();
+</script>

@@ -1,0 +1,76 @@
+<section class="mx-auto max-w-6xl px-4 py-12">
+  <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+    <h1 class="text-3xl font-bold text-slate-900 mb-10">Adminpanel</h1>
+
+    <!-- Snabbåtgärder -->
+    <div class="flex flex-wrap gap-4 mb-12">
+      <a href="/admin/new-topic"
+         class="inline-flex items-center gap-2 rounded-xl bg-sky-600 text-white px-5 py-2.5 font-medium shadow hover:bg-sky-700 transition">
+        <i class="ti ti-plus"></i> Nytt ämne
+      </a>
+      <a href="/admin/categories"
+         class="inline-flex items-center gap-2 rounded-xl bg-sky-600 text-white px-5 py-2.5 font-medium shadow hover:bg-sky-700 transition">
+        <i class="ti ti-folders"></i> Hantera kategorier
+      </a>
+    </div>
+
+    <!-- Öppna frågor -->
+    <div class="mb-12">
+      <h2 class="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
+        <i class="ti ti-help-circle text-sky-600"></i> Öppna frågor
+      </h2>
+      <% if (openQs.length === 0) { %>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-500 text-sm">
+          Inga öppna frågor just nu.
+        </div>
+      <% } else { %>
+        <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
+          <% openQs.forEach(q => { %>
+            <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
+              <div>
+                <div class="font-medium text-slate-800"><%= q.title %></div>
+                <span class="text-xs text-slate-400">
+                  <%= new Date(q.created_at).toLocaleDateString('sv-SE') %>
+                </span>
+              </div>
+              <a href="/admin/questions/<%= q.id %>"
+                 class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-1.5 text-sm font-medium shadow hover:bg-sky-700 transition">
+                <i class="ti ti-eye"></i> Öppna
+              </a>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+
+    <!-- Senaste ämnen -->
+<!-- Senaste ämnen -->
+<div>
+  <h2 class="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
+    <i class="ti ti-book text-sky-600"></i> Senaste ämnen
+  </h2>
+  <% if (!latestTopics || latestTopics.length === 0) { %>
+    <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-500 text-sm">
+      Inga ämnen ännu.
+    </div>
+  <% } else { %>
+    <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
+      <% latestTopics.forEach(t => { %>
+        <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
+          <div>
+            <div class="font-medium text-slate-800"><%= t.title %></div>
+            <span class="text-xs text-slate-400">
+              <%= new Date(t.updated_at).toLocaleDateString('sv-SE') %>
+            </span>
+          </div>
+          <a href="/admin/edit-topic/<%= t.id %>"
+             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-1.5 font-medium shadow hover:bg-sky-700 transition">
+            <i class="ti ti-edit"></i> Redigera
+          </a>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>
+  </div>
+</section>

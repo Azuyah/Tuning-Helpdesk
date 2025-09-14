@@ -1,0 +1,227 @@
+/* =========================================================
+   /public/brand.css — Tuning Helpdesk (Light/Dark theme)
+   ========================================================= */
+
+/* ---------- Containerbredd (som tidigare) ---------- */
+@media (min-width: 1024px){
+  .max-w-6xl { max-width: 1120px; }
+}
+
+/* ---------- Design tokens (CSS-variabler) ---------- */
+/* Ljus som default */
+:root {
+  --bg:        248 250 252;   /* slate-50 */
+  --fg:        15 23 42;      /* slate-900 */
+  --muted:     100 116 139;   /* slate-500/600-ish */
+  --card:      255 255 255;   /* white */
+  --border:    226 232 240;   /* slate-200 */
+  --hover:     248 250 252;   /* slate-50 */
+
+  --brand:     2 132 199;     /* sky-600 */
+  --brand-2:   37 99 235;     /* blue-600 */
+  --accent:    234 88 12;     /* orange-600 */
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg: 0 12px 28px -10px rgba(2,6,23,.18);
+}
+
+/* Mörkt tema aktiveras av .dark på <html> (documentElement) */
+.dark {
+  --bg:        15 23 42;      /* slate-900 */
+  --fg:        241 245 249;   /* slate-100 */
+  --muted:     148 163 184;   /* slate-400 */
+  --card:      2 6 23;        /* slate-950 */
+  --border:    30 41 59;      /* slate-800 */
+  --hover:     15 23 42;      /* slate-900 */
+
+  --brand:     239 68 68;     /* red-500 */
+  --brand-2:   244 63 94;     /* rose-500 */
+  --accent:    245 158 11;    /* amber-500 */
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
+  --shadow-lg: 0 14px 34px -12px rgba(0,0,0,.55);
+}
+
+/* ---------- Bas (kropp & text) ---------- */
+html, body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+}
+::selection { background:#bae6fd; }
+
+/* ---------- Header / backdrop “glas” ---------- */
+.backdrop-blur {
+  /* låt tailwind göra själva blur:en; vi styr färgerna */
+}
+header.sticky {
+  transition: background-color .2s ease, border-color .2s ease;
+}
+header.sticky.border-b {
+  border-color: rgb(var(--border)) !important;
+}
+
+/* ---------- Hero (bakgrund m.m.) ---------- */
+.hero-surface {
+  background: color-mix(in oklab, rgb(var(--brand)) 12%, rgb(var(--bg)));
+}
+.dark .hero-surface {
+  background: color-mix(in oklab, rgb(var(--brand)) 10%, rgb(var(--bg)));
+}
+/* diskreta bubblor (om du använder .float-bubble-klasser) */
+.float-bubble{
+  position:absolute; right:8%; top:12%;
+  width:18px;height:18px;border-radius:9999px;
+  background: color-mix(in oklab, rgb(var(--brand)) 60%, white);
+  opacity:.35; animation:float 8s ease-in-out infinite;
+}
+.float-bubble.delay-1{ right:15%; top:30%; width:12px;height:12px; animation-delay:1.5s; }
+.float-bubble.delay-2{ right:25%; top:18%; width:10px;height:10px; animation-delay:.7s; }
+@keyframes float{ 0%{transform:translateY(0)} 50%{transform:translateY(-14px)} 100%{transform:translateY(0)} }
+
+/* ---------- Kort (cards) ---------- */
+.card{
+  display:block;
+  border-radius:1rem;            /* ~ rounded-2xl */
+  background: rgb(var(--card));
+  border:1px solid rgb(var(--border));
+  padding:1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.card:hover{
+  transform:translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---------- List/hover-yta ---------- */
+.hover-surface:hover { background-color: rgb(var(--hover)); }
+
+/* ---------- Chips / badges ---------- */
+.chip{
+  display:inline-block; margin:.25rem .25rem 0 0; padding:.25rem .6rem;
+  font-size:.85rem; border-radius:9999px;
+  background: color-mix(in oklab, rgb(var(--brand)) 12%, white);
+  color: rgb(var(--brand));
+  border:1px solid color-mix(in oklab, rgb(var(--brand)) 30%, white);
+}
+.dark .chip{
+  background: color-mix(in oklab, rgb(var(--brand)) 16%, rgb(var(--card)));
+  color: color-mix(in oklab, rgb(var(--brand)) 85%, white);
+  border-color: color-mix(in oklab, rgb(var(--brand)) 45%, rgb(var(--card)));
+}
+
+.badge{
+  display:inline-block; font-size:.75rem; padding:.2rem .5rem;
+  border-radius:.6rem; background: rgb(var(--hover)); color: rgb(var(--fg));
+  border:1px solid rgb(var(--border));
+  opacity:.85;
+}
+
+/* ---------- Form (inputs/selects/textarea) ---------- */
+.form-field,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  background: rgb(var(--card));
+  color: rgb(var(--fg));
+  border: 1px solid rgb(var(--border));
+  border-radius: .6rem;
+  box-shadow: var(--shadow-sm);
+}
+input::placeholder, textarea::placeholder { color: rgb(var(--muted)); }
+
+/* ---------- Knappar ---------- */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+  font-weight:600; border-radius:.6rem; padding:.6rem 1rem;
+  border:1px solid transparent; transition: transform .04s ease, filter .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: rgb(var(--brand));
+  color: #fff;
+}
+.btn-primary:hover { filter: brightness(0.95); }
+
+.btn-outline {
+  background: transparent;
+  color: rgb(var(--fg));
+  border-color: rgb(var(--border));
+}
+.btn-outline:hover { background: rgb(var(--hover)); }
+
+/* ---------- Små hjälputiliteter ---------- */
+.border-token { border-color: rgb(var(--border)) !important; }
+.text-muted  { color: rgb(var(--muted)) !important; }
+.link-brand  { color: rgb(var(--brand)); }
+.link-brand:hover { text-decoration: underline; }
+
+/* =========================================================
+   Tailwind “hard-coded light” overrides i mörkt läge
+   (gör att befintliga klasser följer temat utan att ändra EJS)
+   ========================================================= */
+.dark .bg-white          { background-color: rgb(var(--card)) !important; }
+.dark .bg-slate-50       { background-color: rgb(var(--bg)) !important; }
+.dark .bg-slate-100      { background-color: rgb(var(--bg)) !important; }
+.dark .text-slate-900    { color: rgb(var(--fg)) !important; }
+.dark .text-slate-800    { color: rgb(var(--fg)) !important; }
+.dark .text-slate-700    { color: rgb(var(--muted)) !important; }
+.dark .text-slate-600    { color: rgb(var(--muted)) !important; }
+.dark .border-slate-200  { border-color: rgb(var(--border)) !important; }
+.dark .border-slate-300  { border-color: rgb(var(--border)) !important; }
+.dark .shadow, 
+.dark .shadow-sm, 
+.dark .shadow-md, 
+.dark .shadow-lg         { box-shadow: var(--shadow-sm) !important; }
+
+/* Hero-raden som ibland har sky-100 i ljusläge */
+.dark .bg-sky-100        { background-color: rgb(var(--bg)) !important; }
+
+/* Brandknappar som är sky-6/7 i ljus – behåll punch i dark */
+.dark .bg-sky-600           { background-color: rgb(var(--brand)) !important; }
+.dark .hover\:bg-sky-700:hover { filter: brightness(0.95) !important; }
+
+/* Header med glas-effekt i mörkt läge */
+.dark .bg-white\/75.backdrop-blur { background-color: rgba(2,6,23,.85) !important; }
+
+/* ---------- Komponent-nivå justeringar ---------- */
+/* Sökförslag dropdown (autosuggest) om du har en sådan */
+.suggest-menu {
+  background: rgb(var(--card));
+  border: 1px solid rgb(var(--border));
+  box-shadow: var(--shadow-lg);
+  border-radius: .8rem;
+  overflow: hidden;
+}
+.suggest-item { padding:.7rem 1rem; }
+.suggest-item:hover { background: rgb(var(--hover)); }
+
+/* Resultat-lista kort */
+.result-card {
+  background: rgb(var(--card));
+  border: 1px solid rgb(var(--border));
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  transition: background .15s ease;
+}
+.result-card:hover { background: rgb(var(--hover)); }
+
+/* Adminpanelens stora container (om du använder wrapper) */
+.admin-surface {
+  background: rgb(var(--card));
+  border: 1px solid rgb(var(--border));
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Dropdown “caret” (select) ikon-position hjälpklass */
+.select-caret {
+  position:absolute; right:.75rem; top:50%; transform:translateY(-50%);
+  pointer-events:none; color: rgb(var(--muted));
+}
+
+/* ---------- Slut ---------- */

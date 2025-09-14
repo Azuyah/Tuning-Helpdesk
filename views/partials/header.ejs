@@ -1,0 +1,134 @@
+<!-- views/partials/header.ejs -->
+<header class="sticky top-0 z-40 border-b bg-white/75 dark:bg-slate-950/90 backdrop-blur transition-colors">
+  <div class="mx-auto max-w-6xl px-4">
+    <div class="h-16 flex items-center gap-4">
+
+      <!-- Brand -->
+      <a href="/" class="inline-flex items-center gap-2">
+        <span class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+          <i class="ti ti-gauge text-sky-600 dark:text-red-500"></i>
+        </span>
+        <span class="font-semibold tracking-tight text-slate-900 dark:text-white">Tuning Helpdesk</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="ml-4 hidden md:flex items-center gap-1 text-sm">
+        <a href="/" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 after:transition">Hem</a>
+        <a href="/ask" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 after:transition">Ställ fråga</a>
+        <a href="/resources" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
+  Resurser
+</a>
+        <% if (user && user.role === 'admin') { %>
+          <a href="/admin" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-amber-500 after:scale-x-0 hover:after:scale-x-100 after:transition">
+            Admin
+            <span class="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-200/10 dark:text-amber-300 dark:border-amber-400/30">beta</span>
+          </a>
+        <% } %>
+      </nav>
+
+      <!-- Spacer -->
+      <div class="flex-1"></div>
+
+      <!-- Right side (desktop) -->
+      <div class="hidden md:flex items-center gap-2">
+        <% if (user) { %>
+          <!-- User dropdown -->
+          <div class="relative" id="userMenu">
+            <button id="userBtn"
+                    class="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-600 dark:bg-red-600 text-white">
+                <%= (user.email || 'U')[0].toUpperCase() %>
+              </span>
+              <span class="hidden sm:block max-w-[160px] truncate"><%= user.email %></span>
+              <i class="ti ti-chevron-down text-slate-500 dark:text-slate-400"></i>
+            </button>
+            <div id="userDrop"
+                 class="hidden absolute right-0 mt-2 w-56 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden">
+              <div class="px-4 py-3 text-sm">
+                <div class="font-medium text-slate-900 dark:text-white truncate"><%= user.email %></div>
+                <div class="text-slate-500 dark:text-slate-400 capitalize"><%= user.role %></div>
+              </div>
+              <div class="border-t border-slate-200 dark:border-slate-800">
+                <a href="/profile" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-white/5">
+                  <i class="ti ti-user-circle"></i> Profil
+                </a>
+                <% if (user.role === 'admin') { %>
+                  <a href="/admin" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-white/5">
+                    <i class="ti ti-settings"></i> Adminpanel
+                  </a>
+                <% } %>
+                <form action="/api/auth/logout" method="post" onsubmit="return doLogout(event)">
+                  <button class="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10">
+                    <i class="ti ti-logout-2"></i> Logga ut
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        <% } else { %>
+          <a href="/login" class="px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800">Logga in</a>
+          <a href="/register" class="inline-flex items-center gap-1 rounded-lg bg-sky-600 dark:bg-red-600 text-white px-3 py-2 text-sm hover:bg-sky-700 dark:hover:bg-red-700">
+            <i class="ti ti-user-plus text-base"></i> Skapa konto
+          </a>
+        <% } %>
+
+        <!-- Theme toggle: ENDA knappen -->
+        <button id="themeToggle"
+                class="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 transition"
+                aria-label="Växla tema">
+          <i id="themeIcon" class="ti ti-sun text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Mobile toggle -->
+      <button id="navToggle"
+              class="md:hidden ml-1 inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-white/5">
+        <i class="ti ti-menu-2 text-xl text-slate-700 dark:text-slate-100"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<script>
+  async function doLogout(e){
+    e.preventDefault();
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+    location.href = '/login';
+    return false;
+  }
+
+  // User dropdown (desktop)
+  (function(){
+    const btn  = document.getElementById('userBtn');
+    const drop = document.getElementById('userDrop');
+    if (!btn || !drop) return;
+    btn.addEventListener('click', () => drop.classList.toggle('hidden'));
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#userMenu')) drop.classList.add('hidden');
+    });
+  })();
+
+  // Theme toggle (enda instans)
+  (function(){
+    const btn  = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    const root = document.documentElement;
+
+    // init
+    if (localStorage.theme === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
+    syncIcon();
+
+    function syncIcon(){
+      const dark = root.classList.contains('dark');
+      icon.classList.toggle('ti-sun', !dark);
+      icon.classList.toggle('ti-moon', dark);
+    }
+
+    btn.addEventListener('click', () => {
+      root.classList.toggle('dark');
+      localStorage.theme = root.classList.contains('dark') ? 'dark' : 'light';
+      syncIcon();
+    });
+  })();
+</script>

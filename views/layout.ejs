@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <!-- Sätt tema TIDIGT (före CSS) för att undvika blink -->
+  <script>
+    (function () {
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch(_) {}
+    })();
+  </script>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title><%= title || 'Tuning Helpdesk' %></title>
+
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tailwind config MÅSTE ligga EFTER scriptet ovan -->
+   <script>
+  window.tailwind = window.tailwind || {};
+  tailwind.config = { darkMode: 'class' };
+</script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          // valfritt att utöka
+        }
+      }
+    }
+  </script>
+
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+
+  <!-- Egen brandning -->
+  <link rel="stylesheet" href="/public/brand.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
+  <%- include('partials/header') %>
+
+  <% if (showHero) { %>
+    <%- include('partials/hero') %>
+  <% } %>
+
+  <main class="flex-1">
+    <%- body %>
+  </main>
+
+  <%- include('partials/footer') %>
+
+  <!-- Sid-specifika scripts (från vyer via express-ejs-layouts) -->
+  <%- script %>
+
+  <!-- Din gemensamma front-end (om du använder den) -->
+  <script src="/public/home.js"></script>
+</body>
+</html>

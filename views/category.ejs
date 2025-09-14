@@ -1,0 +1,59 @@
+<!-- views/category.ejs -->
+<section class="bg-gradient-to-b from-sky-50/60 to-transparent border-b border-slate-200 dark:border-slate-800">
+  <div class="mx-auto max-w-6xl px-4 py-16">
+    <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+      <%= categoryTitle %>
+    </h1>
+    <p class="mt-3 text-slate-600 dark:text-slate-400">
+      Alla guider och artiklar i denna kategori.
+    </p>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-4 py-12">
+  <% if (!topics.length) { %>
+    <div class="flex justify-center">
+      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 px-6 py-8 text-slate-600 dark:text-slate-300 max-w-xl w-full text-center shadow-sm">
+        Inga artiklar hittades i denna kategori ännu.
+      </div>
+    </div>
+  <% } else { %>
+    <% const isSingle = topics.length === 1; %>
+
+    <div class="<%= isSingle
+        ? 'flex justify-center'
+        : 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3' %>">
+
+      <% topics.forEach(t => { %>
+        <article class="bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow transition max-w-xl w-full">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-1">
+            <a href="/topic/<%= encodeURIComponent(t.id) %>" class="hover:underline"><%= t.title %></a>
+          </h3>
+
+          <% if (t.excerpt) { %>
+            <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-3"><%= t.excerpt %></p>
+          <% } %>
+
+          <% const tags = (t.tags || '').split(',').map(s => s.trim()).filter(Boolean); %>
+          <% if (tags.length) { %>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <% tags.forEach(tag => { %>
+                <a href="/search?q=<%= encodeURIComponent(tag) %>"
+                   class="text-xs rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <%= tag %>
+                </a>
+              <% }) %>
+            </div>
+          <% } %>
+        </article>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <div class="mt-10 text-center">
+    <a href="/" class="inline-flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+      <i class="ti ti-arrow-left"></i>
+      Tillbaka till startsidan
+    </a>
+  </div>
+</section>

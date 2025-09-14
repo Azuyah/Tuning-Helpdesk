@@ -1,0 +1,83 @@
+<section class="mx-auto max-w-3xl px-4 py-10">
+  <h1 class="text-2xl font-bold text-slate-900 mb-6">Redigera ämne</h1>
+
+  <form method="POST" action="/admin/edit-topic/<%= topic.id %>" class="space-y-5">
+    <div class="text-xs text-slate-500">
+      ID (slug): <code class="bg-slate-100 px-1 py-0.5 rounded"><%= topic.id %></code>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700">Titel</label>
+      <input type="text" name="title" value="<%- topic.title %>" required
+             class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm 
+                    focus:border-sky-500 focus:ring-sky-500 sm:text-sm">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700">Kort beskrivning</label>
+      <textarea name="excerpt" rows="2"
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm 
+                       focus:border-sky-500 focus:ring-sky-500 sm:text-sm"><%- topic.excerpt %></textarea>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700">Innehåll</label>
+      <textarea name="body" rows="10"
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm 
+                       focus:border-sky-500 focus:ring-sky-500 sm:text-sm"><%- topic.body %></textarea>
+    </div>
+
+<!-- Taggar -->
+<div>
+  <label class="block text-sm font-medium text-slate-700 mb-1">Taggar</label>
+  <input type="text" name="tags" value="<%- topic.tags || '' %>"
+         placeholder="ex: autotuner, virtual read, credits"
+         class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                focus:border-sky-500 focus:ring-sky-500 sm:text-sm">
+  <p class="text-xs text-slate-500 mt-1">Används för sök och filter (komma-separerade).</p>
+</div>
+
+<!-- Kategori -->
+<div>
+  <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+  <div class="relative">
+    <select name="categoryId"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+      <option value="">— Välj kategori —</option>
+      <% (categories || []).forEach(c => { %>
+        <option value="<%= c.id %>" <%= currentCat === c.id ? 'selected' : '' %>>
+          <%= c.title %>
+        </option>
+      <% }) %>
+    </select>
+    <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+  </div>
+  <p class="text-xs text-slate-500 mt-1">Primär kategori för ämnet.</p>
+</div>
+<!-- Resurs-inställningar -->
+<div class="mt-6 grid sm:grid-cols-2 gap-4">
+  <label class="inline-flex items-center gap-2">
+    <input type="checkbox" name="is_resource" value="1"
+           <%= Number(topic.is_resource) === 1 ? 'checked' : '' %> />
+    Detta är en resurs
+  </label>
+
+  <input type="url" name="download_url"
+         value="<%- topic.download_url || '' %>"
+         placeholder="https://… eller /public/files/fil.zip"
+         class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+</div>
+    <div class="flex gap-3">
+      <button type="submit"
+              class="rounded-lg bg-sky-600 text-white px-5 py-2 font-medium hover:bg-sky-700 shadow-sm">
+        Spara
+      </button>
+      <a href="/admin"
+         class="rounded-lg border border-slate-300 px-5 py-2 font-medium text-slate-700 hover:bg-slate-50">
+        Avbryt
+      </a>
+    </div>
+  </form>
+</section>

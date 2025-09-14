@@ -1,0 +1,35 @@
+<!-- views/search.ejs -->
+
+<main class="flex-1">
+  <!-- Hero hämtas redan via layout + partial -->
+
+  <!-- Resultatlista (ny sektion under hero) -->
+  <section class="mx-auto max-w-4xl px-4 mt-8 relative z-10">
+    <h2 class="text-xl font-semibold text-slate-800 mb-6">
+      Resultat för "<%= q %>"
+    </h2>
+
+    <a href="/" class="text-sky-600 text-sm hover:underline mb-6 inline-block">
+      Tillbaka till startsidan
+    </a>
+
+    <div class="space-y-4">
+      <% if (topics.length === 0) { %>
+        <p class="text-slate-500">Inga resultat hittades.</p>
+      <% } else { %>
+        <% topics.forEach(t => { %>
+          <article class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow transition">
+            <h3 class="text-lg font-semibold text-slate-900 mb-1">
+              <a href="/topic/<%= encodeURIComponent(t.id) %>" class="hover:underline">
+                <%= t.title %>
+              </a>
+            </h3>
+            <% if (t.excerpt) { %>
+              <p class="text-sm text-slate-600"><%= t.excerpt %></p>
+            <% } %>
+          </article>
+        <% }) %>
+      <% } %>
+    </div>
+  </section>
+</main>

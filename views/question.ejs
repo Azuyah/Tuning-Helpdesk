@@ -1,0 +1,90 @@
+<section class="mx-auto max-w-4xl px-4 py-10">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">Fråga #<%= q.id %></h1>
+    <a href="/profile" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
+      <i class="ti ti-arrow-left"></i> Tillbaka
+    </a>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <% 
+      const statusCls =
+        q.status === 'open' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+      : q.status === 'answered' ? 'bg-sky-50 text-sky-700 border border-sky-200'
+      : 'bg-slate-50 text-slate-700 border border-slate-200';
+    %>
+    <div class="flex flex-wrap items-center gap-3 mb-2">
+      <span class="text-sm rounded-full px-2 py-1 <%= statusCls %>">
+        <% 
+  const statusLabels = {
+    open: "Öppen",
+    answered: "Besvarad",
+    closed: "Stängd"
+  };
+%>
+Status: <%= statusLabels[q.status] || q.status %>
+      </span>
+      <span class="text-sm text-slate-500">
+        Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>
+      </span>
+      <% if (q.updated_at) { %>
+        <span class="text-sm text-slate-500">
+          Uppdaterad: <%= new Date(q.updated_at).toLocaleString('sv-SE') %>
+        </span>
+      <% } %>
+    </div>
+
+    <h2 class="text-xl font-semibold text-slate-900"><%= q.title %></h2>
+
+    <% if (q.body) { %>
+      <p class="mt-3 text-slate-700 whitespace-pre-line"><%= q.body %></p>
+    <% } %>
+
+    <div class="mt-4 text-sm text-slate-600">
+      Från:
+      <span class="font-medium"><%= q.user_name || '' %></span>
+      <% if (q.user_email) { %>&lt;<%= q.user_email %>&gt;<% } %>
+    </div>
+  </div>
+
+<!-- Svar / kopplade guider (”det vi hänvisar till för den här frågan”) -->
+<div class="mt-8">
+  <% const hasLinked = Array.isArray(linked) && linked.length > 0; %>
+  <h3 class="text-lg font-semibold text-slate-900 mb-3">
+    <%= hasLinked
+        ? (linked.length > 1 ? 'Svar: guider vi hänvisar till för den här frågan' 
+                             : 'Svar: guiden vi hänvisar till för den här frågan')
+        : 'Svar' %>
+  </h3>
+
+<% const gridCols = hasLinked && linked.length > 1 ? 'md:grid-cols-2' : 'md:grid-cols-1'; %>
+
+<div class="grid grid-cols-1 <%= gridCols %> gap-6">
+  <% if (!hasLinked) { %>
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600 md:col-span-1">
+      Inget svar kopplat ännu.
+    </div>
+  <% } else { %>
+    <% linked.forEach(function(t){ %>
+      <article class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow transition">
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <h4 class="text-base font-semibold text-slate-900">
+            <a href="/topic/<%= t.id %>" class="hover:underline"><%= t.title %></a>
+          </h4>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Rekommenderad
+          </span>
+        </div>
+        <% if (t.excerpt) { %>
+          <p class="text-sm text-slate-600 line-clamp-3"><%= t.excerpt %></p>
+        <% } %>
+        <div class="mt-3">
+          <a href="/topic/<%= t.id %>" class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50">
+            <i class="ti ti-eye"></i> Öppna guiden
+          </a>
+        </div>
+      </article>
+    <% }) %>
+  <% } %>
+</div>
+</div>

@@ -1,0 +1,171 @@
+<!-- views/categories.ejs -->
+<section class="mx-auto max-w-6xl px-4 py-10">
+  <!-- Rubrik -->
+  <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Kategorier</h1>
+  <p class="mt-1 mb-6 text-sm text-slate-500 dark:text-slate-400">
+    Hantera titlar och ikoner. Klicka på ikonen för att byta från en lista. Spara alla ändringar längst ned.
+  </p>
+
+  <!-- Ny kategori (under rubriken) -->
+  <form method="POST" action="/admin/categories"
+        class="mb-8 grid grid-cols-1 sm:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_auto] gap-2">
+    <input name="title" placeholder="Ny kategori (titel)" required
+           class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 shadow-sm text-sm focus:border-sky-500 focus:ring-sky-500"/>
+    <input name="icon" placeholder="Icon (t.ex. ti-rocket)"
+           class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 shadow-sm text-sm focus:border-sky-500 focus:ring-sky-500"/>
+    <button class="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold hover:bg-sky-700">
+      <i class="ti ti-plus"></i> Lägg till
+    </button>
+  </form>
+
+  <!-- Tabell: bulkform -->
+  <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow">
+    <form method="POST" action="/admin/categories/bulk" id="bulkForm">
+      <table class="min-w-[820px] w-full text-left text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+          <tr>
+            <th class="p-3 font-semibold text-slate-600 dark:text-slate-300">Titel</th>
+            <th class="p-3 font-semibold text-slate-600 dark:text-slate-300 w-32">Ikon</th>
+            <th class="p-3 font-semibold text-slate-600 dark:text-slate-300 w-28">Ämnen</th>
+            <th class="p-3 font-semibold text-slate-600 dark:text-slate-300 w-[320px]">Åtgärder</th>
+          </tr>
+        </thead>
+        <tbody class="[&>tr]:border-b border-slate-200 dark:border-slate-800">
+          <% (cats || []).forEach(c => { %>
+            <tr class="align-middle">
+              <!-- Titel -->
+              <td class="p-3">
+                <input name="title[<%= c.id %>]" value="<%- c.title %>"
+                       class="w-[280px] max-w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500"/>
+              </td>
+
+              <!-- Ikon (endast ikon, klickbar) -->
+              <td class="p-3">
+                <button type="button"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-white/5"
+                        title="Byt ikon" data-pick-icon-for="<%= c.id %>">
+                  <i class="ti <%= c.icon || 'ti-folder' %> text-lg"></i>
+                </button>
+                <input type="hidden" name="icon[<%= c.id %>]" value="<%- c.icon || '' %>" data-icon-input="<%= c.id %>"/>
+              </td>
+
+              <!-- Antal ämnen -->
+              <td class="p-3">
+                <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-white/5 px-2.5 py-1 text-slate-700 dark:text-slate-200">
+                  <i class="ti ti-notes"></i> <%= c.topic_count || 0 %>
+                </span>
+              </td>
+
+              <!-- Åtgärder -->
+              <td class="p-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <a href="/admin/categories/<%= c.id %>/topics"
+                     class="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 hover:bg-slate-50 dark:hover:bg-white/5">
+                    <i class="ti ti-list-details"></i> Visa ämnen
+                  </a>
+
+                  <form method="POST" action="/admin/categories/<%= c.id %>/delete"
+                        class="inline-flex"
+                        onsubmit="return confirmDelete('<%- c.title %>')">
+                    <button class="inline-flex items-center gap-2 rounded-lg bg-rose-600 text-white px-3 py-2 hover:bg-rose-700">
+                      <i class="ti ti-trash"></i> Ta bort
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <!-- Spara ändringar (ingen separat container) -->
+      <div class="p-3 flex justify-end">
+        <button class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2 font-semibold hover:bg-emerald-700">
+          <i class="ti ti-device-floppy"></i> Spara ändringar
+        </button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- Ikonväljare (modal) -->
+<div id="iconModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" data-close-icon></div>
+  <div class="absolute left-1/2 top-1/2 w-[min(680px,92vw)] -translate-x-1/2 -translate-y-1/2
+              rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl">
+    <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <h3 class="text-base font-semibold">Välj ikon</h3>
+      <button class="rounded-lg px-2 py-1 hover:bg-slate-100 dark:hover:bg-white/5" data-close-icon>
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+    <div class="p-4">
+      <input id="iconSearch" type="text" placeholder="Sök ikon..."
+             class="mb-3 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-sm"/>
+      <div id="iconGrid" class="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-[340px] overflow-auto"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function confirmDelete(title){
+    return confirm(`Ta bort kategorin “${title}”?`);
+  }
+
+  // ------- Ikonväljare -------
+  (function(){
+    // En enkel curated lista – lägg gärna till fler.
+    const ICONS = [
+      'ti-rocket','ti-device-analytics','ti-gauge','ti-cloud-download','ti-credit-card',
+      'ti-settings','ti-plug','ti-database','ti-car','ti-engine','ti-tool','ti-adjustments',
+      'ti-box','ti-book','ti-notes','ti-cloud','ti-cpu','ti-bolt','ti-flame',
+      'ti-wrench','ti-steering-wheel','ti-file-description','ti-code','ti-chart-bar',
+      'ti-key','ti-lock','ti-shield','ti-stack-2','ti-terminal','ti-bulb'
+    ];
+
+    let currentCat = null;
+    const modal  = document.getElementById('iconModal');
+    const grid   = document.getElementById('iconGrid');
+    const search = document.getElementById('iconSearch');
+
+    document.querySelectorAll('[data-pick-icon-for]').forEach(btn => {
+      btn.addEventListener('click', () => open(btn.getAttribute('data-pick-icon-for')));
+    });
+    document.querySelectorAll('[data-close-icon]').forEach(el => el.addEventListener('click', close));
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
+    search.addEventListener('input', () => render(search.value));
+
+    function open(catId){
+      currentCat = catId;
+      modal.classList.remove('hidden');
+      search.value = '';
+      render('');
+      setTimeout(()=>search.focus(), 10);
+    }
+    function close(){
+      modal.classList.add('hidden');
+      currentCat = null;
+    }
+    function render(q){
+      grid.innerHTML = '';
+      const f = (q||'').toLowerCase();
+      ICONS.filter(n => n.includes(f)).forEach(name => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'aspect-square rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center justify-center';
+        b.innerHTML = `<i class="ti ${name} text-xl"></i>`;
+        b.title = name;
+        b.addEventListener('click', () => pick(name));
+        grid.appendChild(b);
+      });
+    }
+    function pick(name){
+      if (!currentCat) return;
+      const iconEl = document.querySelector(`[data-pick-icon-for="${currentCat}"] i`);
+      const input  = document.querySelector(`[data-icon-input="${currentCat}"]`);
+      if (iconEl) iconEl.className = 'ti ' + name + ' text-lg';
+      if (input)  input.value = name;
+      close();
+    }
+  })();
+</script>

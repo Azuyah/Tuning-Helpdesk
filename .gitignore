@@ -1,0 +1,8 @@
+# Node modules (installeras om automatiskt via package.json)
+node_modules/
+
+# Databasfilen – vill vi inte ha på GitHub
+helpdesk.db
+
+# Miljövariabler (t.ex. Railway secrets)
+.env

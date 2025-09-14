@@ -1,0 +1,114 @@
+<!-- views/profile.ejs -->
+<section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-8">
+  <!-- Vänster: Mina frågor -->
+  <div class="lg:col-span-2 space-y-4">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-slate-900">Min profil</h1>
+      <a href="/ask" class="inline-flex items-center gap-2 rounded-xl bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700">
+        Ställ fråga
+      </a>
+    </div>
+
+    <!-- Meddelanden -->
+    <% if (ok) { %>
+      <div class="rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm"><%= ok %></div>
+    <% } %>
+    <% if (err) { %>
+      <div class="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm"><%= err %></div>
+    <% } %>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div class="px-6 py-4 border-b">
+        <h2 class="text-lg font-semibold text-slate-900">Mina frågor</h2>
+      </div>
+
+      <% if (!myQs || myQs.length === 0) { %>
+        <div class="p-6 text-slate-600 text-sm">
+          Du har inte ställt några frågor ännu.
+          <a class="text-sky-600 hover:underline" href="/ask">Ställ din första fråga</a>.
+        </div>
+      <% } else { %>
+        <ul class="divide-y divide-slate-200">
+          <% myQs.forEach(q => { %>
+            <li class="px-6 py-4 flex items-start justify-between gap-4">
+              <div>
+                <div class="font-medium text-slate-900"><%= q.title %></div>
+                <div class="text-xs text-slate-500 mt-1">
+                  <%= new Date(q.created_at).toLocaleString('sv-SE') %>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs border
+                  <%= q.status === 'open' ? 'border-amber-300 bg-amber-50 text-amber-700' :
+                      q.status === 'answered' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' :
+                      'border-slate-300 bg-slate-50 text-slate-700' %>">
+                  <% 
+  const statusLabels = {
+    open: "Öppen",
+    answered: "Besvarad",
+    closed: "Stängd"
+  };
+%>
+<%= statusLabels[q.status] || q.status %>
+                </span>
+                <a href="/question/<%= q.id %>" class="text-sky-600 hover:underline">Visa</a>
+              </div>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Höger: Inställningar -->
+  <div class="space-y-6">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div class="px-6 py-4 border-b">
+        <h2 class="text-lg font-semibold text-slate-900">Profilinställningar</h2>
+      </div>
+      <form method="post" action="/profile/update" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Namn</label>
+          <input type="text" name="name" value="<%= me.name || '' %>"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700">E-post</label>
+          <input type="email" name="email" value="<%= me.email %>" required autocomplete="email"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+        </div>
+        <button type="submit"
+                class="w-full rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+          Spara
+        </button>
+      </form>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div class="px-6 py-4 border-b">
+        <h2 class="text-lg font-semibold text-slate-900">Byt lösenord</h2>
+      </div>
+      <form method="post" action="/profile/password" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Nuvarande lösenord</label>
+          <input type="password" name="current" required autocomplete="current-password"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Nytt lösenord</label>
+          <input type="password" name="password1" required minlength="6" autocomplete="new-password"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Bekräfta nytt lösenord</label>
+          <input type="password" name="password2" required minlength="6" autocomplete="new-password"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+        </div>
+        <button type="submit"
+                class="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold hover:bg-sky-700">
+          Uppdatera lösenord
+        </button>
+      </form>
+    </div>
+  </div>
+</section>

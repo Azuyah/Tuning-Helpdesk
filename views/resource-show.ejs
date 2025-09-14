@@ -1,0 +1,73 @@
+<!-- views/resource-show.ejs -->
+<section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-10">
+  <!-- Vänster: själva resursen -->
+  <div class="lg:col-span-2">
+    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-slate-900"><%= resource.title %></h1>
+          <% if (resource.excerpt) { %>
+            <p class="mt-2 text-slate-600"><%= resource.excerpt %></p>
+          <% } %>
+        </div>
+
+        <% if (user && user.role === 'admin') { %>
+          <a href="/admin/edit-topic/<%= resource.id %>"
+             class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+            <i class="ti ti-edit"></i> Redigera
+          </a>
+        <% } %>
+      </div>
+
+      <div class="prose prose-slate max-w-none mt-8">
+        <%- resource.body %>
+      </div>
+
+      <% const tags = (resource.tags||'').split(',').map(s=>s.trim()).filter(Boolean); %>
+      <% if (tags.length) { %>
+        <div class="mt-8">
+          <h2 class="text-sm font-semibold text-slate-500 uppercase">Taggar</h2>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <% tags.forEach(function(tag){ %>
+              <a href="/search?q=<%= encodeURIComponent(tag) %>"
+                 class="text-xs rounded-full bg-slate-100 text-slate-700 px-3 py-1 hover:bg-slate-200">
+                <%= tag %>
+              </a>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+    </article>
+  </div>
+
+  <!-- Höger: nedladdning / metadata -->
+  <aside class="space-y-6">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sticky top-24">
+      <div class="text-sm uppercase text-slate-500 mb-1">Resurs</div>
+      <div class="text-slate-900 font-semibold"><%= resource.title %></div>
+
+      <dl class="mt-4 text-sm text-slate-600 space-y-1">
+        <div class="flex items-center justify-between gap-3">
+          <dt>Uppdaterad</dt>
+          <dd class="text-slate-800">
+            <%= new Date(resource.updated_at).toLocaleDateString('sv-SE') %>
+          </dd>
+        </div>
+        <% /* Här kan du lägga till mer metadata framöver (filstorlek, version, checksumma) */ %>
+      </dl>
+
+      <% if (resource.download_url) { %>
+        <a href="<%= resource.download_url %>"
+           class="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2.5 font-semibold hover:bg-sky-700">
+          <i class="ti ti-download"></i> Ladda ner
+        </a>
+      <% } else { %>
+        <div class="mt-6 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          Ingen nedladdningslänk är angiven.
+        </div>
+      <% } %>
+    </div>
+
+    <!-- (valfri) Andra rutor specifikt för resurser kan hamna här -->
+  </aside>
+</section>
