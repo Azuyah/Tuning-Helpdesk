@@ -1,9 +1,8 @@
-<!-- views/question.ejs -->
 <section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-10">
   <!-- Vänsterkolumn -->
   <div class="lg:col-span-2 space-y-8">
 
-    <!-- FRÅGA -->
+    <!-- FRÅGA (eget kort) -->
     <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
       <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Fråga</div>
 
@@ -18,39 +17,27 @@
       <% } %>
 
       <div class="mt-4 text-sm text-slate-500">
-        Från:
-        <span class="font-medium"><%= q.user_name || 'Anonym' %></span>
+        Från: <span class="font-medium"><%= q.user_name || 'Anonym' %></span>
         • Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>
+        <% if (q.updated_at && q.updated_at !== q.created_at) { %>
+          • Uppdaterad: <%= new Date(q.updated_at).toLocaleString('sv-SE') %>
+        <% } %>
       </div>
     </article>
 
-    <!-- SVAR -->
+    <!-- SVAR (eget kort under frågan) -->
     <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
       <div class="flex items-start justify-between mb-4">
         <h2 class="text-xl font-semibold text-slate-900">
-          <%= answerTopic ? (answerTopic.title || 'Svar') : 'Svar' %>
+          <%= answerTopic ? 'Svar: ' + (answerTopic.title || '') : 'Svar' %>
         </h2>
 
-        <% if (user && user.role === 'admin') { %>
+        <% if (answerTopic && user && user.role === 'admin') { %>
           <div class="flex items-center gap-2">
-            <% if (answerTopic) { %>
-              <a href="/admin/edit-topic/<%= encodeURIComponent(answerTopic.id) %>"
-                 class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
-                <i class="ti ti-edit"></i> Redigera
-              </a>
-              <form method="POST"
-                    action="/admin/topics/<%= encodeURIComponent(answerTopic.id) %>/delete"
-                    onsubmit="return confirm('Ta bort ämnet & kopplad fråga? Detta går inte att ångra.');">
-                <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700">
-                  Ta bort
-                </button>
-              </form>
-            <% } else { %>
-              <a href="/admin/questions/<%= q.id %>" class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
-                <i class="ti ti-message-plus"></i> Svara
-              </a>
-            <% } %>
+            <a href="/topic/<%= encodeURIComponent(answerTopic.id) %>"
+               class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+              <i class="ti ti-eye"></i> Visa ämne
+            </a>
           </div>
         <% } %>
       </div>
@@ -63,6 +50,7 @@
           Svarat av: <span class="font-medium"><%= answerTopic.author_name || 'Okänd' %></span>
           • <%= new Date(answerTopic.created_at || answerTopic.updated_at || Date.now()).toLocaleString('sv-SE') %>
         </div>
+
         <% if (answerTopic.tags) { %>
           <div class="mt-8">
             <h3 class="text-sm font-semibold text-slate-500 uppercase">Taggar</h3>
@@ -74,15 +62,39 @@
           </div>
         <% } %>
       <% } else { %>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 text-slate-600 px-4 py-3">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700">
           Frågan har ej blivit besvarad än.
         </div>
       <% } %>
     </article>
   </div>
 
-  <!-- Högerkolumn (valfritt innehåll) -->
+  <!-- Högerkolumn (sidopanel) -->
   <aside class="space-y-8">
-    <!-- här kan du lägga relaterat/information senare om du vill -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">Relaterade frågor</h2>
+      <% if (relatedQuestions && relatedQuestions.length) { %>
+        <ul class="space-y-3">
+          <% relatedQuestions.forEach(function(rq){ %>
+            <li><a href="/questions/<%= rq.id %>" class="text-sky-600 hover:underline"><%= rq.title %></a></li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p class="text-sm text-slate-500">Inga frågor kopplade än.</p>
+      <% } %>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
+      <% if (relatedTopics && relatedTopics.length) { %>
+        <ul class="space-y-3">
+          <% relatedTopics.forEach(function(rt){ %>
+            <li><a href="/topic/<%= rt.id %>" class="text-slate-700 hover:text-sky-700"><%= rt.title %></a></li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
+      <% } %>
+    </div>
   </aside>
 </section>

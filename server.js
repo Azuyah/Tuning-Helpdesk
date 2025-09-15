@@ -1021,9 +1021,10 @@ app.post('/admin/topics/:id/delete', requireAdmin, (req, res) => {
   }
 });
 
-// Publik vy för fråga – alltid samma layout (med/utan svar)
+// Publik vy för en fråga (med samma layout som topic-sidan)
 app.get('/questions/:id', (req, res) => {
   const id = Number(req.params.id);
+  const me = getUser(req);
 
   // Frågan
   const q = db.prepare(`
@@ -1035,40 +1036,68 @@ app.get('/questions/:id', (req, res) => {
   `).get(id);
   if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
 
-  // (valfritt) blockera stängd fråga för andra än ägaren/admin
-  const me = getUser(req);
-  const isOwner = me && me.id === q.user_id;
-  if (q.status === 'closed' && !isOwner && (!me || me.role !== 'admin')) {
-    return res.status(403).render('403', { title: 'Åtkomst nekad' });
-  }
-
-  // Finns kopplat svar-ämne?
+  // Hämta kopplat svar-ämne (om något)
   const link = db.prepare(`
     SELECT qt.topic_id
     FROM question_topic qt
-    WHERE qt.question_id=?
+    WHERE qt.question_id = ?
     ORDER BY rowid DESC
     LIMIT 1
   `).get(id);
 
   let answerTopic = null;
-  if (link?.topic_id) {
+  if (link && link.topic_id) {
     answerTopic = db.prepare(`
-      SELECT b.id, b.created_at, b.updated_at, b.answer_for_question_id,
+      SELECT b.id, b.created_at, b.updated_at,
              t.title, t.excerpt, t.body, t.tags,
              u.name AS author_name
       FROM topics_base b
-      JOIN topics t   ON t.id = b.id
+      JOIN topics t ON t.id = b.id
       LEFT JOIN users u ON u.id = b.created_by
       WHERE b.id = ?
     `).get(link.topic_id);
+
+    // Om frågeställaren tittar på sin besvarade fråga → markera sedd
+    if (me && me.id === q.user_id && q.status === 'answered') {
+      db.prepare(`UPDATE questions SET user_seen_answer_at = datetime('now') WHERE id=?`).run(q.id);
+    }
+  }
+
+  // Sidokolumn: relaterade frågor + fler ämnen i samma kategori (utifrån första taggen)
+  let relatedQuestions = [];
+  let relatedTopics    = [];
+  if (answerTopic) {
+    relatedQuestions = db.prepare(`
+      SELECT DISTINCT q.id, q.title
+      FROM questions q
+      JOIN question_topic qt ON qt.question_id = q.id
+      WHERE qt.topic_id = ?
+        AND q.id <> ?
+      ORDER BY q.created_at DESC
+      LIMIT 5
+    `).all(answerTopic.id, q.id);
+
+    const firstTag = (answerTopic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
+    if (firstTag) {
+      relatedTopics = db.prepare(`
+        SELECT b.id, t.title
+        FROM topics_base b
+        JOIN topics t ON t.id = b.id
+        WHERE b.id <> ?
+          AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
+        ORDER BY b.updated_at DESC
+        LIMIT 5
+      `).all(answerTopic.id, firstTag);
+    }
   }
 
   res.locals.showHero = false;
   res.render('question', {
     title: `Fråga: ${q.title}`,
     q,
-    answerTopic,     // <- ny
+    answerTopic,
+    relatedQuestions,
+    relatedTopics,
     user: me
   });
 });
