@@ -1,16 +1,11 @@
 <section class="mx-auto max-w-3xl px-4 py-10">
   <h1 class="text-2xl font-bold text-slate-900 mb-6">Redigera ämne</h1>
 
-  <!-- QUILL CSS (bäst att lägga i layoutens <head>, men funkar här också) -->
-  <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.core.css">
-  <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
-
-  <form id="editForm" method="POST" action="/admin/edit-topic/<%= topic.id %>" class="space-y-5">
+  <form method="POST" action="/admin/edit-topic/<%= topic.id %>" class="space-y-5">
     <div class="text-xs text-slate-500">
       ID (slug): <code class="bg-slate-100 px-1 py-0.5 rounded"><%= topic.id %></code>
     </div>
 
-    <!-- Titel -->
     <div>
       <label class="block text-sm font-medium text-slate-700">Titel</label>
       <input type="text" name="title" value="<%- topic.title %>" required
@@ -18,7 +13,6 @@
                     focus:border-sky-500 focus:ring-sky-500 sm:text-sm">
     </div>
 
-    <!-- Kort beskrivning -->
     <div>
       <label class="block text-sm font-medium text-slate-700">Kort beskrivning</label>
       <textarea name="excerpt" rows="2"
@@ -26,65 +20,55 @@
                        focus:border-sky-500 focus:ring-sky-500 sm:text-sm"><%- topic.excerpt %></textarea>
     </div>
 
-    <!-- Innehåll med Quill -->
     <div>
       <label class="block text-sm font-medium text-slate-700">Innehåll</label>
-
-      <!-- Quill genererar själv toolbaren utifrån modules.toolbar -->
-      <div id="editor" class="mt-1"></div>
-
-      <!-- HTML som skickas till servern -->
-      <input type="hidden" name="body" id="contentHtml">
-
-      <!-- Dold textarea med ursprungligt innehåll för förifyllning -->
-      <textarea id="initialContent" hidden><%- topic.body || '' %></textarea>
+      <textarea name="body" rows="10"
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm 
+                       focus:border-sky-500 focus:ring-sky-500 sm:text-sm"><%- topic.body %></textarea>
     </div>
 
-    <!-- Taggar -->
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Taggar</label>
-      <input type="text" name="tags" value="<%- topic.tags || '' %>"
-             placeholder="ex: autotuner, virtual read, credits"
-             class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                    focus:border-sky-500 focus:ring-sky-500 sm:text-sm">
-      <p class="text-xs text-slate-500 mt-1">Används för sök och filter (komma-separerade).</p>
-    </div>
+<!-- Taggar -->
+<div>
+  <label class="block text-sm font-medium text-slate-700 mb-1">Taggar</label>
+  <input type="text" name="tags" value="<%- topic.tags || '' %>"
+         placeholder="ex: autotuner, virtual read, credits"
+         class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                focus:border-sky-500 focus:ring-sky-500 sm:text-sm">
+  <p class="text-xs text-slate-500 mt-1">Används för sök och filter (komma-separerade).</p>
+</div>
 
-    <!-- Kategori -->
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
-      <div class="relative">
-        <select name="categoryId"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                       focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
-          <option value="">— Välj kategori —</option>
-          <% (categories || []).forEach(c => { %>
-            <option value="<%= c.id %>" <%= currentCat === c.id ? 'selected' : '' %>>
-              <%= c.title %>
-            </option>
-          <% }) %>
-        </select>
-        <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
-      </div>
-      <p class="text-xs text-slate-500 mt-1">Primär kategori för ämnet.</p>
-    </div>
+<!-- Kategori -->
+<div>
+  <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+  <div class="relative">
+    <select name="categoryId"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+      <option value="">— Välj kategori —</option>
+      <% (categories || []).forEach(c => { %>
+        <option value="<%= c.id %>" <%= currentCat === c.id ? 'selected' : '' %>>
+          <%= c.title %>
+        </option>
+      <% }) %>
+    </select>
+    <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+  </div>
+  <p class="text-xs text-slate-500 mt-1">Primär kategori för ämnet.</p>
+</div>
+<!-- Resurs-inställningar -->
+<div class="mt-6 grid sm:grid-cols-2 gap-4">
+  <label class="inline-flex items-center gap-2">
+    <input type="checkbox" name="is_resource" value="1"
+           <%= Number(topic.is_resource) === 1 ? 'checked' : '' %> />
+    Detta är en resurs
+  </label>
 
-    <!-- Resurs-inställningar -->
-    <div class="mt-6 grid sm:grid-cols-2 gap-4">
-      <label class="inline-flex items-center gap-2">
-        <input type="checkbox" name="is_resource" value="1"
-               <%= Number(topic.is_resource) === 1 ? 'checked' : '' %> />
-        Detta är en resurs
-      </label>
-
-      <input type="url" name="download_url"
-             value="<%- topic.download_url || '' %>"
-             placeholder="https://… eller /public/files/fil.zip"
-             class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                    focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-    </div>
-
-    <!-- Knapp -->
+  <input type="url" name="download_url"
+         value="<%- topic.download_url || '' %>"
+         placeholder="https://… eller /public/files/fil.zip"
+         class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+</div>
     <div class="flex gap-3">
       <button type="submit"
               class="rounded-lg bg-sky-600 text-white px-5 py-2 font-medium hover:bg-sky-700 shadow-sm">
@@ -97,65 +81,3 @@
     </div>
   </form>
 </section>
-
-<!-- QUILL JS -->
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-<script>
-  (function () {
-    const toolbar = [
-      [{ header: [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline'],
-      [{ list: 'ordered' }, { list: 'bullet' }],
-      ['blockquote', 'link'],
-      ['clean']
-    ];
-
-    const quill = new Quill('#editor', {
-      theme: 'snow',
-      modules: { toolbar },
-      placeholder: 'Skriv eller klistra in ditt innehåll här...'
-    });
-
-    // Sätt minhöjd + snygga kanter via Quills egna klasser (som nu har CSS)
-    const container = document.querySelector('#editor .ql-container');
-    const toolbarEl = document.querySelector('#editor .ql-toolbar');
-    if (container) {
-      container.style.minHeight = '220px';
-      container.style.border = '1px solid #cbd5e1'; // slate-300
-      container.style.borderTop = '0';
-      container.style.borderRadius = '0 0 0.5rem 0.5rem';
-      container.style.background = '#fff';
-    }
-    if (toolbarEl) {
-      toolbarEl.style.border = '1px solid #cbd5e1';
-      toolbarEl.style.borderRadius = '0.5rem 0.5rem 0 0';
-      toolbarEl.style.background = '#fff';
-    }
-
-    // Fokus-stil på hela editorn
-    const editorRoot = document.getElementById('editor');
-    editorRoot.addEventListener('focusin', () => {
-      editorRoot.style.boxShadow = '0 0 0 2px rgba(14,165,233,.35)'; // sky-500 ring
-      if (container) container.style.borderColor = '#0ea5e9';
-      if (toolbarEl)  toolbarEl.style.borderColor  = '#0ea5e9';
-    });
-    editorRoot.addEventListener('focusout', () => {
-      editorRoot.style.boxShadow = 'none';
-      if (container) container.style.borderColor = '#cbd5e1';
-      if (toolbarEl)  toolbarEl.style.borderColor  = '#cbd5e1';
-    });
-
-    // Förifyll innehåll
-    const initial = document.getElementById('initialContent').value;
-    if (initial && initial.trim().length) {
-      quill.root.innerHTML = initial;
-    } else {
-      quill.root.innerHTML = '<p><br></p>'; // tom, men stabil
-    }
-
-    // Skicka HTML till servern på submit
-    document.getElementById('editForm').addEventListener('submit', function () {
-      document.getElementById('contentHtml').value = quill.root.innerHTML;
-    });
-  })();
-</script>
