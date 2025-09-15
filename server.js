@@ -510,7 +510,7 @@ app.get('/admin/questions/:id', requireAdmin, (req, res) => {
 
 // Svara och publicera (skapar nytt ämne från en fråga)
 // Admin: svara på en fråga och publicera som nytt ämne
-app.post('/admin/questions/:id/answer', requireAdmin, (req, res) => {
+/*app.post('/admin/questions/:id/answer', requireAdmin, (req, res) => {
   const qid = Number(req.params.id);
   const q = db.prepare('SELECT * FROM questions WHERE id=?').get(qid);
   if (!q) return res.status(404).render('404', { title: 'Frågan finns inte' });
@@ -589,6 +589,35 @@ db.prepare(`
 
   // Klart: gå till det nya ämnet
   res.redirect(`/topic/${topicId}`);
+});
+*/
+
+// Admin: spara/redigera svar direkt på frågan
+app.post('/admin/questions/:id', requireAdmin, (req, res) => {
+  const id = Number(req.params.id);
+  const q = db.prepare('SELECT * FROM questions WHERE id=?').get(id);
+  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
+
+  const answer_title = (req.body.answer_title || '').trim() || `Svar: ${q.title}`;
+  const answer_body  = cleanHtml(req.body.answer_body || '');
+  const answer_tags  = (req.body.answer_tags || '').trim();
+  const answered_by  = req.user?.name || req.user?.email || 'Admin';
+  const answered_at  = new Date().toISOString();
+
+  db.prepare(`
+    UPDATE questions
+       SET answer_title=?,
+           answer_body=?,
+           answer_tags=?,
+           answered_by=?,
+           answered_at=?,
+           is_answered=1,
+           status='answered',
+           updated_at=datetime('now')
+     WHERE id=?
+  `).run(answer_title, answer_body, answer_tags, answered_by, answered_at, id);
+
+  res.redirect('/questions/' + id);
 });
 
 // admin-only create/update/delete

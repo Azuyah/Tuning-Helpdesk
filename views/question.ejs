@@ -12,35 +12,20 @@
 
       <% if (user && user.role === 'admin') { %>
         <div class="flex items-center gap-2">
-          <% if (answerTopic) { %>
-            <a href="/admin/edit-topic/<%= encodeURIComponent(answerTopic.id) %>"
-               class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
-              <i class="ti ti-edit"></i> Redigera
-            </a>
-            <form method="POST"
-                  action="/admin/topics/<%= encodeURIComponent(answerTopic.id) %>/delete"
-                  data-del-form
-                  data-title="<%- (answerTopic.title || '').replace(/\"/g,'&quot;') %>">
-              <button type="submit"
-                      class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
-                <i class="ti ti-trash"></i> Ta bort
-              </button>
-            </form>
-          <% } else { %>
-            <a href="/admin/questions/<%= q.id %>"
-               class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
-              <i class="ti ti-edit"></i> Redigera
-            </a>
-            <form method="POST"
-                  action="/admin/questions/<%= q.id %>/delete"
-                  data-del-form
-                  data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
-              <button type="submit"
-                      class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
-                <i class="ti ti-trash"></i> Ta bort
-              </button>
-            </form>
-          <% } %>
+          <!-- Redigera/Ta bort fråga (alltid) -->
+          <a href="/admin/questions/<%= q.id %>"
+             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
+            <i class="ti ti-edit"></i> <%= q.is_answered ? 'Redigera svar' : 'Svara' %>
+          </a>
+          <form method="POST"
+                action="/admin/questions/<%= q.id %>/delete"
+                data-del-form
+                data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
+              <i class="ti ti-trash"></i> Ta bort
+            </button>
+          </form>
         </div>
       <% } %>
     </div>
@@ -68,38 +53,43 @@
       </div>
     </article>
 
-    <!-- SVAR / ÄMNE (kort under frågan) -->
+    <!-- SVAR (kort under frågan) -->
     <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-      <div class="mb-4">
-        <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Svar</div>
-        <h2 class="text-2xl font-bold text-slate-900">
-          <%= answerTopic ? (answerTopic.title || 'Svar') : 'Svar' %>
-        </h2>
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Svar</div>
+          <h2 class="text-2xl font-bold text-slate-900">
+            <%= q.is_answered ? (q.answer_title || 'Svar') : 'Svar' %>
+          </h2>
+        </div>
+
+        <% if (!q.is_answered && user && user.role === 'admin') { %>
+          <a href="/admin/questions/<%= q.id %>"
+             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
+            <i class="ti ti-message-plus"></i> Svara
+          </a>
+        <% } %>
       </div>
 
-      <% if (answerTopic) { %>
+      <% if (q.is_answered && q.answer_body) { %>
         <div class="prose prose-slate max-w-none mb-6">
-          <%- answerTopic.body %>
+          <%- q.answer_body %>
         </div>
 
         <div class="text-sm text-slate-500">
-          Svarat av: <span class="font-medium"><%= answerTopic.author_name || 'Okänd' %></span>
-          • <%= new Date(answerTopic.created_at || answerTopic.updated_at || Date.now()).toLocaleString('sv-SE') %>
+          Svarat av: <span class="font-medium"><%= q.answered_by || 'Okänd' %></span>
+          • <%= new Date(q.answered_at || q.updated_at || Date.now()).toLocaleString('sv-SE') %>
+          <% if (q.answer_tags) { %> • Taggar: <%= q.answer_tags %><% } %>
         </div>
-
-        <% if (answerTopic.tags) { %>
-          <div class="mt-8">
-            <h3 class="text-sm font-semibold text-slate-500 uppercase">Taggar</h3>
-            <div class="mt-2 flex flex-wrap gap-2">
-              <% answerTopic.tags.split(',').forEach(function(tag){ %>
-                <span class="text-xs rounded-full bg-slate-100 text-slate-700 px-3 py-1"><%= tag.trim() %></span>
-              <% }) %>
-            </div>
-          </div>
-        <% } %>
       <% } else { %>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700">
-          Frågan har ej blivit besvarad än.
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 flex items-center justify-between">
+          <span>Frågan har ej blivit besvarad än.</span>
+          <% if (user && user.role === 'admin') { %>
+            <a href="/admin/questions/<%= q.id %>"
+               class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
+              <i class="ti ti-message-plus"></i> Svara
+            </a>
+          <% } %>
         </div>
       <% } %>
     </article>
