@@ -1397,7 +1397,7 @@ app.post('/admin/new-topic', requireAdmin, (req, res) => {
 
   res.redirect('/admin');
 });
-// --- SUGGEST (topp-5 under sökfältet)
+// --- SUGGEST (topp-8 under sökfältet)
 app.get('/api/suggest', (req, res) => {
   const raw = (req.query.q || '').trim();
   if (!raw) return res.json([]);
@@ -1412,26 +1412,45 @@ app.get('/api/suggest', (req, res) => {
   if (ftsQuery) {
     try {
       rows = db.prepare(`
-        SELECT t.id, t.title,
-               substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+        SELECT 
+          t.id,
+          CASE 
+            WHEN b.answer_for_question_id IS NOT NULL THEN
+              'Fråga: ' || CASE 
+                             WHEN instr(t.title, 'Svar: ') = 1 THEN substr(t.title, 7)
+                             ELSE t.title
+                           END
+            ELSE t.title
+          END AS title,
+          substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
         FROM topics_fts f
-        JOIN topics t ON t.id = f.id
+        JOIN topics      t ON t.id = f.id
+        JOIN topics_base b ON b.id = f.id
         WHERE topics_fts MATCH ?
         ORDER BY bm25(topics_fts)
         LIMIT 8
       `).all(ftsQuery);
-    } catch (_) {
+    } catch {
       rows = [];
     }
   }
 
   // 2) Fallback: LIKE om FTS gav noll
   if (!rows.length) {
-    const esc = (s) => s.replace(/[%_]/g, m => '\\' + m);
+    const esc  = (s) => s.replace(/[%_]/g, m => '\\' + m);
     const like = `%${esc(q)}%`;
     rows = db.prepare(`
-      SELECT b.id, t.title,
-             substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+      SELECT 
+        b.id,
+        CASE 
+          WHEN b.answer_for_question_id IS NOT NULL THEN
+            'Fråga: ' || CASE 
+                           WHEN instr(t.title, 'Svar: ') = 1 THEN substr(t.title, 7)
+                           ELSE t.title
+                         END
+          ELSE t.title
+        END AS title,
+        substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
       FROM topics_base b
       JOIN topics t ON t.id = b.id
       WHERE t.title   LIKE ? ESCAPE '\\'
@@ -1448,18 +1467,29 @@ app.get('/api/suggest', (req, res) => {
 // --- Resultatsida (server-renderad lista)
 app.get('/search', (req, res) => {
   const user = getUser(req);
-  const raw = (req.query.q || '').trim();
-  const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
+  const raw  = (req.query.q || '').trim();
+  const q    = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
 
   let results = [];
   if (q) {
     const terms = q.split(/\s+/).filter(Boolean).map(t => `${t}*`).join(' AND ');
+
     results = db.prepare(`
-      SELECT t.id, t.title,
-             COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,200)) AS excerpt,
-             bm25(topics_fts) AS score
+      SELECT 
+        t.id,
+        CASE 
+          WHEN b.answer_for_question_id IS NOT NULL THEN
+            'Fråga: ' || CASE 
+                           WHEN instr(t.title, 'Svar: ') = 1 THEN substr(t.title, 7)
+                           ELSE t.title
+                         END
+          ELSE t.title
+        END AS title,
+        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,200)) AS excerpt,
+        bm25(topics_fts) AS score
       FROM topics_fts f
-      JOIN topics t ON t.id = f.id
+      JOIN topics      t ON t.id = f.id
+      JOIN topics_base b ON b.id = f.id
       WHERE topics_fts MATCH ?
       ORDER BY score
       LIMIT 100
@@ -1469,11 +1499,23 @@ app.get('/search', (req, res) => {
     if (results.length === 0) {
       const like = `%${q}%`;
       results = db.prepare(`
-        SELECT t.id, t.title,
-               COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,200)) AS excerpt,
-               9999 AS score
-        FROM topics t
-        WHERE t.title LIKE ? OR t.excerpt LIKE ? OR t.body LIKE ?
+        SELECT 
+          t.id,
+          CASE 
+            WHEN b.answer_for_question_id IS NOT NULL THEN
+              'Fråga: ' || CASE 
+                             WHEN instr(t.title, 'Svar: ') = 1 THEN substr(t.title, 7)
+                             ELSE t.title
+                           END
+            ELSE t.title
+          END AS title,
+          COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,200)) AS excerpt,
+          9999 AS score
+        FROM topics_base b
+        JOIN topics t ON t.id = b.id
+        WHERE t.title   LIKE ? 
+           OR t.excerpt LIKE ? 
+           OR t.body    LIKE ?
         LIMIT 100
       `).all(like, like, like);
     }
