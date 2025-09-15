@@ -27,7 +27,7 @@
     <!-- SVAR (eget kort under frågan) -->
     <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
       <div class="flex items-start justify-between mb-4">
-        <h2 class="text-xl font-semibold text-slate-900">Svar</h2>
+        <h1 class="text-2xl font-bold text-slate-900"><%= topic.title %></h1>
 
         <% if (user && user.role === 'admin') { %>
           <div class="flex items-center gap-2">
@@ -55,8 +55,13 @@
       </div>
 
       <div class="text-sm text-slate-500">
-        Svarat av: <span class="font-medium"><%= topic.author_name || 'Okänd' %></span>
-        • <%= new Date(topic.created_at).toLocaleString('sv-SE') %>
+    <% if (sourceQuestion) { %>
+    Svarat av:
+    <% } else { %>
+     Publicerad av:
+    <% } %>
+    <span class="font-medium"><%= topic.author_name || 'Okänd' %></span>
+    <%= new Date(topic.created_at || topic.updated_at || Date.now()).toLocaleString('sv-SE') %>
       </div>
 
       <% if (topic.tags) { %>
