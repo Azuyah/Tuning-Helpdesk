@@ -1185,6 +1185,7 @@ app.get('/api/search', (req, res) => {
 });
 
 // --- PROFIL ---
+// --- PROFIL ---
 app.get('/profile', requireAuth, (req, res) => {
   const me = db.prepare('SELECT id,email,name,role FROM users WHERE id=?').get(req.user.id);
   const myQs = db.prepare(`
@@ -1203,129 +1204,132 @@ app.get('/profile', requireAuth, (req, res) => {
   });
 });
 
-app.post('/profile', requireAuth, (req, res) => {
-  const { name, email } = req.body;
-  if (!email) return res.status(400).render('profile', { title: 'Min profil', error: 'E-post krävs.' });
+// Hjälpare för att rendera profilen med statusmeddelanden
+function renderProfile(res, userId, { ok = null, err = null } = {}) {
+  const me = db.prepare('SELECT id,email,name,role FROM users WHERE id=?').get(userId);
+  const myQs = db.prepare(`
+    SELECT id, title, status, created_at
+    FROM questions
+    WHERE user_id=?
+    ORDER BY created_at DESC
+  `).all(userId);
 
-  // kolla unik e-post (om man byter)
-  const exists = db.prepare('SELECT id FROM users WHERE email=? AND id<>?').get(email, req.user.id);
-  if (exists) {
-    const me = { ...req.user, name, email: req.user.email }; // visa gammal epost i formuläret
-    const myQs = db.prepare('SELECT id, title, status, created_at, updated_at FROM questions WHERE user_id=? ORDER BY created_at DESC').all(req.user.id);
-    return res.status(409).render('profile', { title: 'Min profil', me, myQs, error: 'E-post används redan.' });
+  return res.status(err ? 400 : 200).render('profile', {
+    title: 'Min profil',
+    me,
+    myQs,
+    ok,
+    err
+  });
+}
+
+// --- Uppdatera profil (namn/e-post) ---
+// (Den här matchar ditt "Profilinställningar"-formulär om du vill peka det hit.
+//  Men vi låter även /profile/update nedan hantera samma sak så din vy funkar nu.)
+app.post('/profile', requireAuth, (req, res) => {
+  const userId          = req.user.id;
+  const name            = (req.body.name || '').trim();
+  const email           = (req.body.email || '').trim();
+
+  if (!email) {
+    return renderProfile(res, userId, { err: 'E-post krävs.' });
   }
 
-  db.prepare('UPDATE users SET name=?, email=? WHERE id=?').run(name || '', email, req.user.id);
+  // kolla om eposten används av annan
+  const exists = db.prepare('SELECT id FROM users WHERE email=? AND id<>?').get(email, userId);
+  if (exists) {
+    return renderProfile(res, userId, { err: 'E-post används redan.' });
+  }
 
-  // uppdatera auth-cookien så header visar rätt e-post/namn
-  const userRow = db.prepare('SELECT id, email, role, name FROM users WHERE id=?').get(req.user.id);
-  res.cookie('auth', signUser(userRow), { httpOnly: true, sameSite: 'lax', secure: false, maxAge: 14*24*3600*1000 });
+  db.prepare('UPDATE users SET name=?, email=?, updated_at=datetime("now") WHERE id=?')
+    .run(name, email, userId);
 
-  res.redirect('/profile?ok=1');
+  // uppdatera JWT så headern visar direkt
+  const fresh = db.prepare('SELECT id,email,role,name FROM users WHERE id=?').get(userId);
+  res.cookie('auth', signUser(fresh), {
+    httpOnly: true, sameSite: 'lax', secure: false, maxAge: 14*24*3600*1000
+  });
+
+  return res.redirect('/profile?ok=' + encodeURIComponent('Profil uppdaterad'));
 });
 
-// --- Profil: uppdatera namn / e-post / lösenord ---
+// --- Uppdatera profil (kompatibel med din nuvarande vy) ---
+// Ditt "Profilinställningar"-formulär postar till /profile/update — vi stöder det här.
+// Om fälten för lösenord också skulle skickas i samma form hanteras det med.
 app.post('/profile/update', requireAuth, (req, res) => {
-  const userId = req.user.id;
-  const { name, email, current_password, new_password } = req.body;
+  const userId          = req.user.id;
+  const name            = (req.body.name || '').trim();
+  const email           = (req.body.email || '').trim();
+  const currentPassword = (req.body.current || req.body.current_password || '').trim();
+  const newPassword1    = (req.body.password1 || req.body.new_password || '').trim();
+  const newPassword2    = (req.body.password2 || '').trim();
 
-  try {
-    // 1) Uppdatera namn (om skickat)
-    if (typeof name === 'string' && name.trim()) {
-      db.prepare(`
-        UPDATE users
-           SET name = ?, updated_at = datetime('now')
-         WHERE id = ?
-      `).run(name.trim(), userId);
+  // 1) Namn/E-post (om e-post fanns med i posten)
+  if (email) {
+    // e-post krävs om man vill uppdatera profilinfo
+    const exists = db.prepare('SELECT id FROM users WHERE email=? AND id<>?').get(email, userId);
+    if (exists) {
+      return renderProfile(res, userId, { err: 'E-post används redan.' });
     }
+    db.prepare('UPDATE users SET name=?, email=?, updated_at=datetime("now") WHERE id=?')
+      .run(name, email, userId);
 
-    // 2) Uppdatera e-post (om skickat)
-    if (typeof email === 'string' && email.trim()) {
-      const newEmail = email.trim().toLowerCase();
-
-      // enkel format-koll (valfritt, ta bort om du inte vill validera här)
-      const simpleEmailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!simpleEmailRx.test(newEmail)) {
-        return res.status(400).render('profile', {
-          title: 'Min profil',
-          user: getUser(req),
-          error: 'Ogiltig e-postadress.'
-        });
-      }
-
-      // kolla att ingen annan användare har samma e-post
-      const clash = db.prepare(
-        'SELECT id FROM users WHERE lower(email)=? AND id != ? LIMIT 1'
-      ).get(newEmail, userId);
-
-      if (clash) {
-        return res.status(409).render('profile', {
-          title: 'Min profil',
-          user: getUser(req),
-          error: 'E-postadressen används redan.'
-        });
-      }
-
-      db.prepare(`
-        UPDATE users
-           SET email = ?, updated_at = datetime('now')
-         WHERE id = ?
-      `).run(newEmail, userId);
-    }
-
-    // 3) Byt lösenord (om båda fälten finns)
-    const hasCurr = (current_password || '').trim();
-    const hasNew  = (new_password || '').trim();
-    if (hasCurr && hasNew) {
-      const u = db.prepare('SELECT * FROM users WHERE id=?').get(userId);
-      if (!bcrypt.compareSync(current_password, u.password_hash)) {
-        return res.status(400).render('profile', {
-          title: 'Min profil',
-          user: getUser(req),
-          error: 'Nuvarande lösenord stämmer inte.'
-        });
-      }
-      const hash = bcrypt.hashSync(new_password, 10);
-      db.prepare(`
-        UPDATE users
-           SET password_hash = ?, updated_at = datetime('now')
-         WHERE id = ?
-      `).run(hash, userId);
-    }
-
-    // Uppdatera JWT så nya namn/e-post syns direkt i UI
-    const fresh = db.prepare(
-      'SELECT id, email, role, name FROM users WHERE id=?'
-    ).get(userId);
+    const fresh = db.prepare('SELECT id,email,role,name FROM users WHERE id=?').get(userId);
     res.cookie('auth', signUser(fresh), {
       httpOnly: true, sameSite: 'lax', secure: false, maxAge: 14*24*3600*1000
     });
-
-    // Klart
-    res.redirect('/profile');
-
-  } catch (e) {
-    console.error(e);
-    return res.status(500).render('profile', {
-      title: 'Min profil',
-      user: getUser(req),
-      error: 'Kunde inte spara ändringarna.'
-    });
   }
+
+  // 2) Lösenord (om något lösenordsfält är ifyllt)
+  const wantsPwChange = currentPassword || newPassword1 || newPassword2;
+  if (wantsPwChange) {
+    if (!currentPassword || !newPassword1 || !newPassword2) {
+      return renderProfile(res, userId, { err: 'Fyll i nuvarande lösenord och båda fälten för nytt lösenord.' });
+    }
+    if (newPassword1 !== newPassword2) {
+      return renderProfile(res, userId, { err: 'Nya lösenorden matchar inte.' });
+    }
+    const u = db.prepare('SELECT * FROM users WHERE id=?').get(userId);
+    if (!u || !bcrypt.compareSync(currentPassword, u.password_hash)) {
+      return renderProfile(res, userId, { err: 'Nuvarande lösenord stämmer inte.' });
+    }
+    const hash = bcrypt.hashSync(newPassword1, 10);
+    db.prepare('UPDATE users SET password_hash=?, updated_at=datetime("now") WHERE id=?')
+      .run(hash, userId);
+  }
+
+  // Meddelande beroende på vad som uppdaterats
+  const msgs = [];
+  if (email) msgs.push('Profil uppdaterad');
+  if (wantsPwChange) msgs.push('Lösenord uppdaterat');
+
+  return res.redirect('/profile?ok=' + encodeURIComponent(msgs.join(' • ') || 'Inget att uppdatera.'));
 });
 
+// --- Endast lösenordsbyte (din nuvarande "Byt lösenord"-form skickar hit) ---
 app.post('/profile/password', requireAuth, (req, res) => {
-  const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    return res.status(400).redirect('/profile?pw=missing');
+  const userId          = req.user.id;
+  const currentPassword = (req.body.current || '').trim();
+  const newPassword1    = (req.body.password1 || '').trim();
+  const newPassword2    = (req.body.password2 || '').trim();
+
+  if (!currentPassword || !newPassword1 || !newPassword2) {
+    return renderProfile(res, userId, { err: 'Fyll i nuvarande lösenord och båda fälten för nytt lösenord.' });
   }
-  const u = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
+  if (newPassword1 !== newPassword2) {
+    return renderProfile(res, userId, { err: 'Nya lösenorden matchar inte.' });
+  }
+
+  const u = db.prepare('SELECT * FROM users WHERE id=?').get(userId);
   if (!u || !bcrypt.compareSync(currentPassword, u.password_hash)) {
-    return res.status(400).redirect('/profile?pw=wrong');
+    return renderProfile(res, userId, { err: 'Nuvarande lösenord stämmer inte.' });
   }
-  const hash = bcrypt.hashSync(newPassword, 10);
-  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.user.id);
-  res.redirect('/profile?pw=ok');
+
+  const hash = bcrypt.hashSync(newPassword1, 10);
+  db.prepare('UPDATE users SET password_hash=?, updated_at=datetime("now") WHERE id=?')
+    .run(hash, userId);
+
+  return res.redirect('/profile?ok=' + encodeURIComponent('Lösenord uppdaterat'));
 });
 
 // Sidorout för sökresultat (visar hero + lista under)
