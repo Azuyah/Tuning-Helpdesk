@@ -120,6 +120,15 @@ function initSchemaAndSeed() {
   addColumnIfMissing('topics_base', 'answer_for_question_id', 'INTEGER');
   addColumnIfMissing('topics', 'is_resource', 'INTEGER DEFAULT 0');
   addColumnIfMissing('topics', 'download_url', 'TEXT');
+  addColumnIfMissing('topics_base', 'answer_for_question_id', 'INTEGER');
+  addColumnIfMissing('topics', 'is_resource', 'INTEGER DEFAULT 0');
+  addColumnIfMissing('topics', 'download_url', 'TEXT');
+
+  // notifierings-/svars-kolumner för frågor
+  addColumnIfMissing('questions', 'answered_at', 'TEXT');
+  addColumnIfMissing('questions', 'user_seen_answer_at', 'TEXT');
+  // (frivillig) för admins: markera nya obesvarade frågor
+  addColumnIfMissing('questions', 'admin_seen_new', 'INTEGER DEFAULT 0');
 
   // Se till att FTS har innehåll
   const ftsCountRow = db.prepare(`SELECT count(*) AS n FROM topics_fts`).get();
@@ -181,6 +190,33 @@ app.use((req, res, next) => {
     res.locals.popularTags = [];
   }
 
+  next();
+});
+
+app.use((req, res, next) => {
+  const u = getUser(req);
+  res.locals.notifCount = 0;
+  res.locals.adminOpenCount = 0;
+
+  try {
+    if (u && u.role === 'admin') {
+      const row = db.prepare(`SELECT COUNT(*) AS n FROM questions WHERE status='open'`).get();
+      res.locals.adminOpenCount = row?.n || 0;
+    }
+    if (u && u.role === 'user') {
+      const row = db.prepare(`
+        SELECT COUNT(*) AS n
+        FROM questions
+        WHERE user_id = ?
+          AND status = 'answered'
+          AND (user_seen_answer_at IS NULL OR user_seen_answer_at < answered_at)
+      `).get(u.id);
+      res.locals.notifCount = row?.n || 0;
+    }
+  } catch (e) {
+    res.locals.notifCount = 0;
+    res.locals.adminOpenCount = 0;
+  }
   next();
 });
 
@@ -284,26 +320,38 @@ app.get('/topic/:id', (req, res) => {
     WHERE b.id = ?
   `).get(req.params.id);
 
-  if (!topic) return res.status(404).render('404', { title: 'Hittades inte' });
+  if (!topic) {
+    return res.status(404).render('404', { title: 'Hittades inte' });
+  }
 
-  // 🔁 Resurs? Använd separat resurs-sida
+  // Resurs? Skicka till resurs-vyn.
   if (topic.is_resource) {
     return res.redirect(301, `/resources/${topic.id}`);
   }
 
-  // 🧩 Källfråga (om ämnet är ett svar)
+  // Källfråga (om ämnet är ett svar)
   let sourceQuestion = null;
   if (topic.answer_for_question_id) {
     sourceQuestion = db.prepare(`
-      SELECT q.id, q.title, q.body, q.created_at,
+      SELECT q.id, q.user_id, q.title, q.body, q.created_at,
              u.name AS user_name
       FROM questions q
       LEFT JOIN users u ON u.id = q.user_id
       WHERE q.id = ?
     `).get(topic.answer_for_question_id);
+
+    // Markera att frågeställaren har sett sitt svar
+    const viewer = getUser(req);
+    if (sourceQuestion && viewer && viewer.id === sourceQuestion.user_id) {
+      db.prepare(`
+        UPDATE questions
+        SET user_seen_answer_at = datetime('now')
+        WHERE id = ?
+      `).run(sourceQuestion.id);
+    }
   }
 
-  // 🔎 Relaterade frågor (uteslut källfrågan)
+  // Relaterade frågor (uteslut källfrågan om sådan finns)
   let relatedQuestions = [];
   if (topic.answer_for_question_id) {
     relatedQuestions = db.prepare(`
@@ -326,7 +374,7 @@ app.get('/topic/:id', (req, res) => {
     `).all(topic.id);
   }
 
-  // 📚 Relaterade ämnen (enkel heuristik via första taggen)
+  // Relaterade ämnen via första taggen
   const firstTag = (topic.tags || '').split(',')[0];
   const cat = firstTag ? firstTag.trim().toLowerCase() : '';
   let relatedTopics = [];
@@ -335,7 +383,7 @@ app.get('/topic/:id', (req, res) => {
       SELECT b.id, t.title
       FROM topics_base b
       JOIN topics t ON t.id = b.id
-      WHERE b.id != ?
+      WHERE b.id <> ?
         AND lower(t.tags) LIKE '%' || ? || '%'
       ORDER BY b.updated_at DESC
       LIMIT 5
@@ -522,8 +570,13 @@ app.post('/admin/questions/:id/answer', requireAdmin, (req, res) => {
     db.prepare('INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)')
       .run(qid, topicId);
 
-    db.prepare(`UPDATE questions SET status=?, updated_at=datetime('now') WHERE id=?`)
-      .run('answered', qid);
+db.prepare(`
+  UPDATE questions
+  SET status = 'answered',
+      answered_at = datetime('now'),
+      user_seen_answer_at = NULL
+  WHERE id = ?
+`).run(qid);
   });
 
   tx(); // kör transaktionen
@@ -1169,6 +1222,96 @@ app.post('/profile', requireAuth, (req, res) => {
   res.cookie('auth', signUser(userRow), { httpOnly: true, sameSite: 'lax', secure: false, maxAge: 14*24*3600*1000 });
 
   res.redirect('/profile?ok=1');
+});
+
+// --- Profil: uppdatera namn / e-post / lösenord ---
+app.post('/profile/update', requireAuth, (req, res) => {
+  const userId = req.user.id;
+  const { name, email, current_password, new_password } = req.body;
+
+  try {
+    // 1) Uppdatera namn (om skickat)
+    if (typeof name === 'string' && name.trim()) {
+      db.prepare(`
+        UPDATE users
+           SET name = ?, updated_at = datetime('now')
+         WHERE id = ?
+      `).run(name.trim(), userId);
+    }
+
+    // 2) Uppdatera e-post (om skickat)
+    if (typeof email === 'string' && email.trim()) {
+      const newEmail = email.trim().toLowerCase();
+
+      // enkel format-koll (valfritt, ta bort om du inte vill validera här)
+      const simpleEmailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!simpleEmailRx.test(newEmail)) {
+        return res.status(400).render('profile', {
+          title: 'Min profil',
+          user: getUser(req),
+          error: 'Ogiltig e-postadress.'
+        });
+      }
+
+      // kolla att ingen annan användare har samma e-post
+      const clash = db.prepare(
+        'SELECT id FROM users WHERE lower(email)=? AND id != ? LIMIT 1'
+      ).get(newEmail, userId);
+
+      if (clash) {
+        return res.status(409).render('profile', {
+          title: 'Min profil',
+          user: getUser(req),
+          error: 'E-postadressen används redan.'
+        });
+      }
+
+      db.prepare(`
+        UPDATE users
+           SET email = ?, updated_at = datetime('now')
+         WHERE id = ?
+      `).run(newEmail, userId);
+    }
+
+    // 3) Byt lösenord (om båda fälten finns)
+    const hasCurr = (current_password || '').trim();
+    const hasNew  = (new_password || '').trim();
+    if (hasCurr && hasNew) {
+      const u = db.prepare('SELECT * FROM users WHERE id=?').get(userId);
+      if (!bcrypt.compareSync(current_password, u.password_hash)) {
+        return res.status(400).render('profile', {
+          title: 'Min profil',
+          user: getUser(req),
+          error: 'Nuvarande lösenord stämmer inte.'
+        });
+      }
+      const hash = bcrypt.hashSync(new_password, 10);
+      db.prepare(`
+        UPDATE users
+           SET password_hash = ?, updated_at = datetime('now')
+         WHERE id = ?
+      `).run(hash, userId);
+    }
+
+    // Uppdatera JWT så nya namn/e-post syns direkt i UI
+    const fresh = db.prepare(
+      'SELECT id, email, role, name FROM users WHERE id=?'
+    ).get(userId);
+    res.cookie('auth', signUser(fresh), {
+      httpOnly: true, sameSite: 'lax', secure: false, maxAge: 14*24*3600*1000
+    });
+
+    // Klart
+    res.redirect('/profile');
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).render('profile', {
+      title: 'Min profil',
+      user: getUser(req),
+      error: 'Kunde inte spara ändringarna.'
+    });
+  }
 });
 
 app.post('/profile/password', requireAuth, (req, res) => {

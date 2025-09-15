@@ -62,7 +62,22 @@
 
       <!-- Spacer -->
       <div class="flex-1"></div>
-
+<!-- bredvid din inloggad-sektion i headern -->
+<% if (user) { %>
+  <a href="<%= user.role === 'admin' ? '/admin' : '/profile' %>" class="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
+    <i class="ti ti-bell"></i>
+    <% if (user.role === 'admin' && adminOpenCount > 0) { %>
+      <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">
+        <%= adminOpenCount %>
+      </span>
+    <% } %>
+    <% if (user.role === 'user' && notifCount > 0) { %>
+      <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">
+        <%= notifCount %>
+      </span>
+    <% } %>
+  </a>
+<% } %>
       <!-- Right side (desktop) -->
       <div class="hidden md:flex items-center gap-2">
         <% if (user) { %>

@@ -81,17 +81,14 @@
 
         const data = await res.json().catch(() => ({}));
 
-        if (!res.ok || !data.ok) {
-          showMsg('err', data.error || 'Kunde inte skicka frågan.');
-          btn.disabled = false;
-          return;
-        }
+if (!res.ok || !data.ok) {
+  showMsg('err', data.error || 'Kunde inte skicka frågan.');
+  btn.disabled = false;
+  return;
+}
 
-        // Lyckat: visa bekräftelse och nollställ formuläret (eller redirecta)
-        form.reset();
-        showMsg('ok', 'Tack! Din fråga är inskickad. Vi hör av oss snart.');
-        // Vill du hellre redirecta? Avkommentera nästa rad:
-        // location.href = '/'; // eller t.ex. '/admin' för admins
+// Lyckat: redirecta till frågesidan
+location.href = '/questions/' + data.id;
       } catch (err) {
         showMsg('err', 'Nätverksfel. Försök igen.');
       } finally {
