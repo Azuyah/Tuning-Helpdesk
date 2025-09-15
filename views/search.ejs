@@ -13,9 +13,12 @@
       Tillbaka till startsidan
     </a>
 
-    <div class="space-y-4">
+    <div class="space-y-4 <%= topics.length >= 2 ? 'pb-16' : '' %>">
       <% if (topics.length === 0) { %>
-        <p class="text-slate-500">Inga resultat hittades.</p>
+        <p class="text-slate-500">
+  Inga resultat hittades. Vill du
+  <a href="/ask" class="text-sky-600 hover:underline">ställa frågan själv?</a>
+</p>
       <% } else { %>
         <% topics.forEach(t => { %>
           <article class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow transition">
