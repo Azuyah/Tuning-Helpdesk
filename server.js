@@ -158,6 +158,28 @@ db.prepare(`UPDATE users SET updated_at = COALESCE(updated_at, datetime('now'))`
     console.log('[DB] Seeded admin:', ADMIN_EMAIL);
   }
 }
+// Säkerställ att questions har svar-kolumnerna
+function hasColumn(table, col) {
+  const row = db.prepare(`PRAGMA table_info(${table})`).all()
+    .find(r => r.name === col);
+  return !!row;
+}
+function addColumn(table, col, ddl) {
+  if (!hasColumn(table, col)) {
+    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run();
+  }
+}
+
+// Obligatoriska svarfält
+addColumn('questions', 'answer_title', 'TEXT');
+addColumn('questions', 'answer_body', 'TEXT');
+addColumn('questions', 'answer_tags', 'TEXT');
+addColumn('questions', 'answered_by', 'TEXT');
+addColumn('questions', 'answered_at', 'TEXT');      // kan vara TEXT (ISO) eller INTEGER (unix)
+addColumn('questions', 'is_answered', 'INTEGER DEFAULT 0');
+
+// Om du använder dessa någon annanstans i koden, se till att de finns också:
+addColumn('questions', 'user_seen_answer_at', 'TEXT'); // markeras när frågeställaren sett svaret
 
 initSchemaAndSeed();
 // ---------- EJS + Layouts ----------
