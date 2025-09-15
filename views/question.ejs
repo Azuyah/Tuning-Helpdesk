@@ -84,11 +84,6 @@
       <% } else { %>
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 flex items-center justify-between">
           <span>Frågan har ej blivit besvarad än.</span>
-          <% if (user && user.role === 'admin') { %>
-            <a href="/admin/questions/<%= q.id %>"
-               class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
-              <i class="ti ti-message-plus"></i> Svara
-            </a>
           <% } %>
         </div>
       <% } %>

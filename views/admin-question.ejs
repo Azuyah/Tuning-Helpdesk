@@ -1,6 +1,7 @@
 <!-- views/admin-question.ejs -->
-<section id="qView" data-qid="<%= q.id %>" class="mx-auto max-w-4xl px-4 py-10">
-  <div class="flex items-center justify-between mb-6">
+<section id="qView" data-qid="<%= q.id %>" class="mx-auto max-w-4xl px-4 py-10 space-y-8">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold text-slate-900">Fråga #<%= q.id %></h1>
     <a href="/admin"
        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
@@ -8,8 +9,8 @@
     </a>
   </div>
 
-  <!-- Info-kort -->
-  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+  <!-- Frågekort -->
+  <article class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
     <div class="flex flex-wrap items-center gap-3 mb-2">
       <%
         const statusCls =
@@ -42,128 +43,236 @@
       <span class="font-medium"><%= q.user_name || '' %></span>
       <% if (q.user_email) { %>&lt;<%= q.user_email %>&gt;<% } %>
     </div>
-  </div>
-</section>
+  </article>
 
-<!-- Åtgärdssektion: grid med formulär + sidokolumn -->
-<section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-8">
-
-  <!-- Vänsterkolumn: Svar-formulär -->
-  <div class="lg:col-span-2 space-y-8">
-
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-slate-900">Svara på frågan</h3>
-        <% if (q.answered_at) { %>
-          <span class="text-xs text-slate-500">Senast besvarad: <%= new Date(q.answered_at).toLocaleString('sv-SE') %></span>
-        <% } %>
-      </div>
-
-      <!-- Viktigt: postar till /admin/questions/:id med fält answer_title/answer_body/answer_tags -->
-      <form method="POST" action="/admin/questions/<%= q.id %>" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Svarsrubrik</label>
-          <input
-            type="text"
-            name="answer_title"
-            value="<%= q.answer_title || ('Svar: ' + q.title) %>"
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Ditt svar</label>
-          <textarea
-            name="answer_body"
-            rows="10"
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm"><%= q.answer_body || '' %></textarea>
-          <p class="text-xs text-slate-500 mt-1">
-            HTML tillåts och saneras server-side (t.ex. <code>&lt;p&gt;</code>, listor, länkar).
-          </p>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Taggar (valfritt, komma-separerade)</label>
-          <input
-            name="answer_tags"
-            value="<%= q.answer_tags || '' %>"
-            placeholder="ex: b48, 330e, ecu"
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-        </div>
-
-        <div class="pt-2 flex items-center gap-3">
-          <button type="submit"
-                  class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
-            <i class="ti ti-device-floppy"></i> Spara svar
-          </button>
-
-          <% if (q.is_answered) { %>
-            <span class="text-sm text-slate-500">Besvarad av <%= q.answered_by || 'Okänd' %></span>
-          <% } %>
-        </div>
-      </form>
-    </div>
-
-  </div>
-
-  <!-- Högerkolumn: Status + koppla ämne -->
-  <aside class="space-y-6">
-
-    <!-- Ändra status -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 class="font-semibold text-slate-900 mb-3">Ändra status</h3>
-      <div class="flex flex-wrap gap-2">
-        <button type="button" data-status="open"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Öppen</button>
-        <button type="button" data-status="answered"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Besvarad</button>
-        <button type="button" data-status="closed"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Stängd</button>
-      </div>
-    </div>
-
-    <!-- Koppla befintligt ämne (om du vill länka inlägg/KB-artikel) -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 class="font-semibold text-slate-900 mb-3">Koppla ämne</h3>
-      <div class="relative">
-        <input id="topicSearch" type="search" placeholder="Sök ämne…"
-               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500"/>
-        <div id="suggestBox"
-             class="absolute z-10 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-lg hidden overflow-hidden"></div>
-      </div>
-
-      <% if (linked && linked.length) { %>
-        <div class="mt-4">
-          <div class="text-sm text-slate-600 mb-2">Kopplade ämnen:</div>
-          <ul class="space-y-1">
-            <% linked.forEach(function(t){ %>
-              <li>
-                <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline"><%= t.title %></a>
-              </li>
-            <% }); %>
-          </ul>
-        </div>
+  <!-- Svara på frågan -->
+  <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-slate-900">Svara på frågan</h3>
+      <% if (q.answered_at) { %>
+        <span class="text-xs text-slate-500">Senast besvarad: <%= new Date(q.answered_at).toLocaleString('sv-SE') %></span>
       <% } %>
     </div>
 
-    <!-- Radera fråga -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 class="font-semibold text-red-700 mb-3">Farligt område</h3>
-      <form method="POST"
-            action="/admin/questions/<%= q.id %>/delete"
-            data-del-form
-            data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
+    <form method="POST" action="/admin/questions/<%= q.id %>" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700">Svarsrubrik</label>
+        <input
+          type="text"
+          name="answer_title"
+          value="<%= q.answer_title || ('Svar: ' + q.title) %>"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                 focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700">Ditt svar</label>
+        <textarea
+          name="answer_body"
+          rows="10"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                 focus:border-sky-500 focus:ring-sky-500 sm:text-sm"><%= q.answer_body || '' %></textarea>
+        <p class="text-xs text-slate-500 mt-1">
+          HTML tillåts och saneras server-side (t.ex. <code>&lt;p&gt;</code>, listor, länkar).
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700">Taggar (valfritt, komma-separerade)</label>
+        <input
+          name="answer_tags"
+          value="<%= q.answer_tags || '' %>"
+          placeholder="ex: b48, 330e, ecu"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                 focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+      </div>
+
+      <div class="pt-2 flex items-center gap-3">
         <button type="submit"
-                class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-red-700">
-          <i class="ti ti-trash"></i> Ta bort fråga
+                class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
+          <i class="ti ti-device-floppy"></i> Spara svar
         </button>
-      </form>
+
+        <% if (q.is_answered) { %>
+          <span class="text-sm text-slate-500">Besvarad av <%= q.answered_by || 'Okänd' %></span>
+        <% } %>
+      </div>
+    </form>
+  </section>
+
+  <!-- Ändra status -->
+  <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <h3 class="font-semibold text-slate-900 mb-3">Ändra status</h3>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" data-status="open"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Öppen</button>
+      <button type="button" data-status="answered"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Besvarad</button>
+      <button type="button" data-status="closed"
+        class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Stängd</button>
+    </div>
+  </section>
+
+  <!-- Koppla ämne -->
+  <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <h3 class="font-semibold text-slate-900 mb-3">Koppla ämne</h3>
+    <div class="relative">
+      <input id="topicSearch" type="search" placeholder="Sök ämne…"
+             class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500"/>
+      <div id="suggestBox"
+           class="absolute z-10 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-lg hidden overflow-hidden"></div>
     </div>
 
-  </aside>
+    <% if (linked && linked.length) { %>
+      <div class="mt-4">
+        <div class="text-sm text-slate-600 mb-2">Kopplade ämnen:</div>
+        <ul class="space-y-1">
+          <% linked.forEach(function(t){ %>
+            <li>
+              <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline"><%= t.title %></a>
+            </li>
+          <% }); %>
+        </ul>
+      </div>
+    <% } %>
+  </section>
+
+  <!-- Farligt område -->
+  <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <h3 class="font-semibold text-red-700 mb-3">Farligt område</h3>
+    <form method="POST"
+          action="/admin/questions/<%= q.id %>/delete"
+          data-del-form
+          data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
+      <button type="submit"
+              class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-red-700">
+        <i class="ti ti-trash"></i> Ta bort fråga
+      </button>
+    </form>
+  </section>
 </section>
+
+<!-- Snackbar -->
+<div id="snack"
+     class="fixed bottom-4 left-1/2 -translate-x-1/2 hidden rounded-lg border px-4 py-2 text-sm shadow"></div>
+
+<script>
+(function(){
+  var root  = document.getElementById('qView');
+  var qid   = Number(root && root.dataset.qid);
+  var snack = document.getElementById('snack');
+
+  function toast(text, ok) {
+    snack.textContent = text;
+    snack.className =
+      'fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow ' +
+      (ok !== false
+        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+        : 'bg-red-50 text-red-800 border border-red-200');
+    snack.classList.remove('hidden');
+    setTimeout(function(){ snack.classList.add('hidden'); }, 2000);
+  }
+
+  // Byt status
+  document.querySelectorAll('[data-status]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var status = btn.getAttribute('data-status');
+      fetch('/api/questions/' + qid + '/status', {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ status: status })
+      })
+      .then(function(res){ return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
+      .then(function(resp){
+        if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
+        toast('Status uppdaterad');
+        location.reload();
+      })
+      .catch(function(){ toast('Kunde inte uppdatera status', false); });
+    });
+  });
+
+  // Autosuggest + koppla ämne
+  var input = document.getElementById('topicSearch');
+  var box   = document.getElementById('suggestBox');
+  var timer = null;
+
+  function escapeHtml(s){
+    return (s || '').replace(/[&<>"']/g, function(m){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]);
+    });
+  }
+
+  function renderSuggest(rows){
+    if (!rows || !rows.length){
+      box.classList.add('hidden');
+      box.innerHTML = '';
+      return;
+    }
+    var html = rows.map(function(r){
+      var t  = escapeHtml(r.title || '');
+      var sn = r.snippet ? '<div class="text-sm text-slate-600">' + escapeHtml(r.snippet) + '</div>' : '';
+      return (
+        '<button type="button" data-id="' + r.id + '" class="w-full text-left px-4 py-3 hover:bg-slate-50">' +
+          '<div class="font-medium text-slate-900">' + t + '</div>' +
+          sn +
+        '</button>'
+      );
+    }).join('');
+    box.innerHTML = html;
+    box.classList.remove('hidden');
+  }
+
+  function fetchSuggest(q){
+    if (!q) { renderSuggest([]); return; }
+    fetch('/api/suggest?q=' + encodeURIComponent(q))
+      .then(function(res){ return res.json(); })
+      .then(function(rows){ renderSuggest(Array.isArray(rows) ? rows : []); })
+      .catch(function(){ /* ignore */ });
+  }
+
+  if (input){
+    input.addEventListener('input', function(){
+      clearTimeout(timer);
+      var q = input.value.trim();
+      timer = setTimeout(function(){ fetchSuggest(q); }, 150);
+    });
+    document.addEventListener('click', function(e){
+      if (!e.target.closest('#suggestBox') && e.target !== input) box.classList.add('hidden');
+    });
+  }
+
+  // Koppla ämne
+  if (box){
+    box.addEventListener('click', function(e){
+      var btn = e.target.closest('button[data-id]');
+      if (!btn) return;
+      var topicId = btn.getAttribute('data-id');
+      fetch('/api/questions/' + qid + '/attach-topic', {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ topicId: topicId })
+      })
+      .then(function(res){ return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
+      .then(function(resp){
+        if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
+        toast('Ämne kopplat');
+        location.reload();
+      })
+      .catch(function(){ toast('Kunde inte koppla ämne', false); });
+    });
+  }
+
+  // Confirm delete
+  var delForm = document.querySelector('[data-del-form]');
+  if (delForm){
+    delForm.addEventListener('submit', function(e){
+      var t = delForm.dataset.title || '';
+      if (!confirm('Ta bort frågan "' + t + '"? Detta går inte att ångra.')) e.preventDefault();
+    });
+  }
+})();
+</script>
 
 <!-- Snackbar -->
 <div id="snack"
