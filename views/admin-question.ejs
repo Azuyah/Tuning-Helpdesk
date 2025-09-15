@@ -11,21 +11,15 @@
   <!-- Info-kort -->
   <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
     <div class="flex flex-wrap items-center gap-3 mb-2">
-      <% 
-  const statusCls =
-    q.status === 'open' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-  : q.status === 'answered' ? 'bg-sky-50 text-sky-700 border border-sky-200'
-  : 'bg-slate-50 text-slate-700 border border-slate-200';
+      <%
+        const statusCls =
+          q.status === 'open'     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+          q.status === 'answered' ? 'bg-sky-50 text-sky-700 border border-sky-200' :
+                                    'bg-slate-50 text-slate-700 border border-slate-200';
+        const statusLabels = { open: 'Öppen', answered: 'Besvarad', closed: 'Stängd' };
       %>
       <span class="text-sm rounded-full px-2 py-1 <%= statusCls %>">
-        <% 
-  const statusLabels = {
-    open: "Öppen",
-    answered: "Besvarad",
-    closed: "Stängd"
-  };
-%>
-Status: <%= statusLabels[q.status] || q.status %>
+        Status: <%= statusLabels[q.status] || q.status %>
       </span>
       <span class="text-sm text-slate-500">
         Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>
@@ -49,60 +43,72 @@ Status: <%= statusLabels[q.status] || q.status %>
       <% if (q.user_email) { %>&lt;<%= q.user_email %>&gt;<% } %>
     </div>
   </div>
+</section>
 
-<!-- Åtgärder – ny layout: formulär till vänster, status/verktyg till höger -->
+<!-- Åtgärdssektion: grid med formulär + sidokolumn -->
 <section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-8">
 
-  <!-- Vänster: frågekort + formulär -->
+  <!-- Vänsterkolumn: Svar-formulär -->
   <div class="lg:col-span-2 space-y-8">
 
-    <!-- Frågekortet ligger redan ovanför här -->
-
-    <!-- Svara och publicera (bredare) -->
     <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 class="font-semibold text-slate-900 mb-3">Svara och publicera</h3>
-      <form method="POST" action="/admin/questions/<%= q.id %>/answer" class="space-y-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-slate-900">Svara på frågan</h3>
+        <% if (q.answered_at) { %>
+          <span class="text-xs text-slate-500">Senast besvarad: <%= new Date(q.answered_at).toLocaleString('sv-SE') %></span>
+        <% } %>
+      </div>
+
+      <!-- Viktigt: postar till /admin/questions/:id med fält answer_title/answer_body/answer_tags -->
+      <form method="POST" action="/admin/questions/<%= q.id %>" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Svarsrubrik</label>
+          <input
+            type="text"
+            name="answer_title"
+            value="<%= q.answer_title || ('Svar: ' + q.title) %>"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+        </div>
 
         <div>
           <label class="block text-sm font-medium text-slate-700">Ditt svar</label>
-          <textarea name="body" rows="8" required
-                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                           focus:border-sky-500 focus:ring-sky-500 sm:text-sm"></textarea>
+          <textarea
+            name="answer_body"
+            rows="10"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm"><%= q.answer_body || '' %></textarea>
+          <p class="text-xs text-slate-500 mt-1">
+            HTML tillåts och saneras server-side (t.ex. <code>&lt;p&gt;</code>, listor, länkar).
+          </p>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700">Taggar (komma-separerade)</label>
-          <input name="tags" placeholder="ex: autotuner, virtual read, credits"
-                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                        focus:border-sky-500 focus:ring-sky-500 sm:text-sm"/>
+          <label class="block text-sm font-medium text-slate-700">Taggar (valfritt, komma-separerade)</label>
+          <input
+            name="answer_tags"
+            value="<%= q.answer_tags || '' %>"
+            placeholder="ex: b48, 330e, ecu"
+            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
         </div>
 
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Kategori</label>
-          <div class="relative mt-1">
-            <select name="categoryId"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                           focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
-              <option value="">— Välj kategori —</option>
-              <% (categories || []).forEach(function(c){ %>
-                <option value="<%= c.id %>"><%= c.title %></option>
-              <% }); %>
-            </select>
-            <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
-          </div>
-        </div>
-
-        <div class="pt-2">
+        <div class="pt-2 flex items-center gap-3">
           <button type="submit"
                   class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
-            Publicera svar
+            <i class="ti ti-device-floppy"></i> Spara svar
           </button>
+
+          <% if (q.is_answered) { %>
+            <span class="text-sm text-slate-500">Besvarad av <%= q.answered_by || 'Okänd' %></span>
+          <% } %>
         </div>
       </form>
     </div>
+
   </div>
 
-  <!-- Höger: status och koppla ämne -->
+  <!-- Högerkolumn: Status + koppla ämne -->
   <aside class="space-y-6">
 
     <!-- Ändra status -->
@@ -118,7 +124,7 @@ Status: <%= statusLabels[q.status] || q.status %>
       </div>
     </div>
 
-    <!-- Koppla ämne -->
+    <!-- Koppla befintligt ämne (om du vill länka inlägg/KB-artikel) -->
     <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
       <h3 class="font-semibold text-slate-900 mb-3">Koppla ämne</h3>
       <div class="relative">
@@ -142,27 +148,38 @@ Status: <%= statusLabels[q.status] || q.status %>
       <% } %>
     </div>
 
+    <!-- Radera fråga -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+      <h3 class="font-semibold text-red-700 mb-3">Farligt område</h3>
+      <form method="POST"
+            action="/admin/questions/<%= q.id %>/delete"
+            data-del-form
+            data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-red-700">
+          <i class="ti ti-trash"></i> Ta bort fråga
+        </button>
+      </form>
+    </div>
+
   </aside>
 </section>
 
-<!-- Snackbar (lämna kvar) -->
+<!-- Snackbar -->
 <div id="snack"
      class="fixed bottom-4 left-1/2 -translate-x-1/2 hidden rounded-lg border px-4 py-2 text-sm shadow"></div>
-</section>
 
 <script>
 (function(){
-  // Hämta fråga-id utan EJS i JS (bättre för linters)
-  var root = document.getElementById('qView');
-  var qid  = Number(root && root.dataset.qid);
-
+  var root  = document.getElementById('qView');
+  var qid   = Number(root && root.dataset.qid);
   var snack = document.getElementById('snack');
+
   function toast(text, ok) {
-    if (ok === void 0) ok = true;
     snack.textContent = text;
     snack.className =
       'fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow ' +
-      (ok
+      (ok !== false
         ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
         : 'bg-red-50 text-red-800 border border-red-200');
     snack.classList.remove('hidden');
@@ -170,8 +187,7 @@ Status: <%= statusLabels[q.status] || q.status %>
   }
 
   // Byt status
-  var statusBtns = document.querySelectorAll('[data-status]');
-  statusBtns.forEach(function(btn){
+  document.querySelectorAll('[data-status]').forEach(function(btn){
     btn.addEventListener('click', function(){
       var status = btn.getAttribute('data-status');
       fetch('/api/questions/' + qid + '/status', {
@@ -257,6 +273,15 @@ Status: <%= statusLabels[q.status] || q.status %>
         location.reload();
       })
       .catch(function(){ toast('Kunde inte koppla ämne', false); });
+    });
+  }
+
+  // Confirm delete i “Farligt område”
+  var delForm = document.querySelector('[data-del-form]');
+  if (delForm){
+    delForm.addEventListener('submit', function(e){
+      var t = delForm.dataset.title || '';
+      if (!confirm('Ta bort frågan "' + t + '"? Detta går inte att ångra.')) e.preventDefault();
     });
   }
 })();
