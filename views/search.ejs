@@ -19,11 +19,17 @@
       <% } else { %>
         <% topics.forEach(t => { %>
           <article class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow transition">
-            <h3 class="text-lg font-semibold text-slate-900 mb-1">
-              <a href="/topic/<%= encodeURIComponent(t.id) %>" class="hover:underline">
-                <%= t.title %>
-              </a>
-            </h3>
+<h3 class="text-lg font-semibold text-slate-900 mb-1">
+  <a href="/topic/<%= encodeURIComponent(t.id) %>" class="hover:underline">
+    <%
+      const rawTitle = t.title || '';
+      const displayTitle = rawTitle.startsWith('Svar: ')
+        ? ('Fråga: ' + rawTitle.slice(6))
+        : rawTitle;
+    %>
+    <%= displayTitle %>
+  </a>
+</h3>
             <% if (t.excerpt) { %>
               <p class="text-sm text-slate-600"><%= t.excerpt %></p>
             <% } %>
