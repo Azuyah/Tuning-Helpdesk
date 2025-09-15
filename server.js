@@ -1464,18 +1464,39 @@ app.get('/api/suggest', (req, res) => {
   res.json(rows);
 });
 
-// --- Resultatsida (server-renderad lista)
-app.get('/search', (req, res) => {
-  const user = getUser(req);
-  const raw  = (req.query.q || '').trim();
-  const q    = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
+// --- API: search (JSON som frontenden hämtar på /search)
+app.get('/api/search', (req, res) => {
+  const raw = (req.query.q || '').trim();
+  const q   = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
 
-  let results = [];
-  if (q) {
-    const terms = q.split(/\s+/).filter(Boolean).map(t => `${t}*`).join(' AND ');
+  const baseSelect = `
+    SELECT
+      t.id,
+      CASE 
+        WHEN b.answer_for_question_id IS NOT NULL THEN
+          'Fråga: ' || CASE 
+                         WHEN instr(t.title, 'Svar: ') = 1 THEN substr(t.title, 7)
+                         ELSE t.title
+                       END
+        ELSE t.title
+      END AS title,
+      (b.answer_for_question_id IS NOT NULL) AS is_answer,
+      COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,200)) AS excerpt
+    FROM topics_base b
+    JOIN topics t ON t.id = b.id
+  `;
 
-    results = db.prepare(`
-      SELECT 
+  if (!q) {
+    const rows = db.prepare(`${baseSelect} ORDER BY b.updated_at DESC LIMIT 50`).all();
+    return res.json(rows);
+  }
+
+  const terms = q.split(/\s+/).filter(Boolean).map(t => `${t}*`).join(' AND ');
+  let rows = [];
+
+  try {
+    rows = db.prepare(`
+      SELECT
         t.id,
         CASE 
           WHEN b.answer_for_question_id IS NOT NULL THEN
@@ -1485,6 +1506,7 @@ app.get('/search', (req, res) => {
                          END
           ELSE t.title
         END AS title,
+        (b.answer_for_question_id IS NOT NULL) AS is_answer,
         COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,200)) AS excerpt,
         bm25(topics_fts) AS score
       FROM topics_fts f
@@ -1494,34 +1516,21 @@ app.get('/search', (req, res) => {
       ORDER BY score
       LIMIT 100
     `).all(terms);
+  } catch { rows = []; }
 
-    // fallback LIKE om FTS mot förmodan ger 0
-    if (results.length === 0) {
-      const like = `%${q}%`;
-      results = db.prepare(`
-        SELECT 
-          t.id,
-          CASE 
-            WHEN b.answer_for_question_id IS NOT NULL THEN
-              'Fråga: ' || CASE 
-                             WHEN instr(t.title, 'Svar: ') = 1 THEN substr(t.title, 7)
-                             ELSE t.title
-                           END
-            ELSE t.title
-          END AS title,
-          COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,200)) AS excerpt,
-          9999 AS score
-        FROM topics_base b
-        JOIN topics t ON t.id = b.id
-        WHERE t.title   LIKE ? 
-           OR t.excerpt LIKE ? 
-           OR t.body    LIKE ?
-        LIMIT 100
-      `).all(like, like, like);
-    }
+  if (!rows.length) {
+    const like = `%${q}%`;
+    rows = db.prepare(`
+      ${baseSelect}
+      WHERE t.title   LIKE ?
+         OR t.excerpt LIKE ?
+         OR t.body    LIKE ?
+      ORDER BY b.updated_at DESC
+      LIMIT 100
+    `).all(like, like, like);
   }
 
-  res.render('search', { user, q, results, title: `Sök: ${q || ''}` });
+  res.json(rows);
 });
 
 // Kategorisida: visa alla topics som matchar en tagg/kategori
