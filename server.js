@@ -599,7 +599,7 @@ app.post('/admin/questions/:id', requireAdmin, (req, res) => {
   if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
 
   const answer_title = (req.body.answer_title || '').trim() || `Svar: ${q.title}`;
-  const answer_body  = cleanHtml(req.body.answer_body || '');
+  const answer_body  = (req.body.answer_body || '').trim();  
   const answer_tags  = (req.body.answer_tags || '').trim();
   const answered_by  = req.user?.name || req.user?.email || 'Admin';
   const answered_at  = new Date().toISOString();
