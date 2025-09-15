@@ -1,91 +1,88 @@
-<section class="mx-auto max-w-4xl px-4 py-10">
-  <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-slate-900">Fråga #<%= q.id %></h1>
-<a href="javascript:window.history.back()" 
-   class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">
-  <i class="ti ti-arrow-left"></i> Tillbaka
-</a>
-  </div>
+<!-- views/question.ejs -->
+<section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-10">
+  <!-- Vänsterkolumn -->
+  <div class="lg:col-span-2 space-y-8">
 
-  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-    <% 
-      const statusCls =
-        q.status === 'open' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-      : q.status === 'answered' ? 'bg-sky-50 text-sky-700 border border-sky-200'
-      : 'bg-slate-50 text-slate-700 border border-slate-200';
-    %>
-    <div class="flex flex-wrap items-center gap-3 mb-2">
-      <span class="text-sm rounded-full px-2 py-1 <%= statusCls %>">
-        <% 
-  const statusLabels = {
-    open: "Öppen",
-    answered: "Besvarad",
-    closed: "Stängd"
-  };
-%>
-Status: <%= statusLabels[q.status] || q.status %>
-      </span>
-      <span class="text-sm text-slate-500">
-        Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>
-      </span>
-      <% if (q.updated_at) { %>
-        <span class="text-sm text-slate-500">
-          Uppdaterad: <%= new Date(q.updated_at).toLocaleString('sv-SE') %>
-        </span>
+    <!-- FRÅGA -->
+    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+      <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Fråga</div>
+
+      <h1 class="text-2xl font-bold text-slate-900 mb-2">
+        Fråga: <%= q.title %>
+      </h1>
+
+      <% if (q.body) { %>
+        <p class="text-slate-700 whitespace-pre-line"><%= q.body %></p>
+      <% } else { %>
+        <p class="text-slate-500 italic">Ingen beskrivning bifogad.</p>
       <% } %>
-    </div>
 
-    <h2 class="text-xl font-semibold text-slate-900"><%= q.title %></h2>
+      <div class="mt-4 text-sm text-slate-500">
+        Från:
+        <span class="font-medium"><%= q.user_name || 'Anonym' %></span>
+        • Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>
+      </div>
+    </article>
 
-    <% if (q.body) { %>
-      <p class="mt-3 text-slate-700 whitespace-pre-line"><%= q.body %></p>
-    <% } %>
+    <!-- SVAR -->
+    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+      <div class="flex items-start justify-between mb-4">
+        <h2 class="text-xl font-semibold text-slate-900">
+          <%= answerTopic ? (answerTopic.title || 'Svar') : 'Svar' %>
+        </h2>
 
-    <div class="mt-4 text-sm text-slate-600">
-      Från:
-      <span class="font-medium"><%= q.user_name || '' %></span>
-      <% if (q.user_email) { %>&lt;<%= q.user_email %>&gt;<% } %>
-    </div>
+        <% if (user && user.role === 'admin') { %>
+          <div class="flex items-center gap-2">
+            <% if (answerTopic) { %>
+              <a href="/admin/edit-topic/<%= encodeURIComponent(answerTopic.id) %>"
+                 class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+                <i class="ti ti-edit"></i> Redigera
+              </a>
+              <form method="POST"
+                    action="/admin/topics/<%= encodeURIComponent(answerTopic.id) %>/delete"
+                    onsubmit="return confirm('Ta bort ämnet & kopplad fråga? Detta går inte att ångra.');">
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700">
+                  Ta bort
+                </button>
+              </form>
+            <% } else { %>
+              <a href="/admin/questions/<%= q.id %>" class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+                <i class="ti ti-message-plus"></i> Svara
+              </a>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+
+      <% if (answerTopic) { %>
+        <div class="prose prose-slate max-w-none mb-6">
+          <%- answerTopic.body %>
+        </div>
+        <div class="text-sm text-slate-500">
+          Svarat av: <span class="font-medium"><%= answerTopic.author_name || 'Okänd' %></span>
+          • <%= new Date(answerTopic.created_at || answerTopic.updated_at || Date.now()).toLocaleString('sv-SE') %>
+        </div>
+        <% if (answerTopic.tags) { %>
+          <div class="mt-8">
+            <h3 class="text-sm font-semibold text-slate-500 uppercase">Taggar</h3>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <% answerTopic.tags.split(',').forEach(function(tag){ %>
+                <span class="text-xs rounded-full bg-slate-100 text-slate-700 px-3 py-1"><%= tag.trim() %></span>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+      <% } else { %>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 text-slate-600 px-4 py-3">
+          Frågan har ej blivit besvarad än.
+        </div>
+      <% } %>
+    </article>
   </div>
 
-<!-- Svar / kopplade guider (”det vi hänvisar till för den här frågan”) -->
-<div class="mt-8">
-  <% const hasLinked = Array.isArray(linked) && linked.length > 0; %>
-  <h3 class="text-lg font-semibold text-slate-900 mb-3">
-    <%= hasLinked
-        ? (linked.length > 1 ? 'Din fråga har blivit besvarad' 
-                             : 'Din fråga har blivit besvarad')
-        : 'Svar' %>
-  </h3>
-
-<% const gridCols = hasLinked && linked.length > 1 ? 'md:grid-cols-2' : 'md:grid-cols-1'; %>
-
-<div class="grid grid-cols-1 <%= gridCols %> gap-6">
-  <% if (!hasLinked) { %>
-    <div class="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600 md:col-span-1">
-      Frågan har ej blivit besvarad än.
-    </div>
-  <% } else { %>
-    <% linked.forEach(function(t){ %>
-      <article class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow transition">
-        <div class="flex items-center justify-between gap-3 mb-2">
-          <h4 class="text-base font-semibold text-slate-900">
-            <a href="/topic/<%= t.id %>" class="hover:underline"><%= t.title %></a>
-          </h4>
-          <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Besvarad fråga
-          </span>
-        </div>
-        <% if (t.excerpt) { %>
-          <p class="text-sm text-slate-600 line-clamp-3"><%= t.excerpt %></p>
-        <% } %>
-        <div class="mt-3">
-          <a href="/topic/<%= t.id %>" class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50">
-            <i class="ti ti-eye"></i> Visa svar
-          </a>
-        </div>
-      </article>
-    <% }) %>
-  <% } %>
-</div>
-</div>
+  <!-- Högerkolumn (valfritt innehåll) -->
+  <aside class="space-y-8">
+    <!-- här kan du lägga relaterat/information senare om du vill -->
+  </aside>
+</section>

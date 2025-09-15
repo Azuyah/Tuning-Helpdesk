@@ -1021,13 +1021,28 @@ app.post('/admin/topics/:id/delete', requireAdmin, (req, res) => {
   }
 });
 
-// Publik vy/redirect för frågor
+// Publik vy för fråga – alltid samma layout (med/utan svar)
 app.get('/questions/:id', (req, res) => {
   const id = Number(req.params.id);
-  const q = db.prepare(`SELECT * FROM questions WHERE id=?`).get(id);
+
+  // Frågan
+  const q = db.prepare(`
+    SELECT q.id, q.user_id, q.title, q.body, q.status, q.created_at, q.updated_at,
+           u.name  AS user_name, u.email AS user_email
+    FROM questions q
+    LEFT JOIN users u ON u.id = q.user_id
+    WHERE q.id = ?
+  `).get(id);
   if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
 
-  // Om det finns ett kopplat ämne → redirecta till svaret
+  // (valfritt) blockera stängd fråga för andra än ägaren/admin
+  const me = getUser(req);
+  const isOwner = me && me.id === q.user_id;
+  if (q.status === 'closed' && !isOwner && (!me || me.role !== 'admin')) {
+    return res.status(403).render('403', { title: 'Åtkomst nekad' });
+  }
+
+  // Finns kopplat svar-ämne?
   const link = db.prepare(`
     SELECT qt.topic_id
     FROM question_topic qt
@@ -1035,24 +1050,26 @@ app.get('/questions/:id', (req, res) => {
     ORDER BY rowid DESC
     LIMIT 1
   `).get(id);
-  if (link && link.topic_id) {
-    return res.redirect(302, `/topic/${encodeURIComponent(link.topic_id)}`);
+
+  let answerTopic = null;
+  if (link?.topic_id) {
+    answerTopic = db.prepare(`
+      SELECT b.id, b.created_at, b.updated_at, b.answer_for_question_id,
+             t.title, t.excerpt, t.body, t.tags,
+             u.name AS author_name
+      FROM topics_base b
+      JOIN topics t   ON t.id = b.id
+      LEFT JOIN users u ON u.id = b.created_by
+      WHERE b.id = ?
+    `).get(link.topic_id);
   }
 
-  // Annars: hämta ev. länkade (kan vara tomt)
-  const linked = db.prepare(`
-    SELECT t.id, t.title, t.excerpt
-    FROM question_topic qt
-    JOIN topics t ON t.id = qt.topic_id
-    WHERE qt.question_id = ?
-    ORDER BY t.title
-  `).all(id);
-
+  res.locals.showHero = false;
   res.render('question', {
-    title: q.title,
+    title: `Fråga: ${q.title}`,
     q,
-    linked,               // <<— viktigt
-    user: getUser(req)
+    answerTopic,     // <- ny
+    user: me
   });
 });
 
