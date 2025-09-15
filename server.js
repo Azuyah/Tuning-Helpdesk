@@ -987,18 +987,38 @@ app.get('/resources', (req, res) => {
   res.render('resources', { title: 'Resurser', resources: rows, user: getUser(req) });
 });
 
-// Ta bort ett ämne (admin)
+// Ta bort ett ämne (admin) – och radera även källfrågan om detta är ett svar
 app.post('/admin/topics/:id/delete', requireAdmin, (req, res) => {
   const id = req.params.id;
 
-  // Ta bort FTS-raden först (den har ingen FK)
-  db.prepare('DELETE FROM topics_fts WHERE id=?').run(id);
+  const tx = db.transaction(() => {
+    // 1) Kolla om ämnet är ett svar på en fråga
+    const row = db.prepare(`
+      SELECT answer_for_question_id AS qid
+      FROM topics_base
+      WHERE id = ?
+    `).get(id);
 
-  // Detta raderar huvudet och CASCADE tar hand om topics + länktabeller
-  db.prepare('DELETE FROM topics_base WHERE id=?').run(id);
+    // 2) Ta bort FTS-raden (ingen FK)
+    db.prepare('DELETE FROM topics_fts WHERE id=?').run(id);
 
-  // Tillbaka till adminpanelen
-  res.redirect('/admin');
+    // 3) Ta bort ämnet; CASCADE tar bort topics + topic_category + question_topic (via topic_id)
+    db.prepare('DELETE FROM topics_base WHERE id=?').run(id);
+
+    // 4) Om ämnet var ett svar → ta bort själva frågan också
+    if (row && row.qid) {
+      // Raderar frågan; CASCADE tar samtidigt bort ev. question_topic-rader (via question_id)
+      db.prepare('DELETE FROM questions WHERE id=?').run(row.qid);
+    }
+  });
+
+  try {
+    tx();
+    res.redirect('/admin');
+  } catch (e) {
+    console.error('Delete topic failed:', e);
+    res.status(500).send('Kunde inte ta bort ämnet.');
+  }
 });
 
 // Publik vy/redirect för frågor
