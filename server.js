@@ -1621,6 +1621,19 @@ app.get('/category/:id', (req, res) => {
   });
 });
 
+// Ta bort en fråga (admin)
+app.post('/admin/questions/:id/delete', requireAdmin, (req, res) => {
+  const id = Number(req.params.id);
+
+  // ta bort kopplingar först (om några)
+  db.prepare('DELETE FROM question_topic WHERE question_id=?').run(id);
+
+  // radera själva frågan
+  db.prepare('DELETE FROM questions WHERE id=?').run(id);
+
+  res.redirect('/admin');
+});
+
 app.get('/login', (req, res) =>
   res.render('login', { user: getUser(req), title: 'Logga in', next: req.query.next || '/' })
 );
