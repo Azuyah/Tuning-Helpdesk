@@ -54,14 +54,8 @@
 
     <!-- SVAR / ÄMNE (eget kort under frågan) -->
     <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-      <div class="mb-4">
-        <h2 class="text-2xl font-bold text-slate-900">
-  <% if (sourceQuestion) { %>
-    Svar: <%= topic.title %>
-  <% } else { %>
-    <%= topic.title %>
-  <% } %>
-</h2>
+      <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Svar</div>
+        <h2 class="text-2xl font-bold text-slate-900"><%= topic.title %></h2>
       </div>
 
       <div class="prose prose-slate max-w-none mb-6">
