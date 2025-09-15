@@ -129,6 +129,12 @@ function initSchemaAndSeed() {
   addColumnIfMissing('questions', 'user_seen_answer_at', 'TEXT');
   // (frivillig) för admins: markera nya obesvarade frågor
   addColumnIfMissing('questions', 'admin_seen_new', 'INTEGER DEFAULT 0');
+addColumnIfMissing('users', 'created_at', 'TEXT');
+addColumnIfMissing('users', 'updated_at', 'TEXT');
+
+// Backfill tidsstämplar för befintliga rader
+db.prepare(`UPDATE users SET created_at = COALESCE(created_at, datetime('now'))`).run();
+db.prepare(`UPDATE users SET updated_at = COALESCE(updated_at, datetime('now'))`).run();
 
   // Se till att FTS har innehåll
   const ftsCountRow = db.prepare(`SELECT count(*) AS n FROM topics_fts`).get();
@@ -1241,8 +1247,8 @@ app.post('/profile', requireAuth, (req, res) => {
     return renderProfile(res, userId, { err: 'E-post används redan.' });
   }
 
-  db.prepare('UPDATE users SET name=?, email=?, updated_at=datetime("now") WHERE id=?')
-    .run(name, email, userId);
+db.prepare("UPDATE users SET name=?, email=?, updated_at=datetime('now') WHERE id=?")
+  .run(name, email, userId);
 
   // uppdatera JWT så headern visar direkt
   const fresh = db.prepare('SELECT id,email,role,name FROM users WHERE id=?').get(userId);
@@ -1254,8 +1260,6 @@ app.post('/profile', requireAuth, (req, res) => {
 });
 
 // --- Uppdatera profil (kompatibel med din nuvarande vy) ---
-// Ditt "Profilinställningar"-formulär postar till /profile/update — vi stöder det här.
-// Om fälten för lösenord också skulle skickas i samma form hanteras det med.
 app.post('/profile/update', requireAuth, (req, res) => {
   const userId          = req.user.id;
   const name            = (req.body.name || '').trim();
@@ -1264,24 +1268,36 @@ app.post('/profile/update', requireAuth, (req, res) => {
   const newPassword1    = (req.body.password1 || req.body.new_password || '').trim();
   const newPassword2    = (req.body.password2 || '').trim();
 
-  // 1) Namn/E-post (om e-post fanns med i posten)
-  if (email) {
-    // e-post krävs om man vill uppdatera profilinfo
-    const exists = db.prepare('SELECT id FROM users WHERE email=? AND id<>?').get(email, userId);
-    if (exists) {
-      return renderProfile(res, userId, { err: 'E-post används redan.' });
-    }
-    db.prepare('UPDATE users SET name=?, email=?, updated_at=datetime("now") WHERE id=?')
-      .run(name, email, userId);
+  const msgs = [];
 
+  // ---- 1) Uppdatera namn/e-post (var för sig) ----
+// Uppdatera namn om angivet
+if (name) {
+  db.prepare('UPDATE users SET name=?, updated_at=datetime(\'now\') WHERE id=?')
+    .run(name, userId);
+  msgs.push('Namn uppdaterat');
+}
+
+if (email) {
+  const exists = db.prepare('SELECT id FROM users WHERE email=? AND id<>?').get(email, userId);
+  if (exists) {
+    return renderProfile(res, userId, { err: 'E-post används redan.' });
+  }
+  db.prepare('UPDATE users SET email=?, updated_at=datetime(\'now\') WHERE id=?')
+    .run(email, userId);
+  msgs.push('E-post uppdaterad');
+}
+
+  // Om vi uppdaterade namn eller e-post: fräscha JWT så headern visar rätt
+  if (name || email) {
     const fresh = db.prepare('SELECT id,email,role,name FROM users WHERE id=?').get(userId);
     res.cookie('auth', signUser(fresh), {
       httpOnly: true, sameSite: 'lax', secure: false, maxAge: 14*24*3600*1000
     });
   }
 
-  // 2) Lösenord (om något lösenordsfält är ifyllt)
-  const wantsPwChange = currentPassword || newPassword1 || newPassword2;
+  // ---- 2) Lösenordsbyte (om några pw-fält skickats) ----
+  const wantsPwChange = !!(currentPassword || newPassword1 || newPassword2);
   if (wantsPwChange) {
     if (!currentPassword || !newPassword1 || !newPassword2) {
       return renderProfile(res, userId, { err: 'Fyll i nuvarande lösenord och båda fälten för nytt lösenord.' });
@@ -1294,42 +1310,18 @@ app.post('/profile/update', requireAuth, (req, res) => {
       return renderProfile(res, userId, { err: 'Nuvarande lösenord stämmer inte.' });
     }
     const hash = bcrypt.hashSync(newPassword1, 10);
-    db.prepare('UPDATE users SET password_hash=?, updated_at=datetime("now") WHERE id=?')
-      .run(hash, userId);
+db.prepare("UPDATE users SET password_hash=?, updated_at=datetime('now') WHERE id=?")
+  .run(hash, userId);
+    msgs.push('Lösenord uppdaterat');
   }
 
-  // Meddelande beroende på vad som uppdaterats
-  const msgs = [];
-  if (email) msgs.push('Profil uppdaterad');
-  if (wantsPwChange) msgs.push('Lösenord uppdaterat');
-
-  return res.redirect('/profile?ok=' + encodeURIComponent(msgs.join(' • ') || 'Inget att uppdatera.'));
-});
-
-// --- Endast lösenordsbyte (din nuvarande "Byt lösenord"-form skickar hit) ---
-app.post('/profile/password', requireAuth, (req, res) => {
-  const userId          = req.user.id;
-  const currentPassword = (req.body.current || '').trim();
-  const newPassword1    = (req.body.password1 || '').trim();
-  const newPassword2    = (req.body.password2 || '').trim();
-
-  if (!currentPassword || !newPassword1 || !newPassword2) {
-    return renderProfile(res, userId, { err: 'Fyll i nuvarande lösenord och båda fälten för nytt lösenord.' });
-  }
-  if (newPassword1 !== newPassword2) {
-    return renderProfile(res, userId, { err: 'Nya lösenorden matchar inte.' });
+  // ---- 3) Inget alls ifyllt? ----
+  if (msgs.length === 0) {
+    return renderProfile(res, userId, { err: 'Inget att uppdatera.' });
   }
 
-  const u = db.prepare('SELECT * FROM users WHERE id=?').get(userId);
-  if (!u || !bcrypt.compareSync(currentPassword, u.password_hash)) {
-    return renderProfile(res, userId, { err: 'Nuvarande lösenord stämmer inte.' });
-  }
-
-  const hash = bcrypt.hashSync(newPassword1, 10);
-  db.prepare('UPDATE users SET password_hash=?, updated_at=datetime("now") WHERE id=?')
-    .run(hash, userId);
-
-  return res.redirect('/profile?ok=' + encodeURIComponent('Lösenord uppdaterat'));
+  // ---- 4) Klart ----
+  return res.redirect('/profile?ok=' + encodeURIComponent(msgs.join(' • ')));
 });
 
 // Sidorout för sökresultat (visar hero + lista under)
