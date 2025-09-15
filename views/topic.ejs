@@ -14,7 +14,7 @@
         <div class="flex items-center gap-2">
           <a href="/admin/edit-topic/<%= encodeURIComponent(topic.id) %>"
              class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
-            <i class="ti ti-eye"></i> Visa
+            <i class="ti ti-edit"></i> Redigera
           </a>
 
           <form method="POST"
@@ -23,7 +23,7 @@
                 data-title="<%- (topic.title || '').replace(/\"/g,'&quot;') %>">
             <button type="submit"
                     class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
-              <i class="ti ti-trash"></i> Ta bort
+              <i class="ti ti-pencil"></i> Ta bort
             </button>
           </form>
         </div>

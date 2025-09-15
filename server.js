@@ -9,6 +9,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import slugify from 'slugify';
 import expressLayouts from 'express-ejs-layouts';
+import { JSDOM } from 'jsdom';
+import createDOMPurify from 'dompurify';
+
+const window = new JSDOM('').window;
+const DOMPurify = createDOMPurify(window);
+
+const ALLOWED_TAGS = [
+  'p','br','ul','ol','li','strong','em','u','blockquote',
+  'h1','h2','h3','a','span'
+];
+const ALLOWED_ATTR = ['href','target','rel','class'];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -442,15 +453,18 @@ app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
 
   const title        = (req.body.title || '').trim();
   const excerpt      = (req.body.excerpt || '').trim();
-  const body         = (req.body.body || '').trim();
+  const rawBody      = req.body.body || ''; // ej trim här – vi vill bevara HTML
   const tags         = (req.body.tags || '').trim();
   const categoryId   = req.body.categoryId || null;
 
   // Nya fält
-  const is_resource  = req.body.is_resource ? 1 : 0;               // checkbox -> 1/0
+  const is_resource  = req.body.is_resource ? 1 : 0;
   const download_url = (req.body.download_url || '').trim();
 
   if (!title) return res.status(400).send('Titel krävs');
+
+  // Sanera HTML-innehåll
+  const body = DOMPurify.sanitize(rawBody, { ALLOWED_TAGS, ALLOWED_ATTR });
 
   db.prepare(`
     UPDATE topics
@@ -473,7 +487,6 @@ app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
 
   res.redirect('/admin');
 });
-
 // Visa en fråga i admin
 app.get('/admin/questions/:id', requireAdmin, (req, res) => {
   const q = db.prepare(`
