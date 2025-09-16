@@ -1645,71 +1645,116 @@ app.post('/admin/new-topic', requireAdmin, (req, res) => {
 
   res.redirect('/admin');
 });
-// --- SUGGEST (topp-8 under sökfältet)
-app.get('/api/suggest', (req, res) => {
+
+// 1) Manuell dealers-sync-knapp
+app.post('/admin/sync-dealers', requireAdmin, async (req, res) => {
+  try {
+    await syncAllDealers();
+    return res.redirect('/admin?ok=Dealer%20sync%20klar');
+  } catch (e) {
+    console.error('Admin sync error:', e);
+    return res.redirect('/admin?err=Sync%20misslyckades');
+  }
+});
+
+// 2) Bygg om sökindex (topics_fts)
+app.post('/admin/reindex', requireAdmin, (req, res) => {
+  try {
+    // töm index
+    db.prepare(`DELETE FROM topics_fts`).run();
+    // återbygg från topics
+    const rows = db.prepare(`SELECT id, COALESCE(title,'') AS title, COALESCE(excerpt,'') AS excerpt, COALESCE(body,'') AS body FROM topics`).all();
+    const ins  = db.prepare(`INSERT INTO topics_fts (id,title,excerpt,body) VALUES (?,?,?,?)`);
+    const tx   = db.transaction(list => { for (const r of list) ins.run(r.id, r.title, r.excerpt, r.body); });
+    tx(rows);
+    return res.redirect('/admin?ok=Sökindex%20återbyggt');
+  } catch (e) {
+    console.error('Reindex error:', e);
+    return res.redirect('/admin?err=Kunde%20inte%20bygga%20om%20sökindex');
+  }
+});
+
+// Sök i både topics och questions
+app.get('/api/search', (req, res) => {
   const raw = (req.query.q || '').trim();
-  if (!raw) return res.json([]);
+  // Tom fråga → visa senaste ämnen + frågor
+  const hasQ = raw.length > 0;
 
-  // Rensa och gör enkla prefix-termer
+  // Rensa + för LIKE
   const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
-  const termsArr = q.split(/\s+/).filter(Boolean).map(t => `${t}*`);
-  const ftsQuery = termsArr.length ? termsArr.join(' OR ') : '';
+  const esc = (s) => s.replace(/[%_]/g, m => '\\' + m);
+  const like = `%${esc(q)}%`;
 
-  let rows = [];
-  // 1) FTS (snällare OR + prefix)
-  if (ftsQuery) {
-    try {
-      rows = db.prepare(`
-        SELECT 
-          t.id,
-          CASE 
-            WHEN b.answer_for_question_id IS NOT NULL THEN
-              'Fråga: ' || CASE 
-                             WHEN instr(t.title, 'Svar: ') = 1 THEN substr(t.title, 7)
-                             ELSE t.title
-                           END
-            ELSE t.title
-          END AS title,
-          substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
-        FROM topics_fts f
-        JOIN topics      t ON t.id = f.id
-        JOIN topics_base b ON b.id = f.id
-        WHERE topics_fts MATCH ?
-        ORDER BY bm25(topics_fts)
-        LIMIT 8
-      `).all(ftsQuery);
-    } catch {
-      rows = [];
-    }
-  }
+  // Hur många resultat totalt
+  const LIMIT = 30;
 
-  // 2) Fallback: LIKE om FTS gav noll
-  if (!rows.length) {
-    const esc  = (s) => s.replace(/[%_]/g, m => '\\' + m);
-    const like = `%${esc(q)}%`;
-    rows = db.prepare(`
+  const sqlWithQ = `
+    SELECT id, title, snippet, sort_ts, type FROM (
       SELECT 
-        b.id,
-        CASE 
-          WHEN b.answer_for_question_id IS NOT NULL THEN
-            'Fråga: ' || CASE 
-                           WHEN instr(t.title, 'Svar: ') = 1 THEN substr(t.title, 7)
-                           ELSE t.title
-                         END
-          ELSE t.title
-        END AS title,
-        substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
-      FROM topics_base b
-      JOIN topics t ON t.id = b.id
-      WHERE t.title   LIKE ? ESCAPE '\\'
+        t.id AS id,
+        t.title AS title,
+        substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 160) AS snippet,
+        b.updated_at AS sort_ts,
+        'topic' AS type
+      FROM topics t
+      JOIN topics_base b ON b.id = t.id
+      WHERE t.title LIKE ? ESCAPE '\\'
          OR t.excerpt LIKE ? ESCAPE '\\'
-         OR t.body    LIKE ? ESCAPE '\\'
-      ORDER BY b.updated_at DESC
-      LIMIT 8
-    `).all(like, like, like);
-  }
+         OR t.body LIKE ? ESCAPE '\\'
 
-  res.json(rows);
+      UNION ALL
+
+      SELECT
+        q.id AS id,
+        q.title AS title,
+        substr(COALESCE(q.body, ''), 1, 160) AS snippet,
+        q.updated_at AS sort_ts,
+        'question' AS type
+      FROM questions q
+      WHERE q.title LIKE ? ESCAPE '\\'
+         OR q.body LIKE ? ESCAPE '\\'
+    )
+    ORDER BY datetime(sort_ts) DESC
+    LIMIT ${LIMIT}
+  `;
+
+  const sqlNoQ = `
+    SELECT id, title, snippet, sort_ts, type FROM (
+      SELECT 
+        t.id AS id,
+        t.title AS title,
+        substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 160) AS snippet,
+        b.updated_at AS sort_ts,
+        'topic' AS type
+      FROM topics t
+      JOIN topics_base b ON b.id = t.id
+
+      UNION ALL
+
+      SELECT
+        q.id AS id,
+        q.title AS title,
+        substr(COALESCE(q.body, ''), 1, 160) AS snippet,
+        q.updated_at AS sort_ts,
+        'question' AS type
+      FROM questions q
+    )
+    ORDER BY datetime(sort_ts) DESC
+    LIMIT ${LIMIT}
+  `;
+
+  try {
+    let rows = [];
+    if (hasQ) {
+      rows = db.prepare(sqlWithQ).all(like, like, like, like, like);
+    } else {
+      rows = db.prepare(sqlNoQ).all();
+    }
+    res.json(rows);
+  } catch (e) {
+    console.error('search error:', e);
+    res.status(500).json([]);
+  }
 });
 
 // --- API: search (JSON som frontenden hämtar på /search)
@@ -1928,6 +1973,7 @@ app.get('/admin/dealers/token', requireAdmin, (req, res) => {
   res.json(row);
 });
 
+// 3) (Valfritt) Senaste användare & dealers till dashboarden
 app.get('/admin', requireAdmin, (req, res) => {
   const openQs = db.prepare(`
     SELECT id, title, created_at
@@ -1945,11 +1991,28 @@ app.get('/admin', requireAdmin, (req, res) => {
     LIMIT 10
   `).all();
 
+  const latestUsers = db.prepare(`
+    SELECT id, email, name, role, created_at
+    FROM users
+    ORDER BY datetime(created_at) DESC
+    LIMIT 8
+  `).all();
+
+  const latestDealers = db.prepare(`
+    SELECT source, email, company, firstname, lastname, updated_at
+    FROM dealers
+    ORDER BY datetime(updated_at) DESC
+    LIMIT 8
+  `).all();
+
   res.render('admin', {
     title: 'Adminpanel',
     openQs,
     latestTopics,
-    user: getUser(req)
+    latestUsers,
+    latestDealers,
+    ok: req.query.ok || '',
+    err: req.query.err || ''
   });
 });
 

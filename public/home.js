@@ -13,19 +13,40 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = url;
   }
 
-  // --- autosuggest (om suggestBox finns) ---
-  function renderSuggest(rows = []) {
-    if (!$box) return;
-    if (!rows.length) { $box.classList.add('hidden'); $box.innerHTML = ''; return; }
-    $box.innerHTML = rows.map(r => `
-      <a href="/topic/${encodeURIComponent(r.id)}" class="block px-4 py-3 hover:bg-slate-50">
-        <div class="font-medium text-slate-900 line-clamp-1">${escapeHtml(r.title||'')}</div>
-        ${r.snippet ? `<div class="text-sm text-slate-600 line-clamp-1">${escapeHtml(r.snippet)}</div>` : ''}
-      </a>
-    `).join('');
-    $box.classList.remove('hidden');
+// --- autosuggest (om suggestBox finns) ---
+function renderSuggest(rows = []) {
+  if (!$box) return;
+  if (!rows.length) {
+    $box.classList.add('hidden');
+    $box.innerHTML = '';
+    return;
   }
 
+  $box.innerHTML = rows.map(r => {
+    const isTopic = r.type === 'topic';
+    const href    = isTopic
+      ? `/topic/${encodeURIComponent(r.id)}`
+      : `/questions/${encodeURIComponent(r.id)}`;
+    const badge   = isTopic
+      ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>'
+      : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>';
+    const snippet = r.snippet
+      ? `<div class="text-xs text-slate-600 line-clamp-1">${escapeHtml(r.snippet)}</div>`
+      : '';
+
+    return `
+      <a href="${href}" class="block px-4 py-3 hover:bg-slate-50">
+        <div class="flex items-center gap-2">
+          ${badge}
+          <div class="font-medium text-slate-900 line-clamp-1">${escapeHtml(r.title || '')}</div>
+        </div>
+        ${snippet}
+      </a>
+    `;
+  }).join('');
+
+  $box.classList.remove('hidden');
+}
   let tId = null;
   function debounce(fn, ms=150){ clearTimeout(tId); tId = setTimeout(fn, ms); }
 
@@ -40,29 +61,48 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- results (bara på sidor som har #results) ---
-  async function searchAndRender(q) {
-    // Finns ingen results-yta? Navigera till /search
-    if (!$results) { goSearch(); return; }
+// --- results (bara på sidor som har #results) ---
+async function searchAndRender(q) {
+  // Finns ingen results-yta? Navigera till /search
+  if (!$results) { goSearch(); return; }
 
-    try {
-      const url = q ? `/api/search?q=${encodeURIComponent(q)}` : '/api/search';
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
-      if (!res.ok) { console.error('HTTP', res.status); return; }
-      const rows = await res.json();
-      $results.innerHTML = (rows || []).map(t => `
+  try {
+    const url = q ? `/api/search?q=${encodeURIComponent(q)}` : `/api/search`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+    if (!res.ok) { console.error('HTTP', res.status); return; }
+    const rows = await res.json();
+
+    $results.innerHTML = (rows || []).map(item => {
+      const isTopic = item.type === 'topic';
+      const href    = isTopic
+        ? `/topic/${encodeURIComponent(item.id)}`
+        : `/questions/${encodeURIComponent(item.id)}`;
+
+      const badge   = isTopic
+        ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>'
+        : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>';
+
+      const snippet = item.snippet
+        ? `<p class="text-sm text-slate-600">${escapeHtml(item.snippet)}</p>`
+        : '';
+
+      return `
         <article class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow transition">
+          <div class="flex items-center gap-2 mb-2">${badge}</div>
           <h3 class="text-lg font-semibold text-slate-900 mb-1">
-            <a href="/topic/${encodeURIComponent(t.id)}" class="hover:underline">
-              ${escapeHtml(t.title || '')}
+            <a href="${href}" class="hover:underline">
+              ${escapeHtml(item.title || '')}
             </a>
           </h3>
-          ${t.excerpt ? `<p class="text-sm text-slate-600">${escapeHtml(t.excerpt)}</p>` : ``}
+          ${snippet}
         </article>
-      `).join('');
-    } catch (e) {
-      console.error('Search error', e);
-    }
+      `;
+    }).join('');
+
+  } catch (e) {
+    console.error('Search error', e);
   }
+}
 
   function escapeHtml(s) {
     return (s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
