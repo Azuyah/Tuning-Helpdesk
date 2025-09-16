@@ -1078,13 +1078,17 @@ app.get('/questions/:id', (req, res) => {
   const me = getUser(req);
 
   // Frågan
-  const q = db.prepare(`
-    SELECT q.id, q.user_id, q.title, q.body, q.status, q.created_at, q.updated_at,
-           u.name  AS user_name, u.email AS user_email
-    FROM questions q
-    LEFT JOIN users u ON u.id = q.user_id
-    WHERE q.id = ?
-  `).get(id);
+const q = db.prepare(`
+  SELECT q.id, q.user_id, q.title, q.body, q.status, 
+         q.created_at, q.updated_at,
+         q.answer_title, q.answer_body, q.answer_tags,
+         q.answered_by, q.answered_at, q.is_answered,
+         u.name  AS user_name,
+         u.email AS user_email
+  FROM questions q
+  LEFT JOIN users u ON u.id = q.user_id
+  WHERE q.id = ?
+`).get(id);
   if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
 
   // Hämta kopplat svar-ämne (om något)
