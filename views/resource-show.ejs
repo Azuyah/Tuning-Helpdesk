@@ -53,7 +53,9 @@
             <%= new Date(resource.updated_at).toLocaleDateString('sv-SE') %>
           </dd>
         </div>
-        <% /* Här kan du lägga till mer metadata framöver (filstorlek, version, checksumma) */ %>
+    <span class="text-xs text-slate-500 whitespace-nowrap">
+      Nedladdad <%= resource.downloads || 0 %> gånger
+    </span>
       </dl>
 
 <% if (resource.download_url) { %>
@@ -62,9 +64,6 @@
        class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2.5 font-semibold hover:bg-sky-700">
       <i class="ti ti-download"></i> Ladda ner
     </a>
-    <span class="text-xs text-slate-500 whitespace-nowrap">
-      Nedladdad <%= resource.downloads || 0 %> gånger
-    </span>
   </div>
 <% } else { %>
   <div class="mt-6 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">

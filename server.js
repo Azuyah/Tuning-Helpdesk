@@ -1287,19 +1287,20 @@ app.get('/resources', (req, res) => {
 
 app.get('/resources/:id/download', (req, res) => {
   const id = String(req.params.id || '').trim();
+
   const row = db.prepare(`
-    SELECT t.download_url, COALESCE(t.is_resource,0) AS is_resource
-    FROM topics t
-    WHERE t.id = ?
+    SELECT download_url
+    FROM topics
+    WHERE id = ?
   `).get(id);
 
-  if (!row)             return res.status(404).send('Resurs ej hittad');
+  if (!row)         return res.status(404).send('Resurs ej hittad');
   if (!row.download_url) return res.status(400).send('Ingen fil länkad');
 
-  // Öka räknaren (även om is_resource råkar vara 0)
   db.prepare(`UPDATE topics SET downloads = COALESCE(downloads,0) + 1 WHERE id = ?`).run(id);
 
-  // Skicka användaren till den riktiga länken (intern eller extern)
+  console.log('[download] incremented for', id);
+
   return res.redirect(row.download_url);
 });
 
