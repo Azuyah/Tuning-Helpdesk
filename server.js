@@ -1930,28 +1930,53 @@ app.get('/admin-accounts', requireAdmin, (req, res) => {
   const safePage   = Math.min(page, totalPages);
   const offset     = (safePage - 1) * perPage;
 
-  // --- Hämta dealers för aktuell sida ---
-  const dealers = db.prepare(`
-    SELECT source, dealer_id, email, username, company, firstname, lastname, telephone, added, updated_at
-    FROM dealers
-    ${whereSql}
-    ORDER BY datetime(updated_at) DESC
-    LIMIT ? OFFSET ?
-  `).all(...params, perPage, offset);
-
-  // --- Render ---
-  res.render('admin-accounts', {
-    title: 'Konton & dealers',
-    users,
-    dealers,
-    totalDealersAll,
-    totalFiltered,
-    totalPages,
-    page: safePage,
-    q,
+// --- Hämta dealers för aktuell sida ---
+const dealers = db.prepare(`
+  SELECT
     source,
-    perPage
-  });
+    dealer_id,
+    email,
+    username,
+    company,
+    firstname,
+    lastname,
+    telephone,
+    added,
+    updated_at,
+    md5_token               -- <-- ta med token
+  FROM dealers
+  ${whereSql}
+  ORDER BY datetime(updated_at) DESC
+  LIMIT ? OFFSET ?
+`).all(...params, perPage, offset);
+
+// --- Render ---
+res.render('admin-accounts', {
+  title: 'Konton & dealers',
+  users,
+  dealers,
+  totalDealersAll,
+  totalFiltered,
+  totalPages,
+  page: safePage,
+  q,
+  source,
+  perPage
+});
+});
+
+app.get('/admin/dealers/token', requireAdmin, (req, res) => {
+  const email = String(req.query.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).send('email is required');
+  const row = db.prepare(`
+    SELECT source, dealer_id, email, md5_token, updated_at
+    FROM dealers
+    WHERE lower(email) = ?
+    ORDER BY updated_at DESC
+    LIMIT 1
+  `).get(email);
+  if (!row) return res.status(404).send('not found');
+  res.json(row);
 });
 
 app.get('/admin', requireAdmin, (req, res) => {
