@@ -1014,6 +1014,101 @@ app.get('/api/questions', requireAuth, (req, res) => {
   res.json(rows);
 });
 
+// --- Autosuggest API ---
+app.get('/api/suggest', (req, res) => {
+  const raw = (req.query.q || '').trim();
+  if (!raw) return res.json([]);
+
+  // Sanera & gör prefix-termer för FTS
+  const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
+  const termsArr = q.split(/\s+/).filter(Boolean).map(t => `${t}*`);
+  const ftsQuery = termsArr.length ? termsArr.join(' OR ') : '';
+
+  const results = [];
+
+  // 1) Topics via FTS
+  if (ftsQuery) {
+    try {
+      const topicRows = db.prepare(`
+        SELECT t.id,
+               t.title,
+               substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+        FROM topics_fts f
+        JOIN topics      t ON t.id = f.id
+        JOIN topics_base b ON b.id = f.id
+        WHERE topics_fts MATCH ?
+        ORDER BY bm25(topics_fts)
+        LIMIT 5
+      `).all(ftsQuery);
+
+      for (const r of topicRows) {
+        results.push({
+          type: 'topic',
+          id: r.id,
+          title: r.title,
+          snippet: r.snippet || ''
+        });
+      }
+    } catch (e) {
+      // Ignorera FTS-fel, vi har fallback nedan
+    }
+  }
+
+  // 2) Fallback topics (LIKE) om FTS gav lite/inget
+  if (results.length < 5) {
+    const esc  = (s) => s.replace(/[%_]/g, m => '\\' + m);
+    const like = `%${esc(q)}%`;
+    const left = 5 - results.length;
+
+    const topicLike = db.prepare(`
+      SELECT b.id, t.title,
+             substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+      FROM topics_base b
+      JOIN topics t ON t.id = b.id
+      WHERE t.title   LIKE ? ESCAPE '\\'
+         OR t.excerpt LIKE ? ESCAPE '\\'
+         OR t.body    LIKE ? ESCAPE '\\'
+      ORDER BY b.updated_at DESC
+      LIMIT ?
+    `).all(like, like, like, left);
+
+    for (const r of topicLike) {
+      results.push({
+        type: 'topic',
+        id: r.id,
+        title: r.title,
+        snippet: r.snippet || ''
+      });
+    }
+  }
+
+  // 3) Questions (enkelt LIKE) upp till 3 st
+  if (results.length < 8) {
+    const esc  = (s) => s.replace(/[%_]/g, m => '\\' + m);
+    const like = `%${esc(q)}%`;
+    const left = 8 - results.length;
+
+    const qs = db.prepare(`
+      SELECT id, title, substr(COALESCE(body,''), 1, 120) AS snippet
+      FROM questions
+      WHERE title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\'
+      ORDER BY datetime(created_at) DESC
+      LIMIT ?
+    `).all(like, like, Math.min(left, 3));
+
+    for (const r of qs) {
+      results.push({
+        type: 'question',
+        id: String(r.id),
+        title: r.title,
+        snippet: r.snippet || ''
+      });
+    }
+  }
+
+  res.json(results);
+});
+
 app.get('/api/questions/:id', requireAuth, (req, res) => {
   const q = db.prepare('SELECT * FROM questions WHERE id=?').get(req.params.id);
   if (!q) return res.status(404).json({ error: 'not found' });

@@ -50,17 +50,16 @@ function renderSuggest(rows = []) {
   let tId = null;
   function debounce(fn, ms=150){ clearTimeout(tId); tId = setTimeout(fn, ms); }
 
-  async function fetchSuggest(q){
-    if (!$box) return;
-    try {
-      if (!q) { renderSuggest([]); return; }
-      const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      renderSuggest(Array.isArray(data) ? data : []);
-    } catch(e) { console.error(e); }
-  }
-
-  // --- results (bara på sidor som har #results) ---
+async function fetchSuggest(q){
+  if (!$box) return;
+  try {
+    if (!q) { renderSuggest([]); return; }
+    const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`);
+    if (!res.ok) { renderSuggest([]); return; }  // <— viktigt
+    const data = await res.json();
+    renderSuggest(Array.isArray(data) ? data : []);
+  } catch(e) { console.error(e); }
+}
 // --- results (bara på sidor som har #results) ---
 async function searchAndRender(q) {
   // Finns ingen results-yta? Navigera till /search
