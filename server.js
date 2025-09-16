@@ -1017,16 +1017,20 @@ app.get('/api/questions', requireAuth, (req, res) => {
 // --- Autosuggest API ---
 app.get('/api/suggest', (req, res) => {
   const raw = (req.query.q || '').trim();
-  if (!raw) return res.json([]);
+  if (!raw) {
+    console.log('[suggest] empty query');
+    return res.json([]);
+  }
 
   const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
   const termsArr = q.split(/\s+/).filter(Boolean).map(t => `${t}*`);
   const ftsQuery = termsArr.length ? termsArr.join(' OR ') : '';
 
-  const results = [];
-  const topicIds = new Set();   // för att undvika dubbletter
-  const topicTitles = new Set();// för att blocka frågor med samma titel
+  console.log('[suggest] q="%s" | fts="%s"', q, ftsQuery);
 
+  const results = [];
+  const topicIds = new Set();
+  const topicTitles = new Set();
   const norm = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
   // 1) Topics via FTS
@@ -1043,16 +1047,21 @@ app.get('/api/suggest', (req, res) => {
         LIMIT 5
       `).all(ftsQuery);
 
+      console.log('[suggest][FTS] rows=%d', topicRows.length);
+
       for (const r of topicRows) {
         const type = r.is_resource ? 'resource' : 'topic';
+        console.log('  -> FTS push:', { id: r.id, title: r.title, is_resource: r.is_resource, type });
         results.push({ type, id: r.id, title: r.title, snippet: r.snippet || '' });
         topicIds.add(r.id);
         topicTitles.add(norm(r.title));
       }
-    } catch {}
+    } catch (e) {
+      console.log('[suggest][FTS] ERROR:', e.message);
+    }
   }
 
-  // 2) Fallback topics (LIKE) om FTS gav lite/inget
+  // 2) Fallback topics (LIKE)
   if (results.length < 5) {
     const esc  = s => s.replace(/[%_]/g, m => '\\' + m);
     const like = `%${esc(q)}%`;
@@ -1070,16 +1079,19 @@ app.get('/api/suggest', (req, res) => {
       LIMIT ?
     `).all(like, like, like, left);
 
+    console.log('[suggest][LIKE] rows=%d (left=%d)', topicLike.length, left);
+
     for (const r of topicLike) {
-      if (topicIds.has(r.id)) continue; // redan tillagd via FTS
+      if (topicIds.has(r.id)) continue;
       const type = r.is_resource ? 'resource' : 'topic';
+      console.log('  -> LIKE push:', { id: r.id, title: r.title, is_resource: r.is_resource, type });
       results.push({ type, id: r.id, title: r.title, snippet: r.snippet || '' });
       topicIds.add(r.id);
       topicTitles.add(norm(r.title));
     }
   }
 
-  // 3) Questions (LIKE) – bara fyll ut, och bara om de inte "krockar" med topic/resource
+  // 3) Questions (LIKE)
   if (results.length < 8) {
     const esc  = s => s.replace(/[%_]/g, m => '\\' + m);
     const like = `%${esc(q)}%`;
@@ -1093,13 +1105,20 @@ app.get('/api/suggest', (req, res) => {
       LIMIT ?
     `).all(like, like, Math.min(left, 3));
 
+    console.log('[suggest][Q] rows=%d (left=%d)', qs.length, left);
+
     for (const r of qs) {
-      // blocka frågor vars titel matchar ett redan funnet topic/resource
-      if (topicTitles.has(norm(r.title))) continue;
+      if (topicTitles.has(norm(r.title))) {
+        console.log('  -> Q SKIP (title collision with topic/resource):', r.title);
+        continue;
+      }
+      console.log('  -> Q push:', { id: r.id, title: r.title });
       results.push({ type: 'question', id: String(r.id), title: r.title, snippet: r.snippet || '' });
     }
   }
 
+  // Summering
+  console.log('[suggest] OUT:', results.map(x => ({ id: x.id, type: x.type, title: x.title })).slice(0, 10));
   res.json(results);
 });
 
