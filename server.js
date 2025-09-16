@@ -1862,25 +1862,85 @@ app.get('/ask', (req, res) => {
   res.render('ask', { user: getUser(req), title: 'Ställ en fråga' });
 });
 
-app.get('/admin/accounts', (req, res) => {
-  const me = getUser(req);
-  if (!me || me.role !== 'admin') return res.status(403).send('Access denied');
+// Admin: visa alla konton & dealers med filter/sök/pagination
+app.get('/admin-accounts', requireAdmin, (req, res) => {
+  // --- Query params ---
+  const source = (req.query.source || 'all').toLowerCase(); // 'all' | 'nms' | 'dynex'
+  const qRaw   = (req.query.q || '').trim();
+  const q      = qRaw.toLowerCase();
+  const per    = [15,30,50,100].includes(Number(req.query.per)) ? Number(req.query.per) : 15;
+  const page   = Math.max(1, Number(req.query.page) || 1);
 
-  const users = db.prepare(`
-    SELECT id, email, name, role, created_at, updated_at
-    FROM users
-    ORDER BY created_at DESC
-    LIMIT 500
-  `).all();
+  // --- Users (lätt sök på namn/email) ---
+  let users = [];
+  if (q) {
+    const like = `%${q}%`;
+    users = db.prepare(`
+      SELECT id, email, name, role, created_at, updated_at
+      FROM users
+      WHERE lower(email) LIKE ? OR lower(COALESCE(name,'')) LIKE ?
+      ORDER BY created_at DESC
+      LIMIT 200
+    `).all(like, like);
+  } else {
+    users = db.prepare(`
+      SELECT id, email, name, role, created_at, updated_at
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT 200
+    `).all();
+  }
 
+  // --- Dealers: bygg WHERE dynamiskt ---
+  const where = [];
+  const params = [];
+
+  if (source !== 'all') {
+    where.push('source = ?');
+    params.push(source);
+  }
+  if (q) {
+    const like = `%${q}%`;
+    where.push(`(
+      lower(COALESCE(email,''))     LIKE ? OR
+      lower(COALESCE(username,''))  LIKE ? OR
+      lower(COALESCE(company,''))   LIKE ? OR
+      lower(COALESCE(firstname,'')) LIKE ? OR
+      lower(COALESCE(lastname,''))  LIKE ?
+    )`);
+    params.push(like, like, like, like, like);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  // Totalt alla dealers (utan filter) och totalt matchningar
+  const totalDealersAll = db.prepare(`SELECT COUNT(*) AS c FROM dealers`).get().c;
+  const totalFiltered   = db.prepare(`SELECT COUNT(*) AS c FROM dealers ${whereSql}`).get(...params).c;
+
+  const offset = (page - 1) * per;
   const dealers = db.prepare(`
-    SELECT source, dealer_id, email, username, company, firstname, lastname, telephone, added, updated_at
+    SELECT source, email, username, company, firstname, lastname, telephone, updated_at
     FROM dealers
+    ${whereSql}
     ORDER BY updated_at DESC
-    LIMIT 500
-  `).all();
+    LIMIT ? OFFSET ?
+  `).all(...params, per, offset);
 
-  res.render('admin-accounts', { title: 'Alla konton & dealers', users, dealers, user: me });
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / per));
+
+  res.render('admin-accounts', {
+    title: 'Konton & dealers',
+    users,
+    dealers,
+    // UI state
+    q: qRaw,
+    source,
+    per,
+    page,
+    totalPages,
+    totalDealersAll,
+    totalFiltered
+  });
 });
 
 app.get('/admin', requireAdmin, (req, res) => {

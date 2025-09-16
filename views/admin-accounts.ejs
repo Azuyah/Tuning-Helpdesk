@@ -1,14 +1,59 @@
 <!-- views/admin-accounts.ejs -->
-<section class="mx-auto max-w-6xl px-4 py-10 space-y-12">
-  <h1 class="text-2xl font-bold text-slate-900">Alla konton & dealers</h1>
+<section class="mx-auto max-w-6xl px-4 py-10 space-y-10">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Alla konton & dealers</h1>
+      <div class="mt-1 text-slate-600 text-sm">
+        Totalt dealers: <span class="font-medium"><%= totalDealersAll %></span>
+        • Matchar filter: <span class="font-medium"><%= totalFiltered %></span>
+      </div>
+    </div>
+
+    <!-- Filter / sök / per-page -->
+    <form method="get" class="grid grid-cols-2 sm:flex items-end gap-3">
+      <!-- Sök -->
+      <div class="col-span-2 sm:w-64">
+        <label class="block text-xs font-medium text-slate-600 mb-1">Sök (email, namn, företag, användarnamn)</label>
+        <input name="q" value="<%= q %>" placeholder="t.ex. johanna, dynex, @gmail.com"
+               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-sm"/>
+      </div>
+
+      <!-- Källa -->
+      <div class="sm:w-40">
+        <label class="block text-xs font-medium text-slate-600 mb-1">Källa</label>
+        <select name="source"
+                class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-sm">
+          <option value="all"   <%= source==='all'?'selected':'' %>  >Alla</option>
+          <option value="nms"   <%= source==='nms'?'selected':'' %>  >NMS</option>
+          <option value="dynex" <%= source==='dynex'?'selected':'' %>>DYNEX</option>
+        </select>
+      </div>
+
+      <!-- Resultat per sida -->
+      <div class="sm:w-40">
+        <label class="block text-xs font-medium text-slate-600 mb-1">Resultat per sida</label>
+        <select name="per"
+                class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-sm">
+          <option value="15"  <%= per===15?'selected':'' %>>15</option>
+          <option value="30"  <%= per===30?'selected':'' %>>30</option>
+          <option value="50"  <%= per===50?'selected':'' %>>50</option>
+          <option value="100" <%= per===100?'selected':'' %>>100</option>
+        </select>
+      </div>
+
+      <div class="self-end">
+        <button class="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold shadow-sm hover:bg-sky-700">
+          Filtrera
+        </button>
+      </div>
+    </form>
+  </div>
 
   <!-- Users -->
-  <div>
-    <h2 class="text-xl font-semibold text-slate-900 mb-4">Användare (users)</h2>
+  <div class="space-y-4">
+    <h2 class="text-xl font-semibold text-slate-900">Användare (users)</h2>
     <% if (!users || users.length === 0) { %>
-      <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">
-        Inga användare hittades.
-      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">Inga användare hittades.</div>
     <% } else { %>
       <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table class="min-w-full text-sm">
@@ -27,7 +72,7 @@
               <tr class="hover:bg-slate-50">
                 <td class="px-4 py-2 font-mono text-xs text-slate-500"><%= u.id %></td>
                 <td class="px-4 py-2"><%= u.email %></td>
-                <td class="px-4 py-2"><%= u.name %></td>
+                <td class="px-4 py-2"><%= u.name || '-' %></td>
                 <td class="px-4 py-2">
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
                     <%= u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' %>">
@@ -45,51 +90,17 @@
   </div>
 
   <!-- Dealers -->
-  <div>
-    <div class="flex items-center justify-between mb-2">
+  <div class="space-y-4">
+    <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold text-slate-900">Dealers (NMS & Dynex)</h2>
-      <div class="text-sm text-slate-600">
-        Totalt: <span id="dealerTotalGlobal"><%= (dealers && dealers.length) || 0 %></span>
-        • Visar: <span id="dealerTotalFiltered"><%= (dealers && dealers.length) || 0 %></span>
-      </div>
-    </div>
-
-    <!-- Filter & page size -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
-      <div class="flex gap-2">
-        <button type="button" data-filter="all"
-          class="dealer-filter px-3 py-1.5 rounded-lg border border-slate-300 text-sm bg-slate-100 font-medium">
-          Alla
-        </button>
-        <button type="button" data-filter="nms"
-          class="dealer-filter px-3 py-1.5 rounded-lg border border-slate-300 text-sm hover:bg-slate-50">
-          NMS
-        </button>
-        <button type="button" data-filter="dynex"
-          class="dealer-filter px-3 py-1.5 rounded-lg border border-slate-300 text-sm hover:bg-slate-50">
-          Dynex
-        </button>
-      </div>
-
-      <div class="ml-auto flex items-center gap-2">
-        <label for="pageSize" class="text-sm text-slate-700">Resultat per sida</label>
-        <select id="pageSize"
-          class="rounded-lg border border-slate-300 px-2 py-1 text-sm focus:border-sky-500 focus:ring-sky-500">
-          <option value="15" selected>15</option>
-          <option value="30">30</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
-        </select>
-      </div>
+      <div class="text-sm text-slate-600">Visar sida <%= page %> av <%= totalPages %></div>
     </div>
 
     <% if (!dealers || dealers.length === 0) { %>
-      <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">
-        Inga dealers hittades.
-      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">Inga dealers hittades.</div>
     <% } else { %>
       <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table class="min-w-full text-sm" id="dealersTable">
+        <table class="min-w-full text-sm">
           <thead class="bg-slate-50 text-slate-700 text-left font-semibold">
             <tr>
               <th class="px-4 py-2">Källa</th>
@@ -102,11 +113,11 @@
           </thead>
           <tbody class="divide-y divide-slate-200">
             <% dealers.forEach(d => { %>
-              <tr class="hover:bg-slate-50" data-source="<%= (d.source||'').toLowerCase() %>">
-                <td class="px-4 py-2 font-semibold"><%= (d.source||'').toUpperCase() %></td>
-                <td class="px-4 py-2"><%= d.email %></td>
-                <td class="px-4 py-2"><%= [d.firstname, d.lastname].filter(Boolean).join(' ') || d.username %></td>
-                <td class="px-4 py-2"><%= d.company %></td>
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-2"><%= (d.source || '').toUpperCase() %></td>
+                <td class="px-4 py-2"><%= d.email || '-' %></td>
+                <td class="px-4 py-2"><%= [d.firstname, d.lastname].filter(Boolean).join(' ') || d.username || '-' %></td>
+                <td class="px-4 py-2"><%= d.company || '-' %></td>
                 <td class="px-4 py-2"><%= d.telephone || '-' %></td>
                 <td class="px-4 py-2 text-slate-500"><%= new Date(d.updated_at).toLocaleString('sv-SE') %></td>
               </tr>
@@ -116,7 +127,31 @@
       </div>
 
       <!-- Pagination -->
-      <div class="flex items-center justify-center gap-1 mt-4" id="dealerPager"></div>
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-600">
+          Visar <%= dealers.length %> av <%= totalFiltered %> matchningar
+        </div>
+        <div class="inline-flex gap-1">
+          <% function link(p){ 
+               const params = new URLSearchParams({ q, source, per, page: p });
+               return `/admin-accounts?${params.toString()}`;
+             } %>
+          <a href="<%= page>1 ? link(page-1) : '#' %>"
+             class="px-3 py-1.5 rounded-lg border text-sm <%= page>1 ? 'hover:bg-slate-50 border-slate-300' : 'border-slate-200 text-slate-400 pointer-events-none' %>">
+            Föregående
+          </a>
+          <% for (let i=Math.max(1, page-2); i<=Math.min(totalPages, page+2); i++){ %>
+            <a href="<%= link(i) %>"
+               class="px-3 py-1.5 rounded-lg border text-sm <%= i===page ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
+              <%= i %>
+            </a>
+          <% } %>
+          <a href="<%= page<totalPages ? link(page+1) : '#' %>"
+             class="px-3 py-1.5 rounded-lg border text-sm <%= page<totalPages ? 'hover:bg-slate-50 border-slate-300' : 'border-slate-200 text-slate-400 pointer-events-none' %>">
+            Nästa
+          </a>
+        </div>
+      </div>
     <% } %>
   </div>
 </section>
