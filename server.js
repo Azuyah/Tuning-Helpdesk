@@ -67,7 +67,7 @@ function hasColumn(table, col) {
 function addColumnIfMissing(table, col, ddl) {
   if (!hasColumn(table, col)) {
     db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run();
-    console.log(`[DB:migration] ${table}.${col} added (${ddl})`);
+    db.prepare(`UPDATE topics SET downloads = COALESCE(downloads, 0)`).run();
   }
 }
 
@@ -155,6 +155,7 @@ function initSchemaAndSeed() {
   addColumnIfMissing('topics_base', 'answer_for_question_id', 'INTEGER');
   addColumnIfMissing('topics', 'is_resource', 'INTEGER DEFAULT 0');
   addColumnIfMissing('topics', 'download_url', 'TEXT');
+  addColumnIfMissing('topics', 'downloads', 'INTEGER DEFAULT 0');
 
   // Backfill users.password_hash (ska inte vara NULL)
   try {
@@ -1282,6 +1283,24 @@ app.get('/resources', (req, res) => {
     ORDER BY b.updated_at DESC
   `).all();
   res.render('resources', { title: 'Resurser', resources: rows, user: getUser(req) });
+});
+
+app.get('/resources/:id/download', (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const row = db.prepare(`
+    SELECT t.download_url, COALESCE(t.is_resource,0) AS is_resource
+    FROM topics t
+    WHERE t.id = ?
+  `).get(id);
+
+  if (!row)             return res.status(404).send('Resurs ej hittad');
+  if (!row.download_url) return res.status(400).send('Ingen fil länkad');
+
+  // Öka räknaren (även om is_resource råkar vara 0)
+  db.prepare(`UPDATE topics SET downloads = COALESCE(downloads,0) + 1 WHERE id = ?`).run(id);
+
+  // Skicka användaren till den riktiga länken (intern eller extern)
+  return res.redirect(row.download_url);
 });
 
 // Ta bort ett ämne (admin) – och radera även källfrågan om detta är ett svar
