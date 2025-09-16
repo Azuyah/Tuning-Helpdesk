@@ -9,6 +9,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import slugify from 'slugify';
 import expressLayouts from 'express-ejs-layouts';
+import crypto from 'crypto';
+import cron from 'node-cron';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -27,6 +29,31 @@ if (dbDir && dbDir !== '.' && !fs.existsSync(dbDir)) {
 
 /* --- Öppna databasen EFTER att katalogen finns --- */
 const db = new Database(DB_PATH);
+
+// --- Partner API endpoints + keys ---
+const DEALER_APIS = [
+  { source: 'nms',   url: 'https://portal.nmstuning.se/api/dealers',        apiKey: 'jNtCK7Z5qR8sqnxN5LpkdF5hJQqJ9m' },
+  { source: 'dynex', url: 'https://portal.dynexperformance.se/api/dealers', apiKey: '04d87a25-3711-11f0-88c2-ac1f6bad7482' },
+];
+
+// MD5 helper
+function md5(s) {
+  return crypto.createHash('md5').update(String(s), 'utf8').digest('hex');
+}
+
+// Normalisera ett dealer-record från API:t
+function normalizeDealer(rec) {
+  return {
+    dealer_id: rec.ID || '',
+    email: (rec.email || '').trim().toLowerCase(),
+    username: rec.username || '',
+    company: rec.company || '',
+    firstname: rec.firstname || '',
+    lastname: rec.lastname || '',
+    telephone: rec.telephone || null,
+    added: rec.added || null,
+  };
+}
 
 /* --- SQLite setup + bootstrap --- */
 /* --- SQLite setup + bootstrap --- */
@@ -182,6 +209,43 @@ addColumn('questions', 'is_answered', 'INTEGER DEFAULT 0');
 addColumn('questions', 'user_seen_answer_at', 'TEXT'); // markeras när frågeställaren sett svaret
 
 initSchemaAndSeed();
+
+// --- Dealers schema (NMS/Dynex) ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS dealers (
+    source        TEXT NOT NULL,                  -- 'nms' | 'dynex'
+    dealer_id     TEXT NOT NULL,
+    email         TEXT,
+    username      TEXT,
+    company       TEXT,
+    firstname     TEXT,
+    lastname      TEXT,
+    telephone     TEXT,
+    added         TEXT,
+    md5_token     TEXT NOT NULL,                  -- md5(dealer_id + email)
+    updated_at    TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (source, dealer_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_dealers_md5   ON dealers (md5_token);
+  CREATE INDEX IF NOT EXISTS idx_dealers_email ON dealers (email);
+`);
+
+// Mjuk migrering: lägg till md5_token om den saknas, och backfilla
+try {
+  const cols = db.prepare("PRAGMA table_info(dealers)").all().map(c => c.name);
+  if (!cols.includes('md5_token')) {
+    db.exec(`ALTER TABLE dealers ADD COLUMN md5_token TEXT`);
+    const rows = db.prepare(`SELECT source, dealer_id, IFNULL(lower(email),'') AS email FROM dealers`).all();
+    const upd  = db.prepare(`UPDATE dealers SET md5_token=? WHERE source=? AND dealer_id=?`);
+    for (const r of rows) {
+      const token = crypto.createHash('md5').update(String(r.dealer_id) + String(r.email), 'utf8').digest('hex');
+      upd.run(token, r.source, r.dealer_id);
+    }
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_dealers_md5 ON dealers (md5_token)`);
+  }
+} catch {}
+
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -220,6 +284,59 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Upsert-statement för dealers
+const upsertDealerStmt = db.prepare(`
+  INSERT INTO dealers (source, dealer_id, email, username, company, firstname, lastname, telephone, added, md5_token, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  ON CONFLICT(source, dealer_id) DO UPDATE SET
+    email      = excluded.email,
+    username   = excluded.username,
+    company    = excluded.company,
+    firstname  = excluded.firstname,
+    lastname   = excluded.lastname,
+    telephone  = excluded.telephone,
+    added      = excluded.added,
+    md5_token  = excluded.md5_token,
+    updated_at = datetime('now')
+`);
+
+// Hämta dealers från partner-API
+async function fetchDealersFrom(source, url, apiKey) {
+  const res = await fetch(url, {
+    headers: {
+      'X-Tfs-siteapikey': apiKey,
+      'Accept': 'application/json'
+    }
+  });
+  if (!res.ok) throw new Error(`Dealer API (${source}) HTTP ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error(`Dealer API (${source}) gav oväntat format`);
+  return data;
+}
+
+// Skriv in/updatera dealers i batch
+function upsertDealers(source, list) {
+  const tx = db.transaction(() => {
+    for (const rec of list) {
+      const d = normalizeDealer(rec);
+      const token = md5((d.dealer_id || '') + (d.email || ''));  // token skapas här
+      upsertDealerStmt.run(
+        source, d.dealer_id, d.email, d.username, d.company,
+        d.firstname, d.lastname, d.telephone, d.added, token
+      );
+    }
+  });
+  tx();
+}
+
+// Kör sync för båda källorna
+async function syncAllDealers() {
+  for (const cfg of DEALER_APIS) {
+    const rows = await fetchDealersFrom(cfg.source, cfg.url, cfg.apiKey);
+    upsertDealers(cfg.source, rows);
+  }
+}
 
 app.use((req, res, next) => {
   const u = getUser(req);
@@ -276,6 +393,49 @@ function requireAdmin(req, res, next) {
 
 // ---------- AUTH API ----------
 
+
+// --- SSO md5-login ---
+// Partnern länkar t.ex. till: https://din-helpdesk.se/sso/md5-login?token=<md5(id+email)>&redirect=/profile
+app.get('/sso/md5-login', async (req, res) => {
+  try {
+    const token = String(req.query.token || '').trim().toLowerCase();
+    const redirectTo = (req.query.redirect && String(req.query.redirect)) || '/';
+    if (!token) return res.status(400).send('Missing token');
+
+    // Jämför mot pre-beräknad md5_token (SQLite har inte MD5-funktion som MySQL)
+    const dealer = db.prepare(`SELECT * FROM dealers WHERE md5_token = ?`).get(token);
+    if (!dealer) return res.status(403).send('Invalid token');
+
+    const email = dealer.email || '';
+    if (!email) return res.status(422).send('Dealer has no email');
+
+    let user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(email);
+
+    if (!user) {
+      const displayName =
+        [dealer.firstname, dealer.lastname].filter(Boolean).join(' ') ||
+        dealer.username || dealer.company || email;
+
+      db.prepare(`
+        INSERT INTO users (email, name, role, password_hash, created_at, updated_at)
+        VALUES (?, ?, 'user', NULL, datetime('now'), datetime('now'))
+      `).run(email, displayName);
+
+      user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(email);
+    }
+
+    // Sätt JWT-cookie (din befintliga helper)
+    res.cookie('auth', signUser(user), {
+      httpOnly: true, sameSite: 'lax', secure: false, maxAge: 14 * 24 * 3600 * 1000
+    });
+
+    db.prepare(`UPDATE users SET updated_at = datetime('now') WHERE id=?`).run(user.id);
+    return res.redirect(redirectTo);
+  } catch (err) {
+    console.error('SSO md5-login error:', err);
+    return res.status(500).send('Login failed');
+  }
+});
 
 app.post('/api/auth/register', (req, res) => {
   const { email, password, name } = req.body;
@@ -1725,6 +1885,23 @@ app.get('/admin', requireAdmin, (req, res) => {
     latestTopics,
     user: getUser(req)
   });
+});
+
+// Kör en initial sync när servern startar
+(async () => {
+  try { await syncAllDealers(); }
+  catch(e){ console.warn('Initial dealer sync failed:', e.message); }
+})();
+
+// Kör varje dygn kl 03:15 server-tid (cron-format "m h dom mon dow")
+cron.schedule('15 3 * * *', async () => {
+  try {
+    console.log('[cron] Running daily dealer sync…');
+    await syncAllDealers();
+    console.log('[cron] Dealer sync done');
+  } catch (e) {
+    console.error('[cron] Dealer sync failed:', e);
+  }
 });
 
 // ---------- Start ----------
