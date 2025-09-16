@@ -263,7 +263,6 @@ try {
 
   // (Index skapas idempotent i CREATE INDEX ovan)
 } catch (e) {
-  console.warn('[DB:migration] dealers migrations:', e.message);
 }
 
 // ---------- EJS + Layouts ----------
@@ -493,7 +492,6 @@ app.get('/sso/md5-login', async (req, res) => {
     db.prepare(`UPDATE users SET updated_at = datetime('now') WHERE id=?`).run(user.id);
     return res.redirect(redirectTo);
   } catch (err) {
-    console.error('SSO md5-login error:', err);
     return res.status(500).send('Login failed');
   }
 });
@@ -1018,15 +1016,12 @@ app.get('/api/questions', requireAuth, (req, res) => {
 app.get('/api/suggest', (req, res) => {
   const raw = (req.query.q || '').trim();
   if (!raw) {
-    console.log('[suggest] empty query');
     return res.json([]);
   }
 
   const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
   const termsArr = q.split(/\s+/).filter(Boolean).map(t => `${t}*`);
   const ftsQuery = termsArr.length ? termsArr.join(' OR ') : '';
-
-  console.log('[suggest] q="%s" | fts="%s"', q, ftsQuery);
 
   const results = [];
   const topicIds = new Set();
@@ -1047,17 +1042,14 @@ app.get('/api/suggest', (req, res) => {
         LIMIT 5
       `).all(ftsQuery);
 
-      console.log('[suggest][FTS] rows=%d', topicRows.length);
 
       for (const r of topicRows) {
         const type = r.is_resource ? 'resource' : 'topic';
-        console.log('  -> FTS push:', { id: r.id, title: r.title, is_resource: r.is_resource, type });
         results.push({ type, id: r.id, title: r.title, snippet: r.snippet || '' });
         topicIds.add(r.id);
         topicTitles.add(norm(r.title));
       }
     } catch (e) {
-      console.log('[suggest][FTS] ERROR:', e.message);
     }
   }
 
@@ -1079,12 +1071,10 @@ app.get('/api/suggest', (req, res) => {
       LIMIT ?
     `).all(like, like, like, left);
 
-    console.log('[suggest][LIKE] rows=%d (left=%d)', topicLike.length, left);
 
     for (const r of topicLike) {
       if (topicIds.has(r.id)) continue;
       const type = r.is_resource ? 'resource' : 'topic';
-      console.log('  -> LIKE push:', { id: r.id, title: r.title, is_resource: r.is_resource, type });
       results.push({ type, id: r.id, title: r.title, snippet: r.snippet || '' });
       topicIds.add(r.id);
       topicTitles.add(norm(r.title));
@@ -1105,20 +1095,16 @@ app.get('/api/suggest', (req, res) => {
       LIMIT ?
     `).all(like, like, Math.min(left, 3));
 
-    console.log('[suggest][Q] rows=%d (left=%d)', qs.length, left);
 
     for (const r of qs) {
       if (topicTitles.has(norm(r.title))) {
-        console.log('  -> Q SKIP (title collision with topic/resource):', r.title);
         continue;
       }
-      console.log('  -> Q push:', { id: r.id, title: r.title });
       results.push({ type: 'question', id: String(r.id), title: r.title, snippet: r.snippet || '' });
     }
   }
 
   // Summering
-  console.log('[suggest] OUT:', results.map(x => ({ id: x.id, type: x.type, title: x.title })).slice(0, 10));
   res.json(results);
 });
 

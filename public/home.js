@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const $results = document.getElementById('results');    // kan saknas
 
   if (!$q || !$btn) {
-    console.warn('[home] Ingen sökruta hittad – script avbryts.');
+
     return;
   }
 
@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function goSearch() {
     const q = ($q.value || '').trim();
     const url = q ? '/search?q=' + encodeURIComponent(q) : '/search';
-    console.log('[goSearch] →', url);
     window.location.href = url;
   }
 
@@ -24,9 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- rendera autosuggest ----
   function renderSuggest(rows = [], seq = 0) {
-    console.log('[renderSuggest] seq=%d lastRendered=%d rows=%d', seq, lastRenderedSeq, rows.length);
     if (seq < lastRenderedSeq) {
-      console.log('[renderSuggest] SKIP (stale seq)');
       return; // äldre svar: ignorera
     }
     lastRenderedSeq = seq;
@@ -37,8 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
       $box.innerHTML = '';
       return;
     }
-
-    console.log('[renderSuggest] types:', rows.map(r => r.type));
 
     $box.innerHTML = rows.map(r => {
       // Rätt länk per typ
@@ -89,30 +84,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Avbryt ev. pågående request
     if (suggestController) {
       suggestController.abort();
-      console.log('[fetchSuggest] ABORT previous');
     }
     suggestController = new AbortController();
 
     const mySeq = ++reqSeq;
-    console.log('[fetchSuggest] START seq=%d q="%s"', mySeq, q);
 
     try {
       const res = await fetch('/api/suggest?q=' + encodeURIComponent(q), { signal: suggestController.signal });
       if (!res.ok) {
-        console.log('[fetchSuggest] HTTP %s seq=%d', res.status, mySeq);
         return;
       }
       const data = await res.json();
-      console.log('[fetchSuggest] DONE seq=%d items=%d types=%o',
-        mySeq, Array.isArray(data) ? data.length : -1, Array.isArray(data) ? data.map(d => d.type) : null);
 
       // Rendera endast om seq är färskast (sköts i renderSuggest)
       renderSuggest(Array.isArray(data) ? data : [], mySeq);
     } catch (e) {
       if (e.name === 'AbortError') {
-        console.log('[fetchSuggest] ABORT seq=%d', mySeq);
       } else {
-        console.error('[fetchSuggest] ERROR seq=%d', mySeq, e);
       }
     }
   };
@@ -123,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const url = q ? '/api/search?q=' + encodeURIComponent(q) : '/api/search';
       const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
-      if (!res.ok) { console.error('[search] HTTP', res.status); return; }
       const rows = await res.json();
 
       $results.innerHTML = (rows || []).map(item => {
@@ -154,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       }).join('');
     } catch (e) {
-      console.error('[search] ERROR', e);
     }
   }
 
@@ -166,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---- events ----
   $btn.addEventListener('click', () => {
     const q = $q.value.trim();
-    console.log('[btnSearch] click q="%s"', q);
     $results ? searchAndRender(q) : goSearch();
   });
 
@@ -174,18 +159,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') {
       e.preventDefault();
       const q = $q.value.trim();
-      console.log('[input] Enter q="%s"', q);
       $results ? searchAndRender(q) : goSearch();
     }
     if (e.key === 'Escape') {
-      console.log('[input] Escape → close suggest');
       $box && $box.classList.add('hidden');
     }
   });
 
   $q.addEventListener('input', debounce(() => {
     const term = $q.value.trim();
-    console.log('[input] value="%s"', term);
     fetchSuggest(term);
   }, 150));
 
@@ -200,7 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('.tag-btn');
     if (!btn) return;
     const tag = btn.getAttribute('data-tag') || '';
-    console.log('[popular] click tag="%s"', tag);
     $q.value = tag;
     $results ? searchAndRender(tag) : goSearch();
   });
