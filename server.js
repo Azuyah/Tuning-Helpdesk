@@ -1424,54 +1424,54 @@ const q = db.prepare(`
 });
 
 app.get('/explore', (req, res) => {
-  const tab = (req.query.tab === 'questions') ? 'questions' : 'topics';
-  const q    = (req.query.q || '').trim();
-  const cat  = (req.query.cat || '').trim();  // category id
-  const tag  = (req.query.tag || '').trim().toLowerCase();
+  // --- Tabs: all / topics / questions / resources (default: all)
+  const tabParam = String(req.query.tab || '').toLowerCase();
+  const tab = ['topics','questions','resources','all'].includes(tabParam) ? tabParam : 'all';
+
+  const q   = (req.query.q   || '').trim().toLowerCase();
+  const cat = (req.query.cat || '').trim();                   // category id
+  const tag = (req.query.tag || '').trim().toLowerCase();
 
   // Sidebar: kategorier
   const categories = db.prepare(`
     SELECT id, title
     FROM categories
-    ORDER BY COALESCE(sort_order,9999), title
+    ORDER BY COALESCE(sort_order, 9999), title
   `).all();
 
-  // Sidebar: "populära taggar" – enkel utvinning från topics.tags
+  // Sidebar: populära taggar (från icke-resursämnen)
   const tagRows = db.prepare(`
     SELECT t.tags
     FROM topics t
-    WHERE t.is_resource=0 AND IFNULL(t.tags,'') <> ''
+    WHERE t.is_resource = 0 AND IFNULL(t.tags,'') <> ''
   `).all();
   const tagCounter = {};
   for (const r of tagRows) {
-    (r.tags || '').split(',').map(s=>s.trim()).filter(Boolean).forEach(t=>{
-      const key = t.toLowerCase();
-      tagCounter[key] = (tagCounter[key]||0) + 1;
+    (r.tags || '').split(',').map(s => s.trim()).filter(Boolean).forEach(tg => {
+      const key = tg.toLowerCase();
+      tagCounter[key] = (tagCounter[key] || 0) + 1;
     });
   }
   const allTags = Object.entries(tagCounter)
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,30)        // topp 30
-    .map(([name,count])=>({ name, count }));
+    .sort((a,b) => b[1] - a[1])
+    .slice(0, 30)
+    .map(([name,count]) => ({ name, count }));
 
-  // Data för listan
-  let topics = [];
-  let questions = [];
+  // --- Queries byggstenar
+  const like = q ? `%${q}%` : null;
 
-  if (tab === 'topics') {
-    // Baslista: alla topics (ej resurser)
+  // Ämnen (ej resurser)
+  function fetchTopics() {
     let sql = `
       SELECT b.id, t.title, t.excerpt, t.tags, b.updated_at
       FROM topics_base b
-      JOIN topics t ON t.id=b.id
-      WHERE t.is_resource=0
+      JOIN topics t ON t.id = b.id
+      WHERE t.is_resource = 0
     `;
     const params = [];
 
     if (q) {
-      // enkel sök: använd FTS om du vill, men här gör vi LIKE för enkelhet
       sql += ` AND (lower(t.title) LIKE ? OR lower(t.excerpt) LIKE ? OR lower(t.body) LIKE ?) `;
-      const like = `%${q.toLowerCase()}%`;
       params.push(like, like, like);
     }
     if (cat) {
@@ -1484,9 +1484,28 @@ app.get('/explore', (req, res) => {
     }
 
     sql += ` ORDER BY b.updated_at DESC LIMIT 30 `;
-    topics = db.prepare(sql).all(...params);
-  } else {
-    // Senaste frågor
+    return db.prepare(sql).all(...params);
+  }
+
+  // Resurser (is_resource=1)
+  function fetchResources() {
+    let sql = `
+      SELECT b.id, t.title, t.excerpt, b.updated_at
+      FROM topics_base b
+      JOIN topics t ON t.id = b.id
+      WHERE t.is_resource = 1
+    `;
+    const params = [];
+    if (q) {
+      sql += ` AND (lower(t.title) LIKE ? OR lower(t.excerpt) LIKE ? OR lower(t.body) LIKE ?) `;
+      params.push(like, like, like);
+    }
+    sql += ` ORDER BY b.updated_at DESC LIMIT 30 `;
+    return db.prepare(sql).all(...params);
+  }
+
+  // Frågor
+  function fetchQuestions() {
     let sql = `
       SELECT q.id, q.title, q.status, q.created_at
       FROM questions q
@@ -1494,12 +1513,26 @@ app.get('/explore', (req, res) => {
     `;
     const params = [];
     if (q) {
-      sql += ` AND lower(q.title) LIKE ? OR lower(IFNULL(q.body,'')) LIKE ? `;
-      const like = `%${q.toLowerCase()}%`;
+      // Viktigt: parenteser runt OR
+      sql += ` AND (lower(q.title) LIKE ? OR lower(IFNULL(q.body,'')) LIKE ?) `;
       params.push(like, like);
     }
-    sql += ` ORDER BY q.created_at DESC LIMIT 30 `;
-    questions = db.prepare(sql).all(...params);
+    sql += ` ORDER BY datetime(q.created_at) DESC LIMIT 30 `;
+    return db.prepare(sql).all(...params);
+  }
+
+  // Hämta beroende på tab
+  let topics = [], questions = [], resources = [];
+  if (tab === 'topics') {
+    topics = fetchTopics();
+  } else if (tab === 'questions') {
+    questions = fetchQuestions();
+  } else if (tab === 'resources') {
+    resources = fetchResources();
+  } else { // 'all'
+    topics    = fetchTopics();
+    questions = fetchQuestions();
+    resources = fetchResources();
   }
 
   res.render('explore', {
@@ -1510,6 +1543,7 @@ app.get('/explore', (req, res) => {
     tags: allTags,
     topics,
     questions,
+    resources,
     user: getUser(req)
   });
 });
