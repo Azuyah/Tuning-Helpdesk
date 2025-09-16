@@ -1,6 +1,8 @@
 <!-- views/admin-accounts.ejs -->
 <section class="mx-auto max-w-6xl px-4 py-10 space-y-10">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+
+  <!-- Topp: titel + totals -->
+  <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-900">Alla konton & dealers</h1>
       <div class="mt-1 text-slate-600 text-sm">
@@ -8,6 +10,7 @@
         • Matchar filter: <span class="font-medium"><%= totalFiltered %></span>
       </div>
     </div>
+  </div> <!-- <-- den här saknades tidigare -->
 
   <!-- Users -->
   <div class="space-y-4">
@@ -35,9 +38,7 @@
                 <td class="px-4 py-2"><%= u.name || '-' %></td>
                 <td class="px-4 py-2">
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
-                    <%= u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' %>">
-                    <%= u.role %>
-                  </span>
+                    <%= u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' %>"><%= u.role %></span>
                 </td>
                 <td class="px-4 py-2 text-slate-500"><%= new Date(u.created_at).toLocaleString('sv-SE') %></td>
                 <td class="px-4 py-2 text-slate-500"><%= new Date(u.updated_at).toLocaleString('sv-SE') %></td>
@@ -49,68 +50,59 @@
     <% } %>
   </div>
 
-  <!-- Filters for DEALERS -->
-<form method="get" action="/admin-accounts" class="mb-6">
-  <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
+  <!-- Filters for DEALERS (flyttat hit: ovanför dealers-tabellen) -->
+  <form method="get" action="/admin-accounts" class="mt-8">
+    <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
+      <input type="hidden" name="tab" value="dealers">
 
-    <!-- Keep existing users/dealers tabs’ query if you have any others -->
-    <input type="hidden" name="tab" value="dealers">
+      <!-- Sök -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Sök (email, namn, företag, användarnamn)</label>
+        <input type="search" name="q" value="<%= (q || '') %>" placeholder="t.ex. johanna, dynex, @gmail.com"
+               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"/>
+      </div>
 
-    <!-- Search -->
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">
-        Sök (email, namn, företag, användarnamn)
-      </label>
-      <input
-        type="search"
-        name="q"
-        value="<%= (q || '') %>"
-        placeholder="t.ex. johanna, dynex, @gmail.com"
-        class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
-      />
-    </div>
+      <!-- Källa -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Källa</label>
+        <div class="relative">
+          <select name="source"
+                  class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                         focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+            <option value=""     <%= !source ? 'selected' : '' %> >Alla</option>
+            <option value="nms"  <%= source==='nms'   ? 'selected' : '' %> >NMS</option>
+            <option value="dynex"<%= source==='dynex' ? 'selected' : '' %> >DYNEX</option>
+          </select>
+          <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+        </div>
+      </div>
 
-    <!-- Källa -->
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Källa</label>
-      <div class="relative">
-        <select name="source"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                       focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
-          <option value="" <%= !source ? 'selected' : '' %> >Alla</option>
-          <option value="nms"   <%= source==='nms'   ? 'selected' : '' %> >NMS</option>
-          <option value="dynex" <%= source==='dynex' ? 'selected' : '' %> >DYNEX</option>
-        </select>
-        <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+      <!-- Resultat per sida -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Resultat per sida</label>
+        <div class="relative">
+          <select name="perPage"
+                  class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                         focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+            <% const pp = Number(typeof perPage === 'undefined' ? 15 : perPage); %>
+            <option value="15"  <%= pp===15  ? 'selected' : '' %>>15</option>
+            <option value="30"  <%= pp===30  ? 'selected' : '' %>>30</option>
+            <option value="50"  <%= pp===50  ? 'selected' : '' %>>50</option>
+            <option value="100" <%= pp===100 ? 'selected' : '' %>>100</option>
+          </select>
+          <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="md:col-span-3 lg:col-span-1">
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-xl bg-sky-600 text-white px-5 py-2.5 font-medium shadow hover:bg-sky-700 transition">
+          <i class="ti ti-filter"></i> Filtrera
+        </button>
       </div>
     </div>
-
-    <!-- Resultat per sida -->
-    <div>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Resultat per sida</label>
-      <div class="relative">
-        <select name="perPage"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                       focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
-          <% const pp = Number(typeof perPage === 'undefined' ? 15 : perPage); %>
-          <option value="15"  <%= pp===15  ? 'selected' : '' %>>15</option>
-          <option value="30"  <%= pp===30  ? 'selected' : '' %>>30</option>
-          <option value="50"  <%= pp===50  ? 'selected' : '' %>>50</option>
-          <option value="100" <%= pp===100 ? 'selected' : '' %>>100</option>
-        </select>
-        <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
-      </div>
-    </div>
-
-    <!-- Submit -->
-    <div class="md:col-span-3 lg:col-span-1">
-      <button type="submit"
-              class="inline-flex items-center gap-2 rounded-xl bg-sky-600 text-white px-5 py-2.5 font-medium shadow hover:bg-sky-700 transition">
-        <i class="ti ti-filter"></i> Filtrera
-      </button>
-    </div>
-  </div>
-</form>
+  </form>
 
   <!-- Dealers -->
   <div class="space-y-4">
@@ -155,148 +147,25 @@
           Visar <%= dealers.length %> av <%= totalFiltered %> matchningar
         </div>
         <div class="inline-flex gap-1">
-<% function link(p){
-     const params = new URLSearchParams({
-       q: (typeof q==='undefined' ? '' : q),
-       source: (typeof source==='undefined' ? '' : source),
-       perPage: (typeof perPage==='undefined' ? 15 : perPage),
-       page: p
-     });
-     return `/admin-accounts?${params.toString()}`;
-   } %>
+          <% function link(p){
+               const params = new URLSearchParams({
+                 q: (typeof q==='undefined' ? '' : q),
+                 source: (typeof source==='undefined' ? '' : source),
+                 perPage: (typeof perPage==='undefined' ? 15 : perPage),
+                 page: p
+               });
+               return `/admin-accounts?${params.toString()}`;
+             } %>
           <a href="<%= page>1 ? link(page-1) : '#' %>"
-             class="px-3 py-1.5 rounded-lg border text-sm <%= page>1 ? 'hover:bg-slate-50 border-slate-300' : 'border-slate-200 text-slate-400 pointer-events-none' %>">
-            Föregående
-          </a>
+             class="px-3 py-1.5 rounded-lg border text-sm <%= page>1 ? 'hover:bg-slate-50 border-slate-300' : 'border-slate-200 text-slate-400 pointer-events-none' %>">Föregående</a>
           <% for (let i=Math.max(1, page-2); i<=Math.min(totalPages, page+2); i++){ %>
             <a href="<%= link(i) %>"
-               class="px-3 py-1.5 rounded-lg border text-sm <%= i===page ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-              <%= i %>
-            </a>
+               class="px-3 py-1.5 rounded-lg border text-sm <%= i===page ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>"><%= i %></a>
           <% } %>
           <a href="<%= page<totalPages ? link(page+1) : '#' %>"
-             class="px-3 py-1.5 rounded-lg border text-sm <%= page<totalPages ? 'hover:bg-slate-50 border-slate-300' : 'border-slate-200 text-slate-400 pointer-events-none' %>">
-            Nästa
-          </a>
+             class="px-3 py-1.5 rounded-lg border text-sm <%= page<totalPages ? 'hover:bg-slate-50 border-slate-300' : 'border-slate-200 text-slate-400 pointer-events-none' %>">Nästa</a>
         </div>
       </div>
     <% } %>
   </div>
 </section>
-
-<script>
-  (function(){
-    // Elements
-    const table = document.getElementById('dealersTable');
-    if (!table) return;
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
-    const totalGlobalEl   = document.getElementById('dealerTotalGlobal');
-    const totalFilteredEl = document.getElementById('dealerTotalFiltered');
-    const pagerEl  = document.getElementById('dealerPager');
-    const sizeSel  = document.getElementById('pageSize');
-    const filterBtns = document.querySelectorAll('.dealer-filter');
-
-    // State
-    let filter = 'all';
-    let pageSize = parseInt(sizeSel.value, 10) || 15;
-    let currentPage = 1;
-
-    totalGlobalEl.textContent = rows.length;
-
-    function getFilteredRows(){
-      if (filter === 'all') return rows;
-      return rows.filter(r => r.dataset.source === filter);
-    }
-
-    function pageCount(filtered){
-      return Math.max(1, Math.ceil(filtered.length / pageSize));
-    }
-
-    function render(){
-      const filtered = getFilteredRows();
-      const pages = pageCount(filtered);
-      if (currentPage > pages) currentPage = pages;
-
-      // Hide all, then show slice
-      rows.forEach(r => r.style.display = 'none');
-
-      const start = (currentPage - 1) * pageSize;
-      const end   = start + pageSize;
-      filtered.slice(start, end).forEach(r => r.style.display = '');
-
-      // Update counts
-      totalFilteredEl.textContent = filtered.length;
-
-      // Render pager
-      renderPager(pages);
-    }
-
-    function renderPager(pages){
-      pagerEl.innerHTML = '';
-      if (pages <= 1) return;
-
-      function btn(label, page, disabled, isActive){
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = label;
-        b.className =
-          'min-w-[36px] h-9 px-2 rounded-lg border text-sm ' +
-          (isActive ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50');
-        b.disabled = !!disabled;
-        if (!disabled && !isActive) {
-          b.addEventListener('click', () => { currentPage = page; render(); });
-        }
-        return b;
-      }
-
-      // Prev
-      pagerEl.appendChild(btn('‹', Math.max(1, currentPage - 1), currentPage === 1, false));
-
-      // Page numbers (compact: show first, last, and around current)
-      const span = 2;
-      const pagesArr = [];
-      for (let p = 1; p <= pages; p++){
-        if (p === 1 || p === pages || (p >= currentPage - span && p <= currentPage + span)) {
-          pagesArr.push(p);
-        }
-      }
-      // Insert ellipses
-      for (let i = 0; i < pagesArr.length; i++){
-        const p = pagesArr[i];
-        if (i > 0 && p - pagesArr[i-1] > 1) {
-          const dots = document.createElement('span');
-          dots.textContent = '…';
-          dots.className = 'px-2 text-slate-500';
-          pagerEl.appendChild(dots);
-        }
-        pagerEl.appendChild(btn(String(p), p, false, p === currentPage));
-      }
-
-      // Next
-      pagerEl.appendChild(btn('›', Math.min(pages, currentPage + 1), currentPage === pages, false));
-    }
-
-    // Listeners
-    sizeSel.addEventListener('change', () => {
-      pageSize = parseInt(sizeSel.value, 10) || 15;
-      currentPage = 1;
-      render();
-    });
-
-    filterBtns.forEach(b => {
-      b.addEventListener('click', () => {
-        filter = b.dataset.filter;
-        currentPage = 1;
-
-        // Update button styles
-        filterBtns.forEach(x => x.classList.remove('bg-slate-100','font-medium'));
-        b.classList.add('bg-slate-100','font-medium');
-
-        render();
-      });
-    });
-
-    // Initial render
-    render();
-  })();
-</script>
