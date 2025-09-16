@@ -46,42 +46,194 @@
 
   <!-- Dealers -->
   <div>
-    <h2 class="text-xl font-semibold text-slate-900 mb-4">Dealers (NMS & Dynex)</h2>
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-xl font-semibold text-slate-900">Dealers (NMS & Dynex)</h2>
+      <div class="text-sm text-slate-600">
+        Totalt: <span id="dealerTotalGlobal"><%= (dealers && dealers.length) || 0 %></span>
+        • Visar: <span id="dealerTotalFiltered"><%= (dealers && dealers.length) || 0 %></span>
+      </div>
+    </div>
+
+    <!-- Filter & page size -->
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex gap-2">
+        <button type="button" data-filter="all"
+          class="dealer-filter px-3 py-1.5 rounded-lg border border-slate-300 text-sm bg-slate-100 font-medium">
+          Alla
+        </button>
+        <button type="button" data-filter="nms"
+          class="dealer-filter px-3 py-1.5 rounded-lg border border-slate-300 text-sm hover:bg-slate-50">
+          NMS
+        </button>
+        <button type="button" data-filter="dynex"
+          class="dealer-filter px-3 py-1.5 rounded-lg border border-slate-300 text-sm hover:bg-slate-50">
+          Dynex
+        </button>
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <label for="pageSize" class="text-sm text-slate-700">Resultat per sida</label>
+        <select id="pageSize"
+          class="rounded-lg border border-slate-300 px-2 py-1 text-sm focus:border-sky-500 focus:ring-sky-500">
+          <option value="15" selected>15</option>
+          <option value="30">30</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+
     <% if (!dealers || dealers.length === 0) { %>
       <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">
         Inga dealers hittades.
       </div>
     <% } else { %>
       <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table class="min-w-full text-sm">
+        <table class="min-w-full text-sm" id="dealersTable">
           <thead class="bg-slate-50 text-slate-700 text-left font-semibold">
             <tr>
               <th class="px-4 py-2">Källa</th>
-              <th class="px-4 py-2">Dealer ID</th>
               <th class="px-4 py-2">Email</th>
               <th class="px-4 py-2">Namn</th>
               <th class="px-4 py-2">Företag</th>
               <th class="px-4 py-2">Telefon</th>
-              <th class="px-4 py-2">Tillagd</th>
               <th class="px-4 py-2">Senast synkad</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
             <% dealers.forEach(d => { %>
-              <tr class="hover:bg-slate-50">
-                <td class="px-4 py-2"><%= d.source %></td>
-                <td class="px-4 py-2 font-mono text-xs text-slate-500"><%= d.dealer_id %></td>
+              <tr class="hover:bg-slate-50" data-source="<%= (d.source||'').toLowerCase() %>">
+                <td class="px-4 py-2 font-semibold"><%= (d.source||'').toUpperCase() %></td>
                 <td class="px-4 py-2"><%= d.email %></td>
                 <td class="px-4 py-2"><%= [d.firstname, d.lastname].filter(Boolean).join(' ') || d.username %></td>
                 <td class="px-4 py-2"><%= d.company %></td>
                 <td class="px-4 py-2"><%= d.telephone || '-' %></td>
-                <td class="px-4 py-2 text-slate-500"><%= d.added || '-' %></td>
                 <td class="px-4 py-2 text-slate-500"><%= new Date(d.updated_at).toLocaleString('sv-SE') %></td>
               </tr>
             <% }) %>
           </tbody>
         </table>
       </div>
+
+      <!-- Pagination -->
+      <div class="flex items-center justify-center gap-1 mt-4" id="dealerPager"></div>
     <% } %>
   </div>
 </section>
+
+<script>
+  (function(){
+    // Elements
+    const table = document.getElementById('dealersTable');
+    if (!table) return;
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const totalGlobalEl   = document.getElementById('dealerTotalGlobal');
+    const totalFilteredEl = document.getElementById('dealerTotalFiltered');
+    const pagerEl  = document.getElementById('dealerPager');
+    const sizeSel  = document.getElementById('pageSize');
+    const filterBtns = document.querySelectorAll('.dealer-filter');
+
+    // State
+    let filter = 'all';
+    let pageSize = parseInt(sizeSel.value, 10) || 15;
+    let currentPage = 1;
+
+    totalGlobalEl.textContent = rows.length;
+
+    function getFilteredRows(){
+      if (filter === 'all') return rows;
+      return rows.filter(r => r.dataset.source === filter);
+    }
+
+    function pageCount(filtered){
+      return Math.max(1, Math.ceil(filtered.length / pageSize));
+    }
+
+    function render(){
+      const filtered = getFilteredRows();
+      const pages = pageCount(filtered);
+      if (currentPage > pages) currentPage = pages;
+
+      // Hide all, then show slice
+      rows.forEach(r => r.style.display = 'none');
+
+      const start = (currentPage - 1) * pageSize;
+      const end   = start + pageSize;
+      filtered.slice(start, end).forEach(r => r.style.display = '');
+
+      // Update counts
+      totalFilteredEl.textContent = filtered.length;
+
+      // Render pager
+      renderPager(pages);
+    }
+
+    function renderPager(pages){
+      pagerEl.innerHTML = '';
+      if (pages <= 1) return;
+
+      function btn(label, page, disabled, isActive){
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.className =
+          'min-w-[36px] h-9 px-2 rounded-lg border text-sm ' +
+          (isActive ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50');
+        b.disabled = !!disabled;
+        if (!disabled && !isActive) {
+          b.addEventListener('click', () => { currentPage = page; render(); });
+        }
+        return b;
+      }
+
+      // Prev
+      pagerEl.appendChild(btn('‹', Math.max(1, currentPage - 1), currentPage === 1, false));
+
+      // Page numbers (compact: show first, last, and around current)
+      const span = 2;
+      const pagesArr = [];
+      for (let p = 1; p <= pages; p++){
+        if (p === 1 || p === pages || (p >= currentPage - span && p <= currentPage + span)) {
+          pagesArr.push(p);
+        }
+      }
+      // Insert ellipses
+      for (let i = 0; i < pagesArr.length; i++){
+        const p = pagesArr[i];
+        if (i > 0 && p - pagesArr[i-1] > 1) {
+          const dots = document.createElement('span');
+          dots.textContent = '…';
+          dots.className = 'px-2 text-slate-500';
+          pagerEl.appendChild(dots);
+        }
+        pagerEl.appendChild(btn(String(p), p, false, p === currentPage));
+      }
+
+      // Next
+      pagerEl.appendChild(btn('›', Math.min(pages, currentPage + 1), currentPage === pages, false));
+    }
+
+    // Listeners
+    sizeSel.addEventListener('change', () => {
+      pageSize = parseInt(sizeSel.value, 10) || 15;
+      currentPage = 1;
+      render();
+    });
+
+    filterBtns.forEach(b => {
+      b.addEventListener('click', () => {
+        filter = b.dataset.filter;
+        currentPage = 1;
+
+        // Update button styles
+        filterBtns.forEach(x => x.classList.remove('bg-slate-100','font-medium'));
+        b.classList.add('bg-slate-100','font-medium');
+
+        render();
+      });
+    });
+
+    // Initial render
+    render();
+  })();
+</script>
