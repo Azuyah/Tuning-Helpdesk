@@ -1,3 +1,10 @@
+<% function statusLabel(s) {
+     return s === 'open'     ? 'Öppen'
+          : s === 'answered' ? 'Besvarad'
+          : s === 'closed'   ? 'Stängd'
+          : s;
+   }
+%>
 <section class="mx-auto max-w-6xl px-4 py-10 space-y-6">
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold text-slate-900">Frågor</h1>
@@ -16,7 +23,7 @@
       </select>
       <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
     </div>
-    <button class="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+    <button class="rounded-xl bg-sky-600 text-white px-4 py-2 text-sm font-semibold hover:bg-sky-700">
       Filtrera
     </button>
   </form>
@@ -40,12 +47,14 @@
             <tr class="hover:bg-slate-50">
               <td class="px-4 py-2"><div class="line-clamp-1"><%= q.title %></div></td>
               <td class="px-4 py-2 text-slate-600"><%= q.user_email || '-' %></td>
-              <td class="px-4 py-2">
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs
-                  <%= q.status === 'open' ? 'bg-amber-100 text-amber-700' :
-                      q.status === 'answered' ? 'bg-emerald-100 text-emerald-700' :
-                      'bg-slate-100 text-slate-700' %>"><%= q.status %></span>
-              </td>
+<td class="px-4 py-2">
+  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs
+    <%= q.status === 'open' ? 'bg-amber-100 text-amber-700' :
+        q.status === 'answered' ? 'bg-emerald-100 text-emerald-700' :
+        'bg-slate-100 text-slate-700' %>">
+    <%= statusLabel(q.status) %>
+  </span>
+</td>
               <td class="px-4 py-2 text-slate-500"><%= new Date(q.created_at).toLocaleString('sv-SE') %></td>
               <td class="px-4 py-2 text-right">
                 <a href="/admin/questions/<%= q.id %>" class="text-sky-600 hover:underline inline-flex items-center gap-1">
