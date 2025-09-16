@@ -49,16 +49,32 @@ function renderSuggest(rows = []) {
 }
   let tId = null;
   function debounce(fn, ms=150){ clearTimeout(tId); tId = setTimeout(fn, ms); }
+let activeController = null;
+let seq = 0;
 
 async function fetchSuggest(q){
   if (!$box) return;
   try {
     if (!q) { renderSuggest([]); return; }
-    const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`);
-    if (!res.ok) { renderSuggest([]); return; }  // <— viktigt
+
+    // Avbryt ev. pågående request
+    if (activeController) activeController.abort();
+    const controller = new AbortController();
+    activeController = controller;
+
+    const mySeq = ++seq; // markera denna request
+    const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`, { signal: controller.signal });
+    if (!res.ok) return;
+
+    // Om ett annat (senare) svar redan kommit, ignorera detta
+    if (mySeq !== seq) return;
+
     const data = await res.json();
     renderSuggest(Array.isArray(data) ? data : []);
-  } catch(e) { console.error(e); }
+  } catch (e) {
+    // abort är ok, annars logga
+    if (e.name !== 'AbortError') console.error(e);
+  }
 }
 // --- results (bara på sidor som har #results) ---
 async function searchAndRender(q) {
