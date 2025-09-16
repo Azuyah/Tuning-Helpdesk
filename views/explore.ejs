@@ -4,13 +4,42 @@
     <form method="get" action="/explore" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
       <input type="hidden" name="tab" value="<%= tab %>">
       <label class="block text-sm font-medium text-slate-700">Sök</label>
-      <input name="q" value="<%= q %>" placeholder="Sök i <%= tab==='topics'?'ämnen':'frågor' %>…"
-             class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500">
+      <input name="q" value="<%= q %>"
+       placeholder="Sök i <%= tab==='topics' ? 'ämnen' : tab==='questions' ? 'frågor' : tab==='resources' ? 'resurser' : 'alla' %>…"
+       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500">
       <div class="mt-3 flex items-center gap-2">
         <button class="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">Sök</button>
         <a href="/explore?tab=<%= tab %>" class="text-sm text-slate-500 hover:underline">Rensa</a>
       </div>
     </form>
+
+  <!-- Tabbyte (flyttad hit, under sökrutan) -->
+  <% const currentTab = (typeof tab === 'string' && tab) ? tab : 'all'; %>
+  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div class="text-sm font-medium text-slate-700 mb-2">Filter</div>
+    <div class="flex flex-wrap gap-2">
+      <a href="/explore"
+         class="px-3 py-1.5 rounded-lg border <%= currentTab==='all' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
+        Alla
+      </a>
+
+      <a href="/explore?tab=topics"
+         class="px-3 py-1.5 rounded-lg border <%= currentTab==='topics' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
+        Ämnen
+      </a>
+
+      <a href="/explore?tab=questions"
+         class="px-3 py-1.5 rounded-lg border <%= currentTab==='questions' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
+        Frågor
+      </a>
+
+      <a href="/explore?tab=resources"
+         class="px-3 py-1.5 rounded-lg border <%= currentTab==='resources' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
+        Resurser
+      </a>
+    </div>
+  </div>
+
 
     <!-- Kategorier -->
     <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
@@ -39,35 +68,7 @@
         <% }) %>
       </div>
     </div>
-
-<% const currentTab = (typeof tab === 'string' && tab) ? tab : 'all'; %>
-
-<!-- Tabbyte -->
-<div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-  <div class="text-sm font-medium text-slate-700 mb-2">Visa</div>
-  <div class="flex flex-wrap gap-2">
-    <a href="/explore"
-       class="px-3 py-1.5 rounded-lg border <%= currentTab==='all' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-      Alla
-    </a>
-
-    <a href="/explore?tab=topics"
-       class="px-3 py-1.5 rounded-lg border <%= currentTab==='topics' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-      Ämnen
-    </a>
-
-    <a href="/explore?tab=questions"
-       class="px-3 py-1.5 rounded-lg border <%= currentTab==='questions' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-      Frågor
-    </a>
-
-    <a href="/explore?tab=resources"
-       class="px-3 py-1.5 rounded-lg border <%= currentTab==='resources' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-      Resurser
-    </a>
-  </div>
-</div>
-</aside>
+  </aside>
 
 <!-- Lista -->
 <div class="lg:col-span-3 space-y-10 min-w-0">
@@ -138,9 +139,9 @@
                 <div class="text-xs text-slate-500 mt-1 line-clamp-2"><%= r.excerpt %></div>
               <% } %>
             </div>
-            <a href="/resources/<%= r.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
-              Ladda ner <i class="ti ti-download"></i>
-            </a>
+<a href="/resources/<%= r.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
+  Visa <i class="ti ti-arrow-right"></i>
+</a>
           </li>
         <% }) %>
       </ul>
