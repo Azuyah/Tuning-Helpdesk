@@ -13,46 +13,40 @@
 
       <!-- Desktop nav -->
       <nav class="ml-4 hidden md:flex items-center gap-1 text-sm">
-<a href="/" 
-   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
-          dark:text-slate-200 dark:hover:bg-white/5 
-          relative after:pointer-events-none after:absolute after:inset-x-3 
-          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
-          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
-          after:transition">
-  Hem
-</a>
+        <a href="/" 
+           class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+                  dark:text-slate-200 dark:hover:bg-white/5 
+                  relative after:pointer-events-none after:absolute after:inset-x-3 
+                  after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+                  dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+                  after:transition">Hem</a>
 
-<a href="/ask" 
-   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
-          dark:text-slate-200 dark:hover:bg-white/5 
-          relative after:pointer-events-none after:absolute after:inset-x-3 
-          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
-          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
-          after:transition">
-  Ställ fråga
-</a>
+        <a href="/ask" 
+           class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+                  dark:text-slate-200 dark:hover:bg-white/5 
+                  relative after:pointer-events-none after:absolute after:inset-x-3 
+                  after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+                  dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+                  after:transition">Ställ fråga</a>
 
-<a href="/resources" 
-   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
-          dark:text-slate-200 dark:hover:bg-white/5 
-          relative after:pointer-events-none after:absolute after:inset-x-3 
-          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
-          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
-          after:transition">
-  Resurser
-</a>
+        <a href="/resources" 
+           class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+                  dark:text-slate-200 dark:hover:bg-white/5 
+                  relative after:pointer-events-none after:absolute after:inset-x-3 
+                  after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+                  dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+                  after:transition">Resurser</a>
 
-<a href="/explore" 
-   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
-          dark:text-slate-200 dark:hover:bg-white/5 
-          relative after:pointer-events-none after:absolute after:inset-x-3 
-          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
-          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
-          after:transition">
-  Utforska
-</a>
-        <% if (user && user.role === 'admin') { %>
+        <a href="/explore" 
+           class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+                  dark:text-slate-200 dark:hover:bg-white/5 
+                  relative after:pointer-events-none after:absolute after:inset-x-3 
+                  after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+                  dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+                  after:transition">Utforska</a>
+
+        <% const me = (typeof user !== 'undefined' && user) ? user : null; %>
+        <% if (me && me.role === 'admin') { %>
           <a href="/admin" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-amber-500 after:scale-x-0 hover:after:scale-x-100 after:transition">
             Admin
             <span class="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-200/10 dark:text-amber-300 dark:border-amber-400/30">beta</span>
@@ -62,58 +56,60 @@
 
       <!-- Spacer -->
       <div class="flex-1"></div>
-<!-- bredvid din inloggad-sektion i headern -->
-<% if (user) { %>
-  <a href="<%= user.role === 'admin' ? '/admin' : '/profile' %>" class="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
-    <i class="ti ti-bell"></i>
-    <% if (user.role === 'admin' && adminOpenCount > 0) { %>
-      <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">
-        <%= adminOpenCount %>
-      </span>
-    <% } %>
-    <% if (user.role === 'user' && notifCount > 0) { %>
-      <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">
-        <%= notifCount %>
-      </span>
-    <% } %>
-  </a>
-<% } %>
+
+      <!-- Notification/Bell (syns endast om inloggad) -->
+      <% if (me) { %>
+        <a href="<%= me.role === 'admin' ? '/admin' : '/profile' %>" class="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
+          <i class="ti ti-bell"></i>
+          <% if (me.role === 'admin' && Number(adminOpenCount||0) > 0) { %>
+            <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">
+              <%= adminOpenCount %>
+            </span>
+          <% } %>
+          <% if (me.role !== 'admin' && Number(notifCount||0) > 0) { %>
+            <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">
+              <%= notifCount %>
+            </span>
+          <% } %>
+        </a>
+      <% } %>
+
       <!-- Right side (desktop) -->
       <div class="hidden md:flex items-center gap-2">
-        <% if (user) { %>
+        <% if (me) { %>
           <!-- User dropdown -->
           <div class="relative" id="userMenu">
             <button id="userBtn"
                     class="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800">
               <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-600 dark:bg-red-600 text-white">
-                <%= (user.name || 'U')[0].toUpperCase() %>
+                <%= (me.name || 'U')[0].toUpperCase() %>
               </span>
-              <span class="hidden sm:block max-w-[160px] truncate"><%= user.name %></span>
+              <span class="hidden sm:block max-w-[160px] truncate"><%= me.name %></span>
               <i class="ti ti-chevron-down text-slate-500 dark:text-slate-400"></i>
             </button>
             <div id="userDrop"
                  class="hidden absolute right-0 mt-2 w-56 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden">
               <div class="px-4 py-3 text-sm">
-                <div class="font-medium text-slate-900 dark:text-white truncate"><%= user.name %></div>
-                <div class="text-slate-500 dark:text-slate-400"><%= user.email %></div>
+                <div class="font-medium text-slate-900 dark:text-white truncate"><%= me.name %></div>
+                <div class="text-slate-500 dark:text-slate-400"><%= me.email %></div>
               </div>
-<div class="border-t border-slate-200 dark:border-slate-800">
-  <a href="/profile" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-white/5">
-    <i class="ti ti-user-circle"></i> 
-    <%= me.role === 'dealer' ? 'Mina frågor' : 'Profil' %>
-  </a>
-</div>
-                <% if (user.role === 'admin') { %>
-                  <a href="/admin" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-white/5">
-                    <i class="ti ti-settings"></i> Adminpanel
-                  </a>
-                <% } %>
-                <form action="/api/auth/logout" method="post" onsubmit="return doLogout(event)">
-                  <button class="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10">
-                    <i class="ti ti-logout-2"></i> Logga ut
-                  </button>
-                </form>
-              </div>
+
+              <a href="/profile" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-white/5">
+                <i class="ti ti-user-circle"></i>
+                <%= (me.role === 'dealer') ? 'Mina frågor' : 'Profil' %>
+              </a>
+
+              <% if (me.role === 'admin') { %>
+                <a href="/admin" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-white/5">
+                  <i class="ti ti-settings"></i> Adminpanel
+                </a>
+              <% } %>
+
+              <form action="/api/auth/logout" method="post" onsubmit="return doLogout(event)">
+                <button class="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10">
+                  <i class="ti ti-logout-2"></i> Logga ut
+                </button>
+              </form>
             </div>
           </div>
         <% } else { %>
@@ -123,7 +119,7 @@
           </a>
         <% } %>
 
-        <!-- Theme toggle: ENDA knappen -->
+        <!-- Theme toggle -->
         <button id="themeToggle"
                 class="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 transition"
                 aria-label="Växla tema">
@@ -159,13 +155,12 @@
     });
   })();
 
-  // Theme toggle (enda instans)
+  // Theme toggle
   (function(){
     const btn  = document.getElementById('themeToggle');
     const icon = document.getElementById('themeIcon');
     const root = document.documentElement;
 
-    // init
     if (localStorage.theme === 'dark') root.classList.add('dark');
     else root.classList.remove('dark');
     syncIcon();
