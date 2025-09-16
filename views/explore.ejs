@@ -70,62 +70,47 @@
 </aside>
 
 <!-- Lista -->
-<div class="lg:col-span-3 space-y-6 min-w-0">
-  <% if (tab === 'topics') { %>
-    <h1 class="text-2xl font-bold text-slate-900">Alla ämnen</h1>
+<div class="lg:col-span-3 space-y-10 min-w-0">
+
+  <% if (tab === 'topics' || tab === 'all') { %>
+    <h1 class="text-2xl font-bold text-slate-900 mb-4">Ämnen</h1>
     <% if (!topics || topics.length === 0) { %>
       <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600">
         Inga ämnen hittades.
       </div>
     <% } else { %>
-      <!-- hard-stop any inherited max-width/mx-auto -->
-      <div class="w-full mx-0" style="max-width:none">
-        <ul class="w-full max-w-none divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
-          <% topics.forEach(t => { %>
-            <li class="w-full px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
-              <div class="min-w-0">
-                <div class="font-medium text-slate-800 truncate">
-                  <a href="/topic/<%= t.id %>" class="hover:underline"><%= t.title %></a>
-                </div>
-                <% if (t.excerpt) { %>
-                  <div class="text-xs text-slate-500 mt-1 line-clamp-2"><%= t.excerpt %></div>
-                <% } %>
-                <% if (t.tags) { %>
-                  <div class="mt-2 flex flex-wrap gap-1">
-                    <% t.tags.split(',').map(s=>s.trim()).filter(Boolean).forEach(tag => { %>
-                      <a href="/explore?tab=topics&tag=<%= encodeURIComponent(tag.toLowerCase()) %><%= q?`&q=${encodeURIComponent(q)}`:'' %><%= cat?`&cat=${encodeURIComponent(cat)}`:'' %>"
-                         class="text-[11px] rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 hover:bg-slate-200">
-                        <%= tag %>
-                      </a>
-                    <% }) %>
-                  </div>
-                <% } %>
+      <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
+        <% topics.forEach(t => { %>
+          <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
+            <div class="min-w-0">
+              <div class="font-medium text-slate-800 truncate">
+                <a href="/topic/<%= t.id %>" class="hover:underline"><%= t.title %></a>
               </div>
-              <a href="/topic/<%= t.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm shrink-0 hover:underline">
-                Visa <i class="ti ti-arrow-right"></i>
-              </a>
-            </li>
-          <% }) %>
-        </ul>
-      </div>
+              <% if (t.excerpt) { %>
+                <div class="text-xs text-slate-500 mt-1 line-clamp-2"><%= t.excerpt %></div>
+              <% } %>
+            </div>
+            <a href="/topic/<%= t.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
+              Visa <i class="ti ti-arrow-right"></i>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
     <% } %>
-  <% } else { %>
-    <h1 class="text-2xl font-bold text-slate-900">Alla frågor</h1>
+  <% } %>
+
+  <% if (tab === 'questions' || tab === 'all') { %>
+    <h1 class="text-2xl font-bold text-slate-900 mb-4">Frågor</h1>
     <% if (!questions || questions.length === 0) { %>
       <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600">Inga frågor hittades.</div>
     <% } else { %>
-      <ul class="w-full max-w-none divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
+      <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
         <% questions.forEach(q => { %>
           <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
             <div class="min-w-0">
               <div class="font-medium text-slate-800 truncate"><%= q.title %></div>
               <div class="text-xs text-slate-500 mt-0.5">
-                <%= new Date(q.created_at).toLocaleDateString('sv-SE') %> •
-                <% const lbl = q.status==='answered'?'Besvarad': q.status==='closed'?'Stängd':'Öppen'; %>
-                <span class="inline-flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full <%= q.status==='answered'?'bg-emerald-500':q.status==='closed'?'bg-slate-400':'bg-amber-500' %>"></span>
-                  <%= lbl %>
-                </span>
+                <%= new Date(q.created_at).toLocaleDateString('sv-SE') %>
               </div>
             </div>
             <a href="/questions/<%= q.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
@@ -136,5 +121,31 @@
       </ul>
     <% } %>
   <% } %>
+
+  <% if (tab === 'resources' || tab === 'all') { %>
+    <h1 class="text-2xl font-bold text-slate-900 mb-4">Resurser</h1>
+    <% if (!resources || resources.length === 0) { %>
+      <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600">Inga resurser hittades.</div>
+    <% } else { %>
+      <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
+        <% resources.forEach(r => { %>
+          <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
+            <div class="min-w-0">
+              <div class="font-medium text-slate-800 truncate">
+                <a href="/resources/<%= r.id %>" class="hover:underline"><%= r.title %></a>
+              </div>
+              <% if (r.excerpt) { %>
+                <div class="text-xs text-slate-500 mt-1 line-clamp-2"><%= r.excerpt %></div>
+              <% } %>
+            </div>
+            <a href="/resources/<%= r.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
+              Ladda ner <i class="ti ti-download"></i>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  <% } %>
+
 </div>
 </section>
