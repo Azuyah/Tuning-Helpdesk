@@ -61,8 +61,7 @@ db.pragma('foreign_keys = ON');
 
 /* Hjälpare för migrationer – definiera EN gång */
 function hasColumn(table, col) {
-  const row = db.prepare(`PRAGMA table_info(${table})`).all()
-    .find(r => r.name === col);
+  const row = db.prepare(`PRAGMA table_info(${table})`).all().find(r => r.name === col);
   return !!row;
 }
 function addColumnIfMissing(table, col, ddl) {
@@ -152,19 +151,19 @@ function initSchemaAndSeed() {
     );
   `);
 
-  // Säkerställ extra kolumner (idempotent)
+  // Extra kolumner
   addColumnIfMissing('topics_base', 'answer_for_question_id', 'INTEGER');
   addColumnIfMissing('topics', 'is_resource', 'INTEGER DEFAULT 0');
   addColumnIfMissing('topics', 'download_url', 'TEXT');
 
-  // Backfill users.password_hash (ska aldrig vara NULL; använd tom sträng)
+  // Backfill users.password_hash (ska inte vara NULL)
   try {
     db.prepare(`UPDATE users SET password_hash='' WHERE password_hash IS NULL`).run();
   } catch (e) {
     console.warn('[DB:migration] kunde inte backfilla password_hash:', e.message);
   }
 
-  // Säkerställ tidsstämplar finns
+  // Säkerställ tidsstämplar finns (för gamla DB:er)
   addColumnIfMissing('users', 'created_at', 'TEXT');
   addColumnIfMissing('users', 'updated_at', 'TEXT');
   db.prepare(`UPDATE users SET created_at = COALESCE(created_at, datetime('now'))`).run();
@@ -194,33 +193,22 @@ function initSchemaAndSeed() {
   }
 }
 
-// Kör init
-initSchemaAndSeed();
-// Säkerställ att questions har svar-kolumnerna
-function hasColumn(table, col) {
-  const row = db.prepare(`PRAGMA table_info(${table})`).all()
-    .find(r => r.name === col);
-  return !!row;
-}
-function addColumn(table, col, ddl) {
-  if (!hasColumn(table, col)) {
-    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run();
-  }
-}
-
-// Obligatoriska svarfält
-addColumn('questions', 'answer_title', 'TEXT');
-addColumn('questions', 'answer_body', 'TEXT');
-addColumn('questions', 'answer_tags', 'TEXT');
-addColumn('questions', 'answered_by', 'TEXT');
-addColumn('questions', 'answered_at', 'TEXT');      // kan vara TEXT (ISO) eller INTEGER (unix)
-addColumn('questions', 'is_answered', 'INTEGER DEFAULT 0');
-
-// Om du använder dessa någon annanstans i koden, se till att de finns också:
-addColumn('questions', 'user_seen_answer_at', 'TEXT'); // markeras när frågeställaren sett svaret
-
+// Kör init (EN gång)
 initSchemaAndSeed();
 
+/* Valfri: migrations för gamla DB:er som saknar svarskolumner i questions */
+const qCols = {
+  answer_title: 'TEXT',
+  answer_body:  'TEXT',
+  answer_tags:  'TEXT',
+  answered_by:  'TEXT',
+  answered_at:  'TEXT',
+  is_answered:  'INTEGER DEFAULT 0',
+  user_seen_answer_at: 'TEXT',
+};
+for (const [col, ddl] of Object.entries(qCols)) {
+  addColumnIfMissing('questions', col, ddl);
+}
 // --- Dealers schema (NMS/Dynex) ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS dealers (
