@@ -222,28 +222,49 @@ db.exec(`
     telephone     TEXT,
     added         TEXT,
     md5_token     TEXT NOT NULL,                  -- md5(dealer_id + email)
+    created_local TEXT,
     updated_at    TEXT DEFAULT (datetime('now')),
     PRIMARY KEY (source, dealer_id)
   );
 
   CREATE INDEX IF NOT EXISTS idx_dealers_md5   ON dealers (md5_token);
   CREATE INDEX IF NOT EXISTS idx_dealers_email ON dealers (email);
+  CREATE INDEX IF NOT EXISTS idx_dealers_updated ON dealers (updated_at);
 `);
 
-// Mjuk migrering: lägg till md5_token om den saknas, och backfilla
 try {
-  const cols = db.prepare("PRAGMA table_info(dealers)").all().map(c => c.name);
+  // Kolla befintliga kolumner en gång
+  const cols = db.prepare(`PRAGMA table_info(dealers)`).all().map(c => c.name);
+
+  // Lägg till md5_token om den saknas + backfill
   if (!cols.includes('md5_token')) {
     db.exec(`ALTER TABLE dealers ADD COLUMN md5_token TEXT`);
-    const rows = db.prepare(`SELECT source, dealer_id, IFNULL(lower(email),'') AS email FROM dealers`).all();
-    const upd  = db.prepare(`UPDATE dealers SET md5_token=? WHERE source=? AND dealer_id=?`);
+    const rows = db.prepare(`
+      SELECT source, dealer_id, IFNULL(lower(email), '') AS email
+      FROM dealers
+    `).all();
+    const upd = db.prepare(`UPDATE dealers SET md5_token = ? WHERE source = ? AND dealer_id = ?`);
     for (const r of rows) {
-      const token = crypto.createHash('md5').update(String(r.dealer_id) + String(r.email), 'utf8').digest('hex');
+      const token = crypto.createHash('md5')
+        .update(String(r.dealer_id) + String(r.email), 'utf8')
+        .digest('hex');
       upd.run(token, r.source, r.dealer_id);
     }
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_dealers_md5 ON dealers (md5_token)`);
   }
-} catch {}
+
+  // Lägg till created_local om den saknas + backfill (först-sedd-tid)
+  if (!cols.includes('created_local')) {
+    db.exec(`ALTER TABLE dealers ADD COLUMN created_local TEXT`);
+    db.prepare(`
+      UPDATE dealers
+         SET created_local = COALESCE(created_local, updated_at, datetime('now'))
+    `).run();
+  }
+
+  // (Index skapas idempotent i CREATE INDEX ovan)
+} catch (e) {
+  console.warn('[DB:migration] dealers migrations:', e.message);
+}
 
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
@@ -286,18 +307,22 @@ app.use((req, res, next) => {
 
 // Upsert-statement för dealers
 const upsertDealerStmt = db.prepare(`
-  INSERT INTO dealers (source, dealer_id, email, username, company, firstname, lastname, telephone, added, md5_token, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  INSERT INTO dealers (
+    source, dealer_id, email, username, company, firstname, lastname, telephone, added, md5_token,
+    created_local, updated_at
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
   ON CONFLICT(source, dealer_id) DO UPDATE SET
-    email      = excluded.email,
-    username   = excluded.username,
-    company    = excluded.company,
-    firstname  = excluded.firstname,
-    lastname   = excluded.lastname,
-    telephone  = excluded.telephone,
-    added      = excluded.added,
-    md5_token  = excluded.md5_token,
-    updated_at = datetime('now')
+    email         = excluded.email,
+    username      = excluded.username,
+    company       = excluded.company,
+    firstname     = excluded.firstname,
+    lastname      = excluded.lastname,
+    telephone     = excluded.telephone,
+    added         = excluded.added,
+    md5_token     = excluded.md5_token,
+    created_local = COALESCE(dealers.created_local, excluded.created_local),
+    updated_at    = datetime('now')
 `);
 
 // Hämta dealers från partner-API

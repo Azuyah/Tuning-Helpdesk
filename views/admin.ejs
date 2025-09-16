@@ -12,7 +12,7 @@
   <div class="flex items-center justify-between gap-4">
     <div>
       <h1 class="text-3xl font-bold tracking-tight text-slate-900">Adminpanel</h1>
-      <p class="text-slate-600">Översikt & snabba åtgärder</p>
+      <p class="text-slate-600">Översikt & åtgärder</p>
     </div>
   </div>
 
@@ -32,7 +32,7 @@
   <div class="grid md:grid-cols-2 gap-6">
     <!-- Snabbåtgärder (smal container) -->
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold text-slate-900 mb-4">Snabbåtgärder</h2>
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">Åtgärder</h2>
       <div class="flex flex-wrap gap-3">
         <!-- POST /admin/sync-dealers -->
         <form method="post" action="/admin/sync-dealers">
@@ -55,7 +55,7 @@
 
     <!-- Snabba länkar (separat kort) -->
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold text-slate-900 mb-4">Snabba länkar</h2>
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">Länkar</h2>
       <div class="flex flex-wrap gap-3">
         <a href="/admin/new-topic"
            class="inline-flex items-center gap-2 rounded-xl bg-sky-600 text-white px-4 py-2.5 font-medium shadow hover:bg-sky-700">
@@ -172,11 +172,6 @@
     </ul>
   <% } %>
 </div>
-      <div class="px-5 py-3 border-t">
-        <a href="/admin-accounts?tab=dealers" class="text-sm text-sky-600 hover:underline inline-flex items-center gap-1">
-          Visa alla dealers <i class="ti ti-arrow-right"></i>
-        </a>
-      </div>
     </div>
   </div>
 </section>
