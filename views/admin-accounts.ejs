@@ -92,7 +92,7 @@
         <select name="perPage"
                 class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
                        focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
-          <% const pp = Number(perPage || 15); %>
+          <% const pp = Number(typeof perPage === 'undefined' ? 15 : perPage); %>
           <option value="15"  <%= pp===15  ? 'selected' : '' %>>15</option>
           <option value="30"  <%= pp===30  ? 'selected' : '' %>>30</option>
           <option value="50"  <%= pp===50  ? 'selected' : '' %>>50</option>
@@ -155,10 +155,15 @@
           Visar <%= dealers.length %> av <%= totalFiltered %> matchningar
         </div>
         <div class="inline-flex gap-1">
-          <% function link(p){ 
-               const params = new URLSearchParams({ q, source, per, page: p });
-               return `/admin-accounts?${params.toString()}`;
-             } %>
+<% function link(p){
+     const params = new URLSearchParams({
+       q: (typeof q==='undefined' ? '' : q),
+       source: (typeof source==='undefined' ? '' : source),
+       perPage: (typeof perPage==='undefined' ? 15 : perPage),
+       page: p
+     });
+     return `/admin-accounts?${params.toString()}`;
+   } %>
           <a href="<%= page>1 ? link(page-1) : '#' %>"
              class="px-3 py-1.5 rounded-lg border text-sm <%= page>1 ? 'hover:bg-slate-50 border-slate-300' : 'border-slate-200 text-slate-400 pointer-events-none' %>">
             Föregående
