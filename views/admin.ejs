@@ -112,64 +112,66 @@
       </div>
     </div>
 
-    <!-- Senaste ämnen -->
-    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col">
-      <div class="px-5 py-4 border-b">
-        <h3 class="text-base font-semibold text-slate-900 flex items-center gap-2">
-          <i class="ti ti-book text-sky-600"></i> Senaste ämnen
-        </h3>
-      </div>
-      <div class="flex-1">
-<% if (_latestDealers.length === 0) { %>
-  <div class="p-5 text-sm text-slate-500">Inga dealers synkade ännu.</div>
-<% } else { %>
-  <ul class="divide-y divide-slate-200">
-    <% _latestDealers.forEach(d => { %>
-      <li class="px-5 py-3 flex items-center justify-between hover:bg-slate-50">
-        <div class="min-w-0">
-          <div class="font-medium text-slate-900 truncate"><%= d.email || '-' %></div>
-          <div class="text-xs text-slate-500 mt-0.5">
-            <%= (d.firstname || '') %> <%= (d.lastname || '') %> • <%= (d.company || '-') %> • <%= (d.source || '').toUpperCase() %>
-          </div>
-        </div>
-        <div class="text-xs text-slate-500 shrink-0">
-          <%= new Date(d.updated_at).toLocaleString('sv-SE') %>
-        </div>
-      </li>
-    <% }) %>
-  </ul>
-<% } %>
-      </div>
-    </div>
+<!-- Senaste ämnen -->
+<div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="px-5 py-4 border-b">
+    <h3 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+      <i class="ti ti-book text-sky-600"></i> Senaste ämnen
+    </h3>
+  </div>
 
-    <!-- Senaste dealers -->
-    <div class="rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col">
-      <div class="px-5 py-4 border-b">
-        <h3 class="text-base font-semibold text-slate-900 flex items-center gap-2">
-          <i class="ti ti-building-store text-sky-600"></i> Senaste dealers
-        </h3>
-      </div>
-      <div class="flex-1">
-<% if (_latestDealers.length === 0) { %>
-  <div class="p-5 text-sm text-slate-500">Inga dealers synkade ännu.</div>
-<% } else { %>
-  <ul class="divide-y divide-slate-200">
-    <% _latestDealers.forEach(d => { %>
-      <li class="px-5 py-3 flex items-center justify-between hover:bg-slate-50">
-        <div class="min-w-0">
-          <div class="font-medium text-slate-900 truncate"><%= d.email || '-' %></div>
-          <div class="text-xs text-slate-500 mt-0.5">
-            <%= (d.firstname || '') %> <%= (d.lastname || '') %> • <%= (d.company || '-') %> • <%= (d.source || '').toUpperCase() %>
+  <% if (!_latestTopics || _latestTopics.length === 0) { %>
+    <div class="p-5 text-sm text-slate-500">Inga ämnen ännu.</div>
+  <% } else { %>
+    <ul class="divide-y divide-slate-200">
+      <% _latestTopics.forEach(t => { %>
+        <li class="px-5 py-3 flex items-center justify-between hover:bg-slate-50">
+          <div class="min-w-0">
+            <div class="font-medium text-slate-900 truncate"><%= t.title %></div>
+            <div class="text-xs text-slate-500 mt-0.5">
+              Uppdaterad: <%= new Date(t.updated_at).toLocaleString('sv-SE') %>
+            </div>
           </div>
-        </div>
-        <div class="text-xs text-slate-500 shrink-0">
-          <%= new Date(d.updated_at).toLocaleString('sv-SE') %>
-        </div>
-      </li>
-    <% }) %>
-  </ul>
-<% } %>
-      </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <a href="/topic/<%= t.id %>" class="text-slate-600 hover:underline text-sm">Visa</a>
+            <a href="/admin/topic/<%= t.id %>/edit" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
+              Redigera <i class="ti ti-pencil"></i>
+            </a>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>
+
+<!-- Senaste dealers -->
+<div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <div class="px-5 py-4 border-b">
+    <h3 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+      <i class="ti ti-building-store text-sky-600"></i> Senaste dealers
+    </h3>
+  </div>
+
+  <% if (!_latestDealers || _latestDealers.length === 0) { %>
+    <div class="p-5 text-sm text-slate-500">Inga dealers synkade ännu.</div>
+  <% } else { %>
+    <ul class="divide-y divide-slate-200">
+      <% _latestDealers.forEach(d => { %>
+        <li class="px-5 py-3 flex items-center justify-between hover:bg-slate-50">
+          <div class="min-w-0">
+            <div class="font-medium text-slate-900 truncate"><%= (d.firstname||'') + ' ' + (d.lastname||'') || d.company || d.email %></div>
+            <div class="text-xs text-slate-500 mt-0.5">
+              <span class="mr-2 rounded px-1.5 py-0.5 border text-[10px] <%= d.source==='nms' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-indigo-300 bg-indigo-50 text-indigo-700' %>">
+                <%= (d.source||'').toUpperCase() %>
+              </span>
+              <%= d.email || '-' %> • Synkad: <%= new Date(d.updated_at).toLocaleString('sv-SE') %>
+            </div>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>
       <div class="px-5 py-3 border-t">
         <a href="/admin-accounts?tab=dealers" class="text-sm text-sky-600 hover:underline inline-flex items-center gap-1">
           Visa alla dealers <i class="ti ti-arrow-right"></i>

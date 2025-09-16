@@ -1998,12 +1998,12 @@ app.get('/admin', requireAdmin, (req, res) => {
     LIMIT 8
   `).all();
 
-  const latestDealers = db.prepare(`
-    SELECT source, email, company, firstname, lastname, updated_at
-    FROM dealers
-    ORDER BY datetime(updated_at) DESC
-    LIMIT 8
-  `).all();
+const latestDealers = db.prepare(`
+  SELECT source, email, company, firstname, lastname, updated_at
+  FROM dealers
+  ORDER BY datetime(updated_at) DESC
+  LIMIT 6
+`).all();
 
   res.render('admin', {
     title: 'Adminpanel',
