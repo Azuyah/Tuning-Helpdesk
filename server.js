@@ -1862,6 +1862,27 @@ app.get('/ask', (req, res) => {
   res.render('ask', { user: getUser(req), title: 'Ställ en fråga' });
 });
 
+app.get('/admin/accounts', (req, res) => {
+  const me = getUser(req);
+  if (!me || me.role !== 'admin') return res.status(403).send('Access denied');
+
+  const users = db.prepare(`
+    SELECT id, email, name, role, created_at, updated_at
+    FROM users
+    ORDER BY created_at DESC
+    LIMIT 500
+  `).all();
+
+  const dealers = db.prepare(`
+    SELECT source, dealer_id, email, username, company, firstname, lastname, telephone, added, updated_at
+    FROM dealers
+    ORDER BY updated_at DESC
+    LIMIT 500
+  `).all();
+
+  res.render('admin-accounts', { title: 'Alla konton & dealers', users, dealers, user: me });
+});
+
 app.get('/admin', requireAdmin, (req, res) => {
   const openQs = db.prepare(`
     SELECT id, title, created_at
