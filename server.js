@@ -1862,14 +1862,68 @@ app.get('/ask', (req, res) => {
   res.render('ask', { user: getUser(req), title: 'Ställ en fråga' });
 });
 
+// /admin-accounts – lista users + dealers med sök, filter och paginering
 app.get('/admin-accounts', requireAdmin, (req, res) => {
-  const q       = (req.query.q || '').trim();
-  const source  = (req.query.source || '').trim();     // '' | 'nms' | 'dynex'
-  const perPage = Math.max(1, Number(req.query.perPage || 15));
-  const page    = Math.max(1, Number(req.query.page || 1));
+  // --- Query params (med defaults) ---
+  const qRaw     = (req.query.q || '').trim();
+  const q        = qRaw;                   // skickas till vyn
+  const source   = (req.query.source || '').trim();      // '' | 'nms' | 'dynex'
+  const perPage  = Math.max(1, Number(req.query.perPage || 15));
+  const page     = Math.max(1, Number(req.query.page || 1));
 
-  // ... hämta users, dealers, totalFiltered, totalPages etc ...
+  // --- Users: hämta en rimlig mängd (utan filter här) ---
+  const users = db.prepare(`
+    SELECT id, email, name, role, created_at, updated_at
+    FROM users
+    ORDER BY datetime(created_at) DESC
+  `).all();
 
+  // --- Dealers: bygg WHERE dynamiskt för filter/sök ---
+  const where = [];
+  const params = [];
+
+  if (source === 'nms' || source === 'dynex') {
+    where.push(`source = ?`);
+    params.push(source);
+  }
+
+  if (qRaw) {
+    // enkel fritext över flera fält (case-insensitive)
+    const like = `%${qRaw.toLowerCase()}%`;
+    where.push(`
+      (
+        lower(IFNULL(email,''))     LIKE ?
+        OR lower(IFNULL(username,''))  LIKE ?
+        OR lower(IFNULL(company,''))   LIKE ?
+        OR lower(IFNULL(firstname,'')) LIKE ?
+        OR lower(IFNULL(lastname,''))  LIKE ?
+        OR lower(IFNULL(telephone,'')) LIKE ?
+      )
+    `);
+    params.push(like, like, like, like, like, like);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  // --- Totals ---
+  const totalDealersAll = db.prepare(`SELECT COUNT(*) AS n FROM dealers`).get().n;
+  const totalFiltered   = db.prepare(`SELECT COUNT(*) AS n FROM dealers ${whereSql}`).get(...params).n;
+
+  // --- Paginering ---
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / perPage));
+  const safePage   = Math.min(page, totalPages);
+  const offset     = (safePage - 1) * perPage;
+
+  // --- Hämta dealers för aktuell sida ---
+  const dealers = db.prepare(`
+    SELECT source, dealer_id, email, username, company, firstname, lastname, telephone, added, updated_at
+    FROM dealers
+    ${whereSql}
+    ORDER BY datetime(updated_at) DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, perPage, offset);
+
+  // --- Render ---
   res.render('admin-accounts', {
     title: 'Konton & dealers',
     users,
@@ -1877,7 +1931,7 @@ app.get('/admin-accounts', requireAdmin, (req, res) => {
     totalDealersAll,
     totalFiltered,
     totalPages,
-    page,
+    page: safePage,
     q,
     source,
     perPage
