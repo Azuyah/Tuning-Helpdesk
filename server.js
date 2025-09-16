@@ -1699,6 +1699,46 @@ app.post('/admin/reindex', requireAdmin, (req, res) => {
   }
 });
 
+// Lista alla frågor (admin)
+app.get('/admin/questions', requireAdmin, (req, res) => {
+  const status   = (req.query.status || '').trim();      // '', 'open', 'answered', 'closed'
+  const q        = (req.query.q || '').trim();
+  const page     = Math.max(1, Number(req.query.page || 1));
+  const perPage  = Math.max(1, Math.min(50, Number(req.query.perPage || 15)));
+  const offset   = (page - 1) * perPage;
+
+  const where = [];
+  const params = [];
+
+  if (status) { where.push(`status = ?`); params.push(status); }
+  if (q) {
+    where.push(`(title LIKE ? OR body LIKE ?)`);
+    params.push(`%${q}%`, `%${q}%`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : ``;
+
+  const totalRow = db.prepare(`SELECT COUNT(*) AS n FROM questions ${whereSql}`).get(...params);
+  const total    = totalRow?.n || 0;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+
+  const rows = db.prepare(`
+    SELECT q.id, q.title, q.status, q.created_at, q.updated_at,
+           u.email AS user_email
+    FROM questions q
+    LEFT JOIN users u ON u.id = q.user_id
+    ${whereSql}
+    ORDER BY datetime(q.created_at) DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, perPage, offset);
+
+  res.render('admin-questions', {
+    title: 'Frågor',
+    questions: rows,
+    q, status,
+    page, perPage, total, totalPages
+  });
+});
+
 // Sök i både topics och questions
 app.get('/api/search', (req, res) => {
   const raw = (req.query.q || '').trim();
@@ -2027,7 +2067,7 @@ const latestDealers = db.prepare(`
   SELECT source, email, company, firstname, lastname, updated_at
   FROM dealers
   ORDER BY datetime(updated_at) DESC
-  LIMIT 6
+  LIMIT 4
 `).all();
 
   res.render('admin', {

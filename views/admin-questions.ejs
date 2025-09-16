@@ -1,0 +1,80 @@
+<section class="mx-auto max-w-6xl px-4 py-10 space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-slate-900">Frågor</h1>
+    <a href="/admin" class="text-sky-600 hover:underline">← Tillbaka till admin</a>
+  </div>
+
+  <form method="get" class="grid md:grid-cols-3 gap-4">
+    <input name="q" value="<%= q || '' %>" placeholder="Sök titel eller text…"
+           class="rounded-lg border border-slate-300 px-3 py-2 shadow-sm sm:text-sm" />
+    <div class="relative">
+      <select name="status" class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm sm:text-sm appearance-none">
+        <option value="" <%= !status ? 'selected':'' %>>Alla statusar</option>
+        <option value="open"     <%= status==='open'     ? 'selected':'' %>>Öppen</option>
+        <option value="answered" <%= status==='answered' ? 'selected':'' %>>Besvarad</option>
+        <option value="closed"   <%= status==='closed'   ? 'selected':'' %>>Stängd</option>
+      </select>
+      <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+    </div>
+    <button class="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+      Filtrera
+    </button>
+  </form>
+
+  <% if (!questions || questions.length === 0) { %>
+    <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">Inga frågor matchade.</div>
+  <% } else { %>
+    <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-700 text-left font-semibold">
+          <tr>
+            <th class="px-4 py-2">Titel</th>
+            <th class="px-4 py-2">Från</th>
+            <th class="px-4 py-2">Status</th>
+            <th class="px-4 py-2">Skapad</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          <% questions.forEach(q => { %>
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-2"><div class="line-clamp-1"><%= q.title %></div></td>
+              <td class="px-4 py-2 text-slate-600"><%= q.user_email || '-' %></td>
+              <td class="px-4 py-2">
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs
+                  <%= q.status === 'open' ? 'bg-amber-100 text-amber-700' :
+                      q.status === 'answered' ? 'bg-emerald-100 text-emerald-700' :
+                      'bg-slate-100 text-slate-700' %>"><%= q.status %></span>
+              </td>
+              <td class="px-4 py-2 text-slate-500"><%= new Date(q.created_at).toLocaleString('sv-SE') %></td>
+              <td class="px-4 py-2 text-right">
+                <a href="/admin/questions/<%= q.id %>" class="text-sky-600 hover:underline inline-flex items-center gap-1">
+                  Öppna <i class="ti ti-arrow-right"></i>
+                </a>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-between text-sm text-slate-600">
+      <div>Visar <%= questions.length %> av <%= total %></div>
+      <div class="inline-flex gap-1">
+        <% function link(p){ 
+             const u = new URLSearchParams({ q: q||'', status: status||'', perPage, page:p });
+             return `/admin/questions?` + u.toString();
+           } %>
+        <a class="px-3 py-1.5 rounded-lg border <%= page>1?'hover:bg-slate-50 border-slate-300':'border-slate-200 text-slate-400 pointer-events-none' %>"
+           href="<%= page>1?link(page-1):'#' %>">Föregående</a>
+        <% for (let i=Math.max(1,page-2); i<=Math.min(totalPages,page+2); i++){ %>
+          <a class="px-3 py-1.5 rounded-lg border <%= i===page ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>"
+             href="<%= link(i) %>"><%= i %></a>
+        <% } %>
+        <a class="px-3 py-1.5 rounded-lg border <%= page<totalPages?'hover:bg-slate-50 border-slate-300':'border-slate-200 text-slate-400 pointer-events-none' %>"
+           href="<%= page<totalPages?link(page+1):'#' %>">Nästa</a>
+      </div>
+    </div>
+  <% } %>
+</section>
