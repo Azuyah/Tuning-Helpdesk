@@ -113,16 +113,34 @@
   }
 
   // ------- Ikonväljare -------
-  (function(){
-    // En enkel curated lista – lägg gärna till fler.
-    const ICONS = [
-      'ti-rocket','ti-device-analytics','ti-gauge','ti-cloud-download','ti-credit-card',
-      'ti-settings','ti-plug','ti-database','ti-car','ti-engine','ti-tool','ti-adjustments',
-      'ti-box','ti-book','ti-notes','ti-cloud','ti-cpu','ti-bolt','ti-flame',
-      'ti-wrench','ti-steering-wheel','ti-file-description','ti-code','ti-chart-bar',
-      'ti-key','ti-lock','ti-shield','ti-stack-2','ti-terminal','ti-bulb'
-    ];
+(function(){
+  // Curated + extended Tabler icons-list
+  const ICONS = [
+    // System / UI
+    'ti-home','ti-search','ti-user','ti-users','ti-mail','ti-message','ti-bell',
+    'ti-calendar','ti-clock','ti-settings','ti-sliders','ti-adjustments',
 
+    // Tech / Tools
+    'ti-cpu','ti-device-desktop','ti-device-laptop','ti-device-mobile','ti-device-gamepad',
+    'ti-database','ti-terminal','ti-code','ti-bug','ti-shield','ti-lock','ti-key',
+
+    // Auto / Motor
+    'ti-car','ti-steering-wheel','ti-engine','ti-gas-station','ti-road','ti-tire',
+    'ti-wrench','ti-tool','ti-tools-kitchen','ti-antenna','ti-plug','ti-bolt',
+
+    // Business / Docs
+    'ti-credit-card','ti-shopping-cart','ti-cash','ti-coin','ti-wallet',
+    'ti-file','ti-file-description','ti-report','ti-book','ti-notes','ti-archive',
+
+    // Data / Analytics
+    'ti-chart-bar','ti-chart-pie','ti-chart-line','ti-gauge','ti-rocket','ti-flame',
+
+    // Cloud / Network
+    'ti-cloud','ti-cloud-download','ti-cloud-upload','ti-server','ti-network','ti-wifi',
+
+    // Fun / Misc
+    'ti-bulb','ti-star','ti-heart','ti-camera','ti-music','ti-plane','ti-world','ti-sun','ti-moon','ti-leaf','ti-box','ti-stack-2'
+  ];
     let currentCat = null;
     const modal  = document.getElementById('iconModal');
     const grid   = document.getElementById('iconGrid');
