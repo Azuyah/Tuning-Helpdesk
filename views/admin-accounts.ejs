@@ -9,46 +9,6 @@
       </div>
     </div>
 
-    <!-- Filter / sök / per-page -->
-    <form method="get" class="grid grid-cols-2 sm:flex items-end gap-3">
-      <!-- Sök -->
-      <div class="col-span-2 sm:w-64">
-        <label class="block text-xs font-medium text-slate-600 mb-1">Sök (email, namn, företag, användarnamn)</label>
-        <input name="q" value="<%= q %>" placeholder="t.ex. johanna, dynex, @gmail.com"
-               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-sm"/>
-      </div>
-
-      <!-- Källa -->
-      <div class="sm:w-40">
-        <label class="block text-xs font-medium text-slate-600 mb-1">Källa</label>
-        <select name="source"
-                class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-sm">
-          <option value="all"   <%= source==='all'?'selected':'' %>  >Alla</option>
-          <option value="nms"   <%= source==='nms'?'selected':'' %>  >NMS</option>
-          <option value="dynex" <%= source==='dynex'?'selected':'' %>>DYNEX</option>
-        </select>
-      </div>
-
-      <!-- Resultat per sida -->
-      <div class="sm:w-40">
-        <label class="block text-xs font-medium text-slate-600 mb-1">Resultat per sida</label>
-        <select name="per"
-                class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-sm">
-          <option value="15"  <%= per===15?'selected':'' %>>15</option>
-          <option value="30"  <%= per===30?'selected':'' %>>30</option>
-          <option value="50"  <%= per===50?'selected':'' %>>50</option>
-          <option value="100" <%= per===100?'selected':'' %>>100</option>
-        </select>
-      </div>
-
-      <div class="self-end">
-        <button class="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold shadow-sm hover:bg-sky-700">
-          Filtrera
-        </button>
-      </div>
-    </form>
-  </div>
-
   <!-- Users -->
   <div class="space-y-4">
     <h2 class="text-xl font-semibold text-slate-900">Användare (users)</h2>
@@ -88,6 +48,69 @@
       </div>
     <% } %>
   </div>
+
+  <!-- Filters for DEALERS -->
+<form method="get" action="/admin-accounts" class="mb-6">
+  <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
+
+    <!-- Keep existing users/dealers tabs’ query if you have any others -->
+    <input type="hidden" name="tab" value="dealers">
+
+    <!-- Search -->
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">
+        Sök (email, namn, företag, användarnamn)
+      </label>
+      <input
+        type="search"
+        name="q"
+        value="<%= (q || '') %>"
+        placeholder="t.ex. johanna, dynex, @gmail.com"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+      />
+    </div>
+
+    <!-- Källa -->
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Källa</label>
+      <div class="relative">
+        <select name="source"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                       focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+          <option value="" <%= !source ? 'selected' : '' %> >Alla</option>
+          <option value="nms"   <%= source==='nms'   ? 'selected' : '' %> >NMS</option>
+          <option value="dynex" <%= source==='dynex' ? 'selected' : '' %> >DYNEX</option>
+        </select>
+        <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+      </div>
+    </div>
+
+    <!-- Resultat per sida -->
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Resultat per sida</label>
+      <div class="relative">
+        <select name="perPage"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                       focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+          <% const pp = Number(perPage || 15); %>
+          <option value="15"  <%= pp===15  ? 'selected' : '' %>>15</option>
+          <option value="30"  <%= pp===30  ? 'selected' : '' %>>30</option>
+          <option value="50"  <%= pp===50  ? 'selected' : '' %>>50</option>
+          <option value="100" <%= pp===100 ? 'selected' : '' %>>100</option>
+        </select>
+        <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="md:col-span-3 lg:col-span-1">
+      <button type="submit"
+              class="inline-flex items-center gap-2 rounded-xl bg-sky-600 text-white px-5 py-2.5 font-medium shadow hover:bg-sky-700 transition">
+        <i class="ti ti-filter"></i> Filtrera
+      </button>
+    </div>
+  </div>
+</form>
 
   <!-- Dealers -->
   <div class="space-y-4">
