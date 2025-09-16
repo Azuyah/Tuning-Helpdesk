@@ -317,29 +317,40 @@ async function fetchDealersFrom(source, url, apiKey) {
 function upsertDealers(source, list) {
   const tx = db.transaction(() => {
     for (const rec of list) {
-      // behåll originalets casing till token
+      // behåll original-casing för token, men lagra email i lowercase
       const rawEmail = (rec.email || '').trim();
-      const email    = rawEmail.toLowerCase();              // för sökningar/visning
+      const email    = rawEmail.toLowerCase();
       const dealerId = rec.ID || '';
 
       const d = {
         dealer_id: dealerId,
         email,
-        username: rec.username || '',
-        company:  rec.company  || '',
+        username:  rec.username  || '',
+        company:   rec.company   || '',
         firstname: rec.firstname || '',
         lastname:  rec.lastname  || '',
         telephone: rec.telephone || null,
         added:     rec.added     || null,
       };
 
-      // TOKEN = md5(id + RAW email)  ← matchar MySQL-exemplet Stian skickade
+      // TOKEN = md5(id + RAW email) — matchar partnerns MySQL-exempel
       const token = md5(dealerId + rawEmail);
 
       upsertDealerStmt.run(
         source, d.dealer_id, d.email, d.username, d.company,
         d.firstname, d.lastname, d.telephone, d.added, token
       );
+
+      // Promo till dealer-roll om email finns, inte admin, och inte redan dealer
+      if (d.email) {
+        db.prepare(`
+          UPDATE users
+             SET role='dealer', updated_at=datetime('now')
+           WHERE lower(email)=lower(?)
+             AND role <> 'admin'
+             AND role <> 'dealer'
+        `).run(d.email);
+      }
     }
   });
   tx();
@@ -410,7 +421,7 @@ function requireAdmin(req, res, next) {
 
 
 // --- SSO md5-login ---
-// Partnern länkar t.ex. till: https://din-helpdesk.se/sso/md5-login?token=<md5(id+email)>&redirect=/profile
+
 app.get('/sso/md5-login', async (req, res) => {
   try {
     const token = String(req.query.token || '').trim().toLowerCase();
@@ -431,12 +442,22 @@ app.get('/sso/md5-login', async (req, res) => {
         [dealer.firstname, dealer.lastname].filter(Boolean).join(' ') ||
         dealer.username || dealer.company || email;
 
-db.prepare(`
-  INSERT INTO users (email, name, role, password_hash, created_at, updated_at)
-  VALUES (?, ?, 'user', '', datetime('now'), datetime('now'))
-`).run(email, displayName);
+      db.prepare(`
+        INSERT INTO users (email, name, role, password_hash, created_at, updated_at)
+        VALUES (?, ?, 'user', '', datetime('now'), datetime('now'))
+      `).run(email, displayName);
 
       user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(email);
+    }
+
+    // 🔹 Här stoppar du in dealer-roll-logiken
+    const isDealerEmail = db.prepare(`
+      SELECT 1 FROM dealers WHERE lower(email) = lower(?) LIMIT 1
+    `).get(user.email);
+
+    if (isDealerEmail && user.role !== 'admin' && user.role !== 'dealer') {
+      db.prepare(`UPDATE users SET role='dealer', updated_at=datetime('now') WHERE id=?`).run(user.id);
+      user.role = 'dealer'; // uppdatera lokalt objekt också
     }
 
     // Sätt JWT-cookie (din befintliga helper)
@@ -450,6 +471,19 @@ db.prepare(`
     console.error('SSO md5-login error:', err);
     return res.status(500).send('Login failed');
   }
+});
+
+// Kör: GET /admin/tools/backfill-dealer-roles
+app.get('/admin/tools/backfill-dealer-roles', requireAdmin, (req, res) => {
+  const sql = `
+    UPDATE users
+       SET role = 'dealer',
+           updated_at = datetime('now')
+     WHERE role <> 'admin'
+       AND lower(email) IN (SELECT lower(email) FROM dealers WHERE email IS NOT NULL AND email <> '')
+  `;
+  const info = db.prepare(sql).run();
+  res.send(`Dealer-roller uppdaterade: ${info.changes} användare`);
 });
 
 app.post('/api/auth/register', (req, res) => {

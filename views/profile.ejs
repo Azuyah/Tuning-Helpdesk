@@ -63,54 +63,56 @@
   </div>
 
   <!-- Höger: Inställningar -->
-  <div class="space-y-6">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
-      <div class="px-6 py-4 border-b">
-        <h2 class="text-lg font-semibold text-slate-900">Profilinställningar</h2>
+  <% if (me.role !== 'dealer') { %>
+    <div class="space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div class="px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold text-slate-900">Profilinställningar</h2>
+        </div>
+        <form method="post" action="/profile/update" class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Namn</label>
+            <input type="text" name="name" value="<%= me.name || '' %>"
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">E-post</label>
+            <input type="email" name="email" value="<%= me.email %>" required autocomplete="email"
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+          </div>
+          <button type="submit"
+                  class="w-full rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
+            Spara
+          </button>
+        </form>
       </div>
-      <form method="post" action="/profile/update" class="p-6 space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Namn</label>
-          <input type="text" name="name" value="<%= me.name || '' %>"
-                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700">E-post</label>
-          <input type="email" name="email" value="<%= me.email %>" required autocomplete="email"
-                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-        </div>
-        <button type="submit"
-                class="w-full rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">
-          Spara
-        </button>
-      </form>
-    </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
-      <div class="px-6 py-4 border-b">
-        <h2 class="text-lg font-semibold text-slate-900">Byt lösenord</h2>
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div class="px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold text-slate-900">Byt lösenord</h2>
+        </div>
+        <form method="post" action="/profile/password" class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nuvarande lösenord</label>
+            <input type="password" name="current" required autocomplete="current-password"
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nytt lösenord</label>
+            <input type="password" name="password1" required minlength="6" autocomplete="new-password"
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Bekräfta nytt lösenord</label>
+            <input type="password" name="password2" required minlength="6" autocomplete="new-password"
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+          </div>
+          <button type="submit"
+                  class="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold hover:bg-sky-700">
+            Uppdatera lösenord
+          </button>
+        </form>
       </div>
-      <form method="post" action="/profile/password" class="p-6 space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Nuvarande lösenord</label>
-          <input type="password" name="current" required autocomplete="current-password"
-                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Nytt lösenord</label>
-          <input type="password" name="password1" required minlength="6" autocomplete="new-password"
-                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Bekräfta nytt lösenord</label>
-          <input type="password" name="password2" required minlength="6" autocomplete="new-password"
-                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-        </div>
-        <button type="submit"
-                class="w-full rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-semibold hover:bg-sky-700">
-          Uppdatera lösenord
-        </button>
-      </form>
     </div>
-  </div>
+  <% } %>
 </section>
