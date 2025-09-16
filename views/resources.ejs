@@ -23,7 +23,6 @@
 </section>
 
 <section class="mx-auto max-w-6xl px-4 py-10">
-  <% const list = (resources || []); %>
 
 <!-- Tom-state -->
 <div class="<%= list.length ? 'hidden' : '' %> rounded-2xl border border-slate-200 bg-white p-8 text-slate-500 text-center">
@@ -31,15 +30,15 @@
 </div>
 
 <!-- Resultatlista för resurser -->
-<div class="space-y-4 <%= list.length >= 2 ? 'pb-16' : '' %>">
+<div id="resGrid" class="space-y-4 <%= list.length >= 2 ? 'pb-16' : '' %>">
   <% if (!list || list.length === 0) { %>
-    <p class="text-slate-500">
+    <p id="emptyState" class="text-slate-500">
       Inga resurser hittades just nu.
     </p>
   <% } else { %>
     <% list.forEach(r => { %>
       <article
-        class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow transition"
+        class="res-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow transition"
         data-title="<%= (r.title || '').toLowerCase() %>"
         data-excerpt="<%= (r.excerpt || '').toLowerCase() %>">
 

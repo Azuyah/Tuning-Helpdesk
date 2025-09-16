@@ -11,16 +11,18 @@
     window.location.href = url;
   }
 
-  // Rendera förslag
 function renderSuggest(rows = []) {
   if (!$box) return;
   if (!rows.length) { $box.classList.add('hidden'); $box.innerHTML = ''; return; }
 
   $box.innerHTML = rows.map(r => {
+    // RÄTT LÄNK PER TYP
     const href =
+      r.type === 'resource' ? `/resources/${encodeURIComponent(r.id)}` :
       r.type === 'question' ? `/questions/${encodeURIComponent(r.id)}` :
-      `/topic/${encodeURIComponent(r.id)}`;
+                              `/topic/${encodeURIComponent(r.id)}`;
 
+    // Badgen – din version funkar redan fint
     const badge =
       r.type === 'question'
         ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>'

@@ -1026,35 +1026,32 @@ app.get('/api/suggest', (req, res) => {
 
   const results = [];
 
-  // 1) Topics via FTS
-  if (ftsQuery) {
-    try {
-      const topicRows = db.prepare(`
-        SELECT t.id,
-               t.title,
-               t.is_resource AS is_resource,
-               substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
-        FROM topics_fts f
-        JOIN topics      t ON t.id = f.id
-        JOIN topics_base b ON b.id = f.id
-        WHERE topics_fts MATCH ?
-        ORDER BY bm25(topics_fts)
-        LIMIT 5
-      `).all(ftsQuery);
+// 1) Topics via FTS
+if (ftsQuery) {
+  try {
+    const topicRows = db.prepare(`
+      SELECT t.id,
+             t.title,
+             t.is_resource AS is_resource,
+             substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+      FROM topics_fts f
+      JOIN topics      t ON t.id = f.id
+      JOIN topics_base b ON b.id = f.id
+      WHERE topics_fts MATCH ?
+      ORDER BY bm25(topics_fts)
+      LIMIT 5
+    `).all(ftsQuery);
 
-      for (const r of topicRows) {
-        results.push({
-          type: 'topic',
-          id: r.id,
-          title: r.title,
-          snippet: r.snippet || '',
-          resource: !!r.is_resource
-        });
-      }
-    } catch (e) {
-      // ignorera FTS-fel, fallback nedan
+    for (const r of topicRows) {
+      results.push({
+        type: r.is_resource ? 'resource' : 'topic', // <-- här var felet
+        id: r.id,
+        title: r.title,
+        snippet: r.snippet || ''
+      });
     }
-  }
+  } catch {}
+}
 
   // 2) Fallback topics (LIKE) om FTS gav lite/inget
   if (results.length < 5) {
@@ -1077,13 +1074,12 @@ app.get('/api/suggest', (req, res) => {
     `).all(like, like, like, left);
 
     for (const r of topicLike) {
-      results.push({
-        type: 'topic',
-        id: r.id,
-        title: r.title,
-        snippet: r.snippet || '',
-        resource: !!r.is_resource
-      });
+results.push({
+  type: r.is_resource ? 'resource' : 'topic',
+  id: r.id,
+  title: r.title,
+  snippet: r.snippet || ''
+});
     }
   }
 
