@@ -989,7 +989,9 @@ app.get('/question/:id', (req, res) => {
     title: `Fråga #${q.id}`,
     q,
     linked,
-    user: me
+    user: me,
+    relatedQuestions: [],
+    relatedTopics: [] 
   });
 });
 
