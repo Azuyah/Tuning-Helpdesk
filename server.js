@@ -56,11 +56,24 @@ function normalizeDealer(rec) {
 }
 
 /* --- SQLite setup + bootstrap --- */
-/* --- SQLite setup + bootstrap --- */
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+/* Hjälpare för migrationer – definiera EN gång */
+function hasColumn(table, col) {
+  const row = db.prepare(`PRAGMA table_info(${table})`).all()
+    .find(r => r.name === col);
+  return !!row;
+}
+function addColumnIfMissing(table, col, ddl) {
+  if (!hasColumn(table, col)) {
+    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run();
+    console.log(`[DB:migration] ${table}.${col} added (${ddl})`);
+  }
+}
+
 function initSchemaAndSeed() {
+  // Bas-schema
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,7 +92,6 @@ function initSchemaAndSeed() {
       sort_order INTEGER
     );
 
-    -- Viktigt: EN version av topics_base, med kolumnen inkluderad
     CREATE TABLE IF NOT EXISTS topics_base (
       id TEXT PRIMARY KEY,
       created_by INTEGER,
@@ -120,6 +132,14 @@ function initSchemaAndSeed() {
       status TEXT NOT NULL DEFAULT 'open',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
+      answered_at TEXT,
+      user_seen_answer_at TEXT,
+      admin_seen_new INTEGER DEFAULT 0,
+      answer_title TEXT,
+      answer_body  TEXT,
+      answer_tags  TEXT,
+      answered_by  TEXT,
+      is_answered  INTEGER DEFAULT 0,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
@@ -132,38 +152,25 @@ function initSchemaAndSeed() {
     );
   `);
 
-  // ---- Liten migrations-hjälpare (för befintliga DB-filer) ----
-  function hasColumn(table, col){
-    const row = db.prepare(`PRAGMA table_info(${table})`).all()
-      .find(r => r.name === col);
-    return !!row;
-  }
-  function addColumnIfMissing(table, col, ddl){
-    if (!hasColumn(table, col)) {
-      db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run();
-      console.log(`[DB:migration] ${table}.${col} added (${ddl})`);
-    }
-  }
-  addColumnIfMissing('topics_base', 'answer_for_question_id', 'INTEGER');
-  addColumnIfMissing('topics', 'is_resource', 'INTEGER DEFAULT 0');
-  addColumnIfMissing('topics', 'download_url', 'TEXT');
+  // Säkerställ extra kolumner (idempotent)
   addColumnIfMissing('topics_base', 'answer_for_question_id', 'INTEGER');
   addColumnIfMissing('topics', 'is_resource', 'INTEGER DEFAULT 0');
   addColumnIfMissing('topics', 'download_url', 'TEXT');
 
-  // notifierings-/svars-kolumner för frågor
-  addColumnIfMissing('questions', 'answered_at', 'TEXT');
-  addColumnIfMissing('questions', 'user_seen_answer_at', 'TEXT');
-  // (frivillig) för admins: markera nya obesvarade frågor
-  addColumnIfMissing('questions', 'admin_seen_new', 'INTEGER DEFAULT 0');
-addColumnIfMissing('users', 'created_at', 'TEXT');
-addColumnIfMissing('users', 'updated_at', 'TEXT');
+  // Backfill users.password_hash (ska aldrig vara NULL; använd tom sträng)
+  try {
+    db.prepare(`UPDATE users SET password_hash='' WHERE password_hash IS NULL`).run();
+  } catch (e) {
+    console.warn('[DB:migration] kunde inte backfilla password_hash:', e.message);
+  }
 
-// Backfill tidsstämplar för befintliga rader
-db.prepare(`UPDATE users SET created_at = COALESCE(created_at, datetime('now'))`).run();
-db.prepare(`UPDATE users SET updated_at = COALESCE(updated_at, datetime('now'))`).run();
+  // Säkerställ tidsstämplar finns
+  addColumnIfMissing('users', 'created_at', 'TEXT');
+  addColumnIfMissing('users', 'updated_at', 'TEXT');
+  db.prepare(`UPDATE users SET created_at = COALESCE(created_at, datetime('now'))`).run();
+  db.prepare(`UPDATE users SET updated_at = COALESCE(updated_at, datetime('now'))`).run();
 
-  // Se till att FTS har innehåll
+  // Rebuild FTS om tom
   const ftsCountRow = db.prepare(`SELECT count(*) AS n FROM topics_fts`).get();
   if (!ftsCountRow || !ftsCountRow.n) {
     const rows = db.prepare(`SELECT id, title, excerpt, body FROM topics`).all();
@@ -179,12 +186,16 @@ db.prepare(`UPDATE users SET updated_at = COALESCE(updated_at, datetime('now'))`
   const adminExists = db.prepare(`SELECT 1 FROM users WHERE role='admin' LIMIT 1`).get();
   if (!adminExists) {
     const hash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
-    db.prepare(`INSERT INTO users (email, password_hash, name, role)
-                VALUES (?,?,?, 'admin')`)
-      .run(ADMIN_EMAIL, hash, 'Administrator');
+    db.prepare(`
+      INSERT INTO users (email, password_hash, name, role)
+      VALUES (?,?,?, 'admin')
+    `).run(ADMIN_EMAIL, hash, 'Administrator');
     console.log('[DB] Seeded admin:', ADMIN_EMAIL);
   }
 }
+
+// Kör init
+initSchemaAndSeed();
 // Säkerställ att questions har svar-kolumnerna
 function hasColumn(table, col) {
   const row = db.prepare(`PRAGMA table_info(${table})`).all()
@@ -432,10 +443,10 @@ app.get('/sso/md5-login', async (req, res) => {
         [dealer.firstname, dealer.lastname].filter(Boolean).join(' ') ||
         dealer.username || dealer.company || email;
 
-      db.prepare(`
-        INSERT INTO users (email, name, role, password_hash, created_at, updated_at)
-        VALUES (?, ?, 'user', NULL, datetime('now'), datetime('now'))
-      `).run(email, displayName);
+db.prepare(`
+  INSERT INTO users (email, name, role, password_hash, created_at, updated_at)
+  VALUES (?, ?, 'user', '', datetime('now'), datetime('now'))
+`).run(email, displayName);
 
       user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(email);
     }
@@ -705,90 +716,6 @@ app.get('/admin/questions/:id', requireAdmin, (req, res) => {
     user: getUser(req)
   });
 });
-
-// Svara och publicera (skapar nytt ämne från en fråga)
-// Admin: svara på en fråga och publicera som nytt ämne
-/*app.post('/admin/questions/:id/answer', requireAdmin, (req, res) => {
-  const qid = Number(req.params.id);
-  const q = db.prepare('SELECT * FROM questions WHERE id=?').get(qid);
-  if (!q) return res.status(404).render('404', { title: 'Frågan finns inte' });
-
-  const answerHtml = (req.body.body || '').trim();   // endast SVARET
-  const tags       = (req.body.tags || '').trim();
-  const categoryId = (req.body.categoryId || '').trim();
-
-  if (!answerHtml) {
-    return res.status(400).render('admin-question', {
-      title: `Fråga #${qid}`,
-      q,
-      linked: db.prepare(`
-        SELECT t.id, t.title
-        FROM question_topic qt
-        JOIN topics t ON t.id = qt.topic_id
-        WHERE qt.question_id = ?
-        ORDER BY t.title
-      `).all(qid),
-      categories: db.prepare('SELECT id,title FROM categories ORDER BY COALESCE(sort_order,9999), title').all(),
-      error: 'Innehåll krävs.'
-    });
-  }
-
-  // Titel + unik slug
-  const title    = `Svar: ${q.title}`;
-  const baseSlug = slugify(title, { lower: true, strict: true }) || `fraga-${qid}`;
-  let topicId = baseSlug, i = 2;
-  while (db.prepare('SELECT 1 FROM topics_base WHERE id=?').get(topicId)) {
-    topicId = `${baseSlug}-${i++}`;
-  }
-
-  // Excerpt från svaret (plain text)
-  const excerpt = answerHtml.replace(/<[^>]+>/g, '').slice(0, 180);
-
-  // Kör allt atomiskt
-  const tx = db.transaction(() => {
-    // Skapa ämnets basrad (sätter created_by)
-    db.prepare('INSERT INTO topics_base (id, created_by) VALUES (?,?)')
-      .run(topicId, req.user.id);
-
-    // ⬅️ Viktigt: koppla ämnet till frågan så topic-sidan kan visa FRÅGA-kortet
-    db.prepare(`
-      UPDATE topics_base
-      SET answer_for_question_id = ?, updated_at = datetime('now')
-      WHERE id = ?
-    `).run(qid, topicId);
-
-    // Själva ämnesinnehållet (svaret)
-    db.prepare('INSERT INTO topics (id, title, excerpt, body, tags) VALUES (?,?,?,?,?)')
-      .run(topicId, title, excerpt, answerHtml, tags);
-
-    db.prepare('INSERT INTO topics_fts (id, title, excerpt, body) VALUES (?,?,?,?)')
-      .run(topicId, title, excerpt, answerHtml);
-
-    // Valfri kategori
-    if (categoryId) {
-      db.prepare('INSERT OR REPLACE INTO topic_category (topic_id, category_id) VALUES (?,?)')
-        .run(topicId, categoryId);
-    }
-
-    // Koppla fråga↔ämne och markera frågan som besvarad
-    db.prepare('INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)')
-      .run(qid, topicId);
-
-db.prepare(`
-  UPDATE questions
-  SET status = 'answered',
-      answered_at = datetime('now'),
-      user_seen_answer_at = NULL
-  WHERE id = ?
-`).run(qid);
-  });
-
-  tx(); // kör transaktionen
-
-  // Klart: gå till det nya ämnet
-  res.redirect(`/topic/${topicId}`);
-});
-*/
 
 // Admin: spara/redigera svar direkt på frågan
 app.post('/admin/questions/:id', requireAdmin, (req, res) => {
