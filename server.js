@@ -1518,7 +1518,7 @@ app.get('/explore', (req, res) => {
 app.get('/resources/:id', (req, res) => {
   const row = db.prepare(`
     SELECT b.id, t.title, t.excerpt, t.body, t.tags, b.updated_at,
-           t.is_resource, t.download_url
+           t.is_resource, t.download_url, t.downloads
     FROM topics_base b
     JOIN topics t ON t.id=b.id
     WHERE b.id = ?
