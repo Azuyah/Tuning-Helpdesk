@@ -12,17 +12,39 @@
   }
 
   // Rendera förslag
-  function renderSuggest(rows) {
-    if (!rows.length) { $box.classList.add('hidden'); $box.innerHTML = ''; return; }
-    $box.innerHTML = rows.map(r => `
-      <a href="/topic/${encodeURIComponent(r.id)}"
-         class="block px-4 py-3 hover:bg-slate-50">
-        <div class="font-medium text-slate-900 line-clamp-1">${escapeHtml(r.title||'')}</div>
-        ${r.snippet ? `<div class="text-sm text-slate-600 line-clamp-1">${escapeHtml(r.snippet)}</div>` : ''}
+function renderSuggest(rows = []) {
+  if (!$box) return;
+  if (!rows.length) { $box.classList.add('hidden'); $box.innerHTML = ''; return; }
+
+  $box.innerHTML = rows.map(r => {
+    const href =
+      r.type === 'question' ? `/questions/${encodeURIComponent(r.id)}` :
+      `/topic/${encodeURIComponent(r.id)}`;
+
+    const badge =
+      r.type === 'question'
+        ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>'
+        : (r.type === 'resource'
+            ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>'
+            : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>');
+
+    const snippet = r.snippet
+      ? `<div class="text-xs text-slate-600 line-clamp-1">${escapeHtml(r.snippet)}</div>`
+      : '';
+
+    return `
+      <a href="${href}" class="block px-4 py-3 hover:bg-slate-50">
+        <div class="flex items-center gap-2">
+          ${badge}
+          <div class="font-medium text-slate-900 line-clamp-1">${escapeHtml(r.title || '')}</div>
+        </div>
+        ${snippet}
       </a>
-    `).join('');
-    $box.classList.remove('hidden');
-  }
+    `;
+  }).join('');
+
+  $box.classList.remove('hidden');
+}
 
   // Debounce
   let tId = null;

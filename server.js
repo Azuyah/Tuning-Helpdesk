@@ -1032,6 +1032,7 @@ app.get('/api/suggest', (req, res) => {
       const topicRows = db.prepare(`
         SELECT t.id,
                t.title,
+               t.is_resource AS is_resource,
                substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
         FROM topics_fts f
         JOIN topics      t ON t.id = f.id
@@ -1046,11 +1047,12 @@ app.get('/api/suggest', (req, res) => {
           type: 'topic',
           id: r.id,
           title: r.title,
-          snippet: r.snippet || ''
+          snippet: r.snippet || '',
+          resource: !!r.is_resource
         });
       }
     } catch (e) {
-      // Ignorera FTS-fel, vi har fallback nedan
+      // ignorera FTS-fel, fallback nedan
     }
   }
 
@@ -1061,7 +1063,9 @@ app.get('/api/suggest', (req, res) => {
     const left = 5 - results.length;
 
     const topicLike = db.prepare(`
-      SELECT b.id, t.title,
+      SELECT b.id,
+             t.title,
+             t.is_resource AS is_resource,
              substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
       FROM topics_base b
       JOIN topics t ON t.id = b.id
@@ -1077,7 +1081,8 @@ app.get('/api/suggest', (req, res) => {
         type: 'topic',
         id: r.id,
         title: r.title,
-        snippet: r.snippet || ''
+        snippet: r.snippet || '',
+        resource: !!r.is_resource
       });
     }
   }
@@ -1102,6 +1107,7 @@ app.get('/api/suggest', (req, res) => {
         id: String(r.id),
         title: r.title,
         snippet: r.snippet || ''
+        // resource flagg är inte relevant för frågor
       });
     }
   }
