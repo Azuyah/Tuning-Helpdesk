@@ -1019,50 +1019,47 @@ app.get('/api/suggest', (req, res) => {
   const raw = (req.query.q || '').trim();
   if (!raw) return res.json([]);
 
-  // Sanera & gör prefix-termer för FTS
   const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
   const termsArr = q.split(/\s+/).filter(Boolean).map(t => `${t}*`);
   const ftsQuery = termsArr.length ? termsArr.join(' OR ') : '';
 
   const results = [];
+  const topicIds = new Set();   // för att undvika dubbletter
+  const topicTitles = new Set();// för att blocka frågor med samma titel
 
-// 1) Topics via FTS
-if (ftsQuery) {
-  try {
-    const topicRows = db.prepare(`
-      SELECT t.id,
-             t.title,
-             t.is_resource AS is_resource,
-             substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
-      FROM topics_fts f
-      JOIN topics      t ON t.id = f.id
-      JOIN topics_base b ON b.id = f.id
-      WHERE topics_fts MATCH ?
-      ORDER BY bm25(topics_fts)
-      LIMIT 5
-    `).all(ftsQuery);
+  const norm = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
-    for (const r of topicRows) {
-      results.push({
-        type: r.is_resource ? 'resource' : 'topic', // <-- här var felet
-        id: r.id,
-        title: r.title,
-        snippet: r.snippet || ''
-      });
-    }
-  } catch {}
-}
+  // 1) Topics via FTS
+  if (ftsQuery) {
+    try {
+      const topicRows = db.prepare(`
+        SELECT t.id, t.title, t.is_resource AS is_resource,
+               substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+        FROM topics_fts f
+        JOIN topics      t ON t.id = f.id
+        JOIN topics_base b ON b.id = f.id
+        WHERE topics_fts MATCH ?
+        ORDER BY bm25(topics_fts)
+        LIMIT 5
+      `).all(ftsQuery);
+
+      for (const r of topicRows) {
+        const type = r.is_resource ? 'resource' : 'topic';
+        results.push({ type, id: r.id, title: r.title, snippet: r.snippet || '' });
+        topicIds.add(r.id);
+        topicTitles.add(norm(r.title));
+      }
+    } catch {}
+  }
 
   // 2) Fallback topics (LIKE) om FTS gav lite/inget
   if (results.length < 5) {
-    const esc  = (s) => s.replace(/[%_]/g, m => '\\' + m);
+    const esc  = s => s.replace(/[%_]/g, m => '\\' + m);
     const like = `%${esc(q)}%`;
     const left = 5 - results.length;
 
     const topicLike = db.prepare(`
-      SELECT b.id,
-             t.title,
-             t.is_resource AS is_resource,
+      SELECT b.id, t.title, t.is_resource AS is_resource,
              substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
       FROM topics_base b
       JOIN topics t ON t.id = b.id
@@ -1074,18 +1071,17 @@ if (ftsQuery) {
     `).all(like, like, like, left);
 
     for (const r of topicLike) {
-results.push({
-  type: r.is_resource ? 'resource' : 'topic',
-  id: r.id,
-  title: r.title,
-  snippet: r.snippet || ''
-});
+      if (topicIds.has(r.id)) continue; // redan tillagd via FTS
+      const type = r.is_resource ? 'resource' : 'topic';
+      results.push({ type, id: r.id, title: r.title, snippet: r.snippet || '' });
+      topicIds.add(r.id);
+      topicTitles.add(norm(r.title));
     }
   }
 
-  // 3) Questions (enkelt LIKE) upp till 3 st
+  // 3) Questions (LIKE) – bara fyll ut, och bara om de inte "krockar" med topic/resource
   if (results.length < 8) {
-    const esc  = (s) => s.replace(/[%_]/g, m => '\\' + m);
+    const esc  = s => s.replace(/[%_]/g, m => '\\' + m);
     const like = `%${esc(q)}%`;
     const left = 8 - results.length;
 
@@ -1098,13 +1094,9 @@ results.push({
     `).all(like, like, Math.min(left, 3));
 
     for (const r of qs) {
-      results.push({
-        type: 'question',
-        id: String(r.id),
-        title: r.title,
-        snippet: r.snippet || ''
-        // resource flagg är inte relevant för frågor
-      });
+      // blocka frågor vars titel matchar ett redan funnet topic/resource
+      if (topicTitles.has(norm(r.title))) continue;
+      results.push({ type: 'question', id: String(r.id), title: r.title, snippet: r.snippet || '' });
     }
   }
 
