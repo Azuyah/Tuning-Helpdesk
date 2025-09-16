@@ -315,12 +315,28 @@ async function fetchDealersFrom(source, url, apiKey) {
   return data;
 }
 
-// Skriv in/updatera dealers i batch
 function upsertDealers(source, list) {
   const tx = db.transaction(() => {
     for (const rec of list) {
-      const d = normalizeDealer(rec);
-      const token = md5((d.dealer_id || '') + (d.email || ''));  // token skapas här
+      // behåll originalets casing till token
+      const rawEmail = (rec.email || '').trim();
+      const email    = rawEmail.toLowerCase();              // för sökningar/visning
+      const dealerId = rec.ID || '';
+
+      const d = {
+        dealer_id: dealerId,
+        email,
+        username: rec.username || '',
+        company:  rec.company  || '',
+        firstname: rec.firstname || '',
+        lastname:  rec.lastname  || '',
+        telephone: rec.telephone || null,
+        added:     rec.added     || null,
+      };
+
+      // TOKEN = md5(id + RAW email)  ← matchar MySQL-exemplet Stian skickade
+      const token = md5(dealerId + rawEmail);
+
       upsertDealerStmt.run(
         source, d.dealer_id, d.email, d.username, d.company,
         d.firstname, d.lastname, d.telephone, d.added, token
