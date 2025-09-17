@@ -100,54 +100,41 @@ async function fetchSuggest(q){
 </script>
 
 <!-- Kategorikort / Populärt (egen sektion under hero) -->
-<article class="rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow transition p-6">
-  <div class="mb-4">
-    <i class="ti <%= cat.icon || 'ti-folder' %> text-4xl text-sky-500"></i>
-  </div>
-  <h3 class="text-2xl font-semibold text-slate-900 mb-4"><%= cat.title %></h3>
+<section class="mx-auto max-w-6xl px-4 mt-24 pb-20 relative z-10">
+  <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <% if (Array.isArray(categoriesShow)) { %>
+      <% categoriesShow.forEach(function(cat){ %>
+        <article class="rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow transition p-6">
+          <div class="mb-4">
+            <i class="ti <%= cat.icon ? cat.icon : 'ti-folder' %> text-4xl text-sky-500"></i>
+          </div>
+          <h3 class="text-2xl font-semibold text-slate-900 mb-4"><%= cat.title %></h3>
 
-  <% const items = (cat.items || []).slice(0,5); %>
-  <% if (!items.length) { %>
-    <p class="text-sm text-slate-500">Inget innehåll ännu.</p>
-  <% } else { %>
-    <ul class="space-y-3">
-      <% items.forEach(it => { 
-           const href = it.type==='question' 
-             ? `/questions/${encodeURIComponent(it.id)}`
-             : it.type==='resource'
-               ? `/resources/${encodeURIComponent(it.id)}`
-               : `/topic/${encodeURIComponent(it.id)}`;
-      %>
-        <li class="flex items-start gap-3">
-          <% if (it.type==='question') { %>
-            <span class="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>
-          <% } else if (it.type==='resource') { %>
-            <span class="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>
-          <% } else { %>
-            <span class="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>
-          <% } %>
+          <ul class="space-y-3">
+            <% (cat.items || []).forEach(function(it){ %>
+              <li class="flex items-start gap-3">
+                <i class="ti ti-file-description text-slate-400 mt-1"></i>
+                <a href="/topic/<%= encodeURIComponent(it.id) %>" class="text-slate-700 hover:text-sky-700">
+                  <%= it.title %>
+                </a>
+              </li>
+            <% }); %>
+          </ul>
 
-          <a href="<%= href %>" class="text-slate-700 hover:text-sky-700 truncate">
-            <%= it.title %>
-          </a>
-        </li>
-      <% }) %>
-    </ul>
-  <% } %>
-
-  <div class="mt-6 flex items-center justify-between">
-    <span class="text-xs text-slate-500">
-      <%= (cat.count != null ? cat.count : (cat.items || []).length) %> poster
-    </span>
-    <a href="/category/<%= cat.id %>"
-       class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-slate-700 hover:border-sky-400">
-      Visa alla
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 4.5 21 12l-7.5 7.5-1.06-1.06 5.69-5.69H3v-1.5h15.13l-5.69-5.69L13.5 4.5Z"/></svg>
-    </a>
+          <div class="mt-6">
+            <a href="/category/<%= cat.id %>"
+               class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-slate-700 hover:border-sky-400">
+              Visa alla
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13.5 4.5 21 12l-7.5 7.5-1.06-1.06 5.69-5.69H3v-1.5h15.13l-5.69-5.69L13.5 4.5Z"/>
+              </svg>
+            </a>
+          </div>
+        </article>
+      <% }); %>
+    <% } %>
   </div>
-</article>
-    <% }) %>
-  </div>
+</section>
   <!-- Senaste frågor -->
 <section class="mx-auto max-w-6xl px-4 py-10">
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
