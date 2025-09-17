@@ -285,11 +285,13 @@ app.set('layout', 'layout');                 // => views/layout.ejs
 app.set('layout extractScripts', true);      // valfritt: <%- script %> block
 app.set('layout extractStyles', true);       // valfritt: <%- style %> block
 
+
 // ---------- Middleware ----------
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/tinymce', express.static(path.join(__dirname, 'node_modules', 'tinymce')));
 
 // ---- Globala locals (EN källa för showHero + popularTags) ----
 app.use((req, res, next) => {
@@ -506,6 +508,10 @@ app.get('/sso/md5-login', async (req, res) => {
   } catch (err) {
     return res.status(500).send('Login failed');
   }
+});
+
+app.get('/editor-test', (req, res) => {
+  res.render('text-editor'); // matchar views/text-editor.ejs
 });
 
 // Kör: GET /admin/tools/backfill-dealer-roles

@@ -1,3 +1,6 @@
+<link rel="stylesheet" href="/css/style.css">
+
+
 <section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-10">
   <!-- Vänsterkolumn -->
   <div class="lg:col-span-2 space-y-8">
@@ -60,7 +63,7 @@
       </div>
 
       <div class="prose prose-slate max-w-none mb-6">
-        <%- topic.body %>
+        <%- include('partials/richtext', { id: 'topic-' + topic.id, html: topic.body }) %>
       </div>
 
       <div class="text-sm text-slate-500">

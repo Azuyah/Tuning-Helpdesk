@@ -20,7 +20,7 @@
       </div>
 
       <div class="prose prose-slate max-w-none mt-8">
-        <%- resource.body %>
+        <%- include('partials/richtext', { id: 'res-' + resource.id, html: resource.body }) %>
       </div>
 
       <% const tags = (resource.tags||'').split(',').map(s=>s.trim()).filter(Boolean); %>

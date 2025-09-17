@@ -17,48 +17,50 @@
                   class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"></textarea>
       </div>
 
-      <!-- Innehåll -->
+      <!-- Innehåll (TinyMCE) -->
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">Innehåll</label>
-        <textarea name="body" rows="8"
+        <textarea id="bodyEditor" name="body" rows="12"
                   class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"></textarea>
+        <p class="text-xs text-slate-500 mt-1">Stöd för rubriker, fet/kursiv, listor, länkar, bilder/YouTube via URL, tabell, kodvy.</p>
       </div>
 
-<!-- Taggar -->
-<div>
-  <label class="block text-sm font-medium text-slate-700 mb-1">Taggar</label>
-  <input type="text" name="tags"
-         placeholder="ex: autotuner, virtual read, credits"
-         class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                focus:border-sky-500 focus:ring-sky-500 sm:text-sm"/>
-  <p class="text-xs text-slate-500 mt-1">Används för sök och filter (komma-separerade).</p>
-</div>
+      <!-- Taggar -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Taggar</label>
+        <input type="text" name="tags"
+               placeholder="ex: autotuner, virtual read, credits"
+               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                      focus:border-sky-500 focus:ring-sky-500 sm:text-sm"/>
+        <p class="text-xs text-slate-500 mt-1">Används för sök och filter (komma-separerade).</p>
+      </div>
 
-<!-- Kategori -->
-<div>
-  <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
-  <div class="relative">
-    <select name="categoryId"
-            class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
-      <option value="">— Välj kategori —</option>
-      <% (categories || []).forEach(c => { %>
-        <option value="<%= c.id %>"><%= c.title %></option>
-      <% }) %>
-    </select>
-    <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
-  </div>
-  <p class="text-xs text-slate-500 mt-1">Primär kategori för ämnet.</p>
-</div>
-<div class="grid sm:grid-cols-2 gap-4">
-  <label class="inline-flex items-center gap-2">
-    <input type="checkbox" name="is_resource" value="1" <%= topic?.is_resource ? 'checked' : '' %> />
-    Detta är en resurs
-  </label>
-  <input type="url" name="download_url" placeholder="https://… /public/files/fil.zip"
-         value="<%- topic?.download_url || '' %>"
-         class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-</div>
+      <!-- Kategori -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+        <div class="relative">
+          <select name="categoryId"
+                  class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                         focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+            <option value="">— Välj kategori —</option>
+            <% (categories || []).forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.title %></option>
+            <% }) %>
+          </select>
+          <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">Primär kategori för ämnet.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="inline-flex items-center gap-2">
+          <input type="checkbox" name="is_resource" value="1" <%= topic?.is_resource ? 'checked' : '' %> />
+          Detta är en resurs
+        </label>
+        <input type="url" name="download_url" placeholder="https://… /public/files/fil.zip"
+               value="<%- topic?.download_url || '' %>"
+               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
+      </div>
 
       <!-- Submit -->
       <div class="pt-4">
@@ -71,3 +73,31 @@
     </form>
   </div>
 </section>
+
+<!-- TinyMCE self-host (ingen API-nyckel) -->
+<script src="/tinymce/tinymce.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    tinymce.init({
+      selector: '#bodyEditor',
+      height: 500,
+      menubar: false,
+      branding: false,
+      promotion: false,
+      base_url: '/tinymce',                 // så Tiny hittar sina assets
+      plugins: 'link image media table lists code',
+      toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image media table | alignleft aligncenter alignright | code',
+      media_live_embeds: true,
+      // tillåt <iframe> i innehållet (YouTube m.m.)
+      extended_valid_elements: 'iframe[src|frameborder|allowfullscreen|width|height|name|title|allow|referrerpolicy|sandbox]',
+      // i denna vy: inga uploads – använd URL/klistra in
+      paste_data_images: true,
+      automatic_uploads: false,
+      images_upload_handler: function (_blobInfo, _success, fail) {
+        fail('Uppladdning avstängd här. Använd bild-URL eller klistra in.');
+      },
+      convert_urls: false,
+      content_style: 'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;font-size:16px;line-height:1.65}'
+    });
+  });
+</script>

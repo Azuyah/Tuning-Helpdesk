@@ -58,17 +58,13 @@
                    focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
         </div>
 
-        <div>
-          <label class="block text-sm font-medium text-slate-700">Ditt svar</label>
-          <textarea
-            name="answer_body"
-            rows="10"
-            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm"><%= q.answer_body || '' %></textarea>
-          <p class="text-xs text-slate-500 mt-1">
-            HTML tillåts och saneras server-side (t.ex. <code>&lt;p&gt;</code>, listor, länkar).
-          </p>
-        </div>
+<div>
+  <label class="block text-sm font-medium text-slate-700">Ditt svar</label>
+  <textarea id="answerEditor" name="answer_body" rows="10"><%= q.answer_body || '' %></textarea>
+  <p class="text-xs text-slate-500 mt-1">
+    HTML tillåts och saneras server-side (t.ex. <code>&lt;p&gt;</code>, listor, länkar).
+  </p>
+</div>
 
         <div>
           <label class="block text-sm font-medium text-slate-700">Taggar (valfritt, komma-separerade)</label>
@@ -335,4 +331,31 @@
 
 
 })();
+</script>
+<script src="/tinymce/tinymce.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  tinymce.init({
+    selector: '#answerEditor',
+    height: 400,
+    menubar: false,
+    branding: false,
+    promotion: false,
+    base_url: '/tinymce',
+    plugins: 'link image media table lists code',
+    toolbar: 'undo redo | blocks | bold italic underline | ' +
+             'bullist numlist | alignleft aligncenter alignright | ' +
+             'link image media table | code',
+    block_formats: 'Rubrik 1=h1; Rubrik 2=h2; Rubrik 3=h3; Brödtext=p',
+    media_live_embeds: true,
+    extended_valid_elements: 'iframe[src|frameborder|allowfullscreen|width|height|name|title|allow|referrerpolicy|sandbox]',
+    paste_data_images: true,
+    automatic_uploads: false,
+    images_upload_handler: function (_blobInfo, _success, fail) {
+      fail('Uppladdning är avstängd här. Använd bild-URL eller klistra in.');
+    },
+    convert_urls: false,
+    content_style: 'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;font-size:16px;line-height:1.65}'
+  });
+});
 </script>

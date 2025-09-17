@@ -73,7 +73,7 @@
 
       <% if (q.is_answered && q.answer_body) { %>
         <div class="prose prose-slate max-w-none mb-6">
-          <%- q.answer_body %>
+          <%- include('partials/richtext', { id: 'answer-' + q.id, html: q.answer_body }) %>
         </div>
 
         <div class="text-sm text-slate-500">

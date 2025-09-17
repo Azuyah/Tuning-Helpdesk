@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Backa Preflight inne i #topicRich för headings & listor */
+@layer components {
+  /* Nolla preflight/reset på just de element som påverkats */
+  #topicRich h1,
+  #topicRich h2,
+  #topicRich ul,
+  #topicRich ol,
+  #topicRich li { all: revert; }
+
+  /* Återställ design så det matchar ditt tema */
+  #topicRich { color: #0f172a; font-family: inherit; line-height: 1.65; }
+  #topicRich h1 { font-size: 2rem; line-height: 1.25; margin: 1.5rem 0 .75rem; font-weight: 800; }
+  #topicRich h2 { font-size: 1.5rem; line-height: 1.3;  margin: 1.25rem 0 .5rem;  font-weight: 700; }
+
+  /* Säkra listor (om UA-defaults varierar) */
+  #topicRich ul, #topicRich ol { padding-left: 1.5rem; margin: 0 0 1rem; }
+  #topicRich ul { list-style: disc outside; }
+  #topicRich ol { list-style: decimal outside; }
+  #topicRich li { display: list-item; margin: .25rem 0; }
+}
