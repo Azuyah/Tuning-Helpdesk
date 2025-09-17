@@ -1226,68 +1226,72 @@ function shuffle(arr) {
   return arr;
 }
 
-// Bygg kategorier + senaste items (ämne/fråga/resurs) per kategori
-function buildCategoriesMixed() {
-  // 1) Hämta kategorier (id, title, icon)
-  const cats = db.prepare(`
-    SELECT id, title, icon, sort_order
-    FROM categories
-    ORDER BY COALESCE(sort_order, 9999), title
-  `).all();
+/// Hjälpare
+function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a; }
+function hasTable(name){
+  return !!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(name);
+}
 
-  // 2) Hämta senaste items per kategori (ämnen + resurser + frågor)
-  // OBS: vi ger varje rad ett "type" och en tidskolumn "ts"
-  const rows = db.prepare(`
+// Bygg kategorikort (ämnen + resurser + frågor)
+function buildCategoriesMixed(){
+  const cats = db.prepare(`SELECT id, title, icon FROM categories ORDER BY COALESCE(sort_order,9999), title`).all();
+  const catById = new Map(cats.map(c => [String(c.id), c]));
+
+  // Ämnen + resurser
+  const topicRows = db.prepare(`
     SELECT
-      CASE WHEN t.is_resource = 1 THEN 'resource' ELSE 'topic' END AS type,
-      tc.category_id AS cid,
-      t.id           AS id,
-      t.title        AS title,
-      b.updated_at   AS ts
+      tc.category_id                         AS cid,
+      t.id                                   AS id,
+      t.title                                AS title,
+      CASE WHEN t.is_resource=1 THEN 'resource' ELSE 'topic' END AS type,
+      b.updated_at                           AS ts
     FROM topic_category tc
-    JOIN topics t      ON t.id = tc.topic_id
+    JOIN topics      t ON t.id = tc.topic_id
     JOIN topics_base b ON b.id = t.id
-
-    UNION ALL
-
-    SELECT
-      'question'     AS type,
-      qc.category_id AS cid,
-      q.id           AS id,
-      q.title        AS title,
-      q.created_at   AS ts
-    FROM question_category qc
-    JOIN questions q ON q.id = qc.question_id
-    -- ev. WHERE q.status != 'closed' om du vill filtrera
-
-    ORDER BY ts DESC
   `).all();
 
-  // 3) Gruppér items per kategori (max 4 st på kortet)
+  // Frågor (om tabellen finns)
+  const questionRows = hasTable('question_category')
+    ? db.prepare(`
+        SELECT
+          qc.category_id  AS cid,
+          q.id            AS id,
+          q.title         AS title,
+          'question'      AS type,
+          q.created_at    AS ts
+        FROM question_category qc
+        JOIN questions q ON q.id = qc.question_id
+      `).all()
+    : [];
+
+  // Slå ihop & sortera nyast först
+  const merged = [...topicRows, ...questionRows].sort((a,b) => (a.ts < b.ts ? 1 : -1));
+
+  // Gruppera per kategori, max 4 poster per kort
   const byCat = new Map();
-  for (const r of rows) {
-    if (!byCat.has(r.cid)) byCat.set(r.cid, []);
-    const bucket = byCat.get(r.cid);
-    if (bucket.length < 4) {
-      bucket.push({
-        id: r.id,
-        title: r.title,
-        type: r.type, // 'topic' | 'resource' | 'question'
-      });
-    }
+  for (const r of merged) {
+    const key = String(r.cid);
+    if (!byCat.has(key)) byCat.set(key, []);
+    const bucket = byCat.get(key);
+    if (bucket.length < 4) bucket.push({ id: r.id, title: r.title, type: r.type });
   }
 
-  // 4) Bygg cat-objekt och filtrera bort tomma
-  const full = cats.map(c => ({
-    id: c.id,
-    title: c.title,
-    icon: c.icon || 'ti-folder',
-    items: byCat.get(c.id) || []
-  })).filter(c => c.items.length > 0);
+  // Välj endast kategorier som har innehåll och slumpa 3
+  const filled = Array.from(byCat.keys())
+    .map(cid => {
+      const c = catById.get(cid);
+      return c ? {
+        id: c.id,
+        title: c.title,
+        icon: c.icon || 'ti-folder',
+        items: byCat.get(cid) || []
+      } : null;
+    })
+    .filter(Boolean)
+    .filter(card => card.items.length > 0);
 
-  // 5) Slumpa ordningen och ta 3
-  shuffle(full);
-  return full.slice(0, 3);
+  shuffle(filled);
+  return filled.slice(0, 3);
 }
 
 // Bygger upp "kategorikort" till startsidan (ämnen + resurser + frågor)
@@ -1438,7 +1442,8 @@ app.get('/', (req, res) => {
   `).all();
 
   // Visa bara tre kategorikort
-  const categoriesShow = buildCategories().slice(0, 3);
+ const categoriesShow = buildCategoriesMixed();
+res.set('Cache-Control','no-store'); // så slumpen gäller varje laddning
 
   res.render('home', {
     user,
