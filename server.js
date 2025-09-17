@@ -297,7 +297,7 @@ app.use((req, res, next) => {
   res.locals.user  = getUser(req) || null;
 
   // Döp vilka prefix som ska DÖLJA hero
-  const noHeroPrefixes = ['/admin', '/login', '/register', '/ask', '/topic', '/profile', '/explore', '/questions'];
+  const noHeroPrefixes = ['/admin', '/login', '/register', '/ask', '/topic', '/profile', '/explore', '/questions', '/resources'];
   res.locals.showHero = !noHeroPrefixes.some(p => req.path.startsWith(p));
 
   // Populära "chips" (taggar/kategorier) – globala
