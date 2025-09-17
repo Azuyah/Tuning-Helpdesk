@@ -1217,7 +1217,7 @@ function getTopByTag(tag, limit = 4) {
   `).all(tag, limit);
 }
 
-// Bygger upp korten (ämnen, resurser, frågor per kategori)
+// Bygger upp "kategorikort" till startsidan (ämnen + resurser + frågor)
 function buildCategories() {
   // 1) Kategorier
   const cats = db.prepare(`
@@ -1226,60 +1226,56 @@ function buildCategories() {
     ORDER BY COALESCE(sort_order, 9999), title
   `).all();
 
-  // 2) Hämta senaste poster (UNION: topic, resource, question)
+  // 2) Senaste poster per kategori (ämnen/resurser + frågor)
   const rows = db.prepare(`
-    /* Ämnen (ej resurser) */
-    SELECT tc.category_id AS cid,
-           'topic'        AS type,
-           t.id           AS id,
-           t.title        AS title,
-           b.updated_at   AS ts
-    FROM topic_category tc
-    JOIN topics      t ON t.id = tc.topic_id
-    JOIN topics_base b ON b.id = t.id
-    WHERE t.is_resource = 0
+    SELECT cid, id, title, type, ts
+    FROM (
+      -- Ämnen & resurser
+      SELECT
+        tc.category_id           AS cid,
+        t.id                     AS id,
+        t.title                  AS title,
+        CASE WHEN t.is_resource = 1 THEN 'resource' ELSE 'topic' END AS type,
+        b.updated_at             AS ts
+      FROM topic_category tc
+      JOIN topics       t ON t.id = tc.topic_id
+      JOIN topics_base  b ON b.id = t.id
 
-    UNION ALL
+      UNION ALL
 
-    /* Resurser */
-    SELECT tc.category_id AS cid,
-           'resource'     AS type,
-           t.id           AS id,
-           t.title        AS title,
-           b.updated_at   AS ts
-    FROM topic_category tc
-    JOIN topics      t ON t.id = tc.topic_id
-    JOIN topics_base b ON b.id = t.id
-    WHERE t.is_resource = 1
-
-    UNION ALL
-
-    /* Frågor */
-    SELECT qc.category_id AS cid,
-           'question'     AS type,
-           q.id           AS id,
-           q.title        AS title,
-           q.created_at   AS ts
-    FROM question_category qc
-    JOIN questions q ON q.id = qc.question_id
-
-    ORDER BY datetime(ts) DESC
+      -- Frågor
+      SELECT
+        qc.category_id           AS cid,
+        q.id                     AS id,
+        q.title                  AS title,
+        'question'               AS type,
+        q.created_at             AS ts
+      FROM question_category qc
+      JOIN questions        q ON q.id = qc.question_id
+    )
+    ORDER BY cid, ts DESC
   `).all();
 
-  // 3) Grupp + begränsa 3–4 per kategori
+  // 3) Grupp och ta topp 4 per kategori
   const byCat = new Map();
   for (const r of rows) {
     if (!byCat.has(r.cid)) byCat.set(r.cid, []);
-    const list = byCat.get(r.cid);
-    if (list.length >= 4) continue;
-    const href =
-      r.type === 'question' ? `/questions/${encodeURIComponent(r.id)}` :
-      r.type === 'resource' ? `/resources/${encodeURIComponent(r.id)}` :
-                              `/topic/${encodeURIComponent(r.id)}`;
-    list.push({ type: r.type, id: String(r.id), title: r.title, href });
+    const arr = byCat.get(r.cid);
+    if (arr.length < 4) {
+      arr.push({
+        id: r.id,
+        title: r.title,
+        type: r.type,
+        href: r.type === 'resource'
+          ? `/resources/${encodeURIComponent(r.id)}`
+          : r.type === 'question'
+            ? `/questions/${encodeURIComponent(r.id)}`
+            : `/topic/${encodeURIComponent(r.id)}`
+      });
+    }
   }
 
-  // 4) Bygg kortobjekt
+  // 4) Returnera till vyn
   return cats.map(c => ({
     id: c.id,
     title: c.title,
@@ -1287,6 +1283,7 @@ function buildCategories() {
     items: byCat.get(c.id) || []
   }));
 }
+
 app.post('/admin/categories/bulk', requireAdmin, (req, res) => {
   const { title = {}, icon = {}, sort = {} } = req.body;
   const ids = new Set([...Object.keys(title), ...Object.keys(icon), ...Object.keys(sort)]);
