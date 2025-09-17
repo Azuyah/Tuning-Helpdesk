@@ -1217,31 +1217,69 @@ function getTopByTag(tag, limit = 4) {
   `).all(tag, limit);
 }
 
-// Bygger upp korten (ändra titlar/ikoner/taggar efter din domän)
+// Bygger upp korten (ämnen, resurser, frågor per kategori)
 function buildCategories() {
-  // Hämta kategorier
-const cats = db.prepare(`
-  SELECT id, title, icon, sort_order
-  FROM categories
-  ORDER BY COALESCE(sort_order, 9999), title
-`).all();
-
-  // Hämta 3–4 senaste topics per kategori
-  const stmt = db.prepare(`
-    SELECT tc.category_id AS cid, t.id, t.title
-    FROM topic_category tc
-    JOIN topics t ON t.id = tc.topic_id
-    JOIN topics_base b ON b.id = t.id
-    ORDER BY b.updated_at DESC
+  // 1) Kategorier
+  const cats = db.prepare(`
+    SELECT id, title, icon, sort_order
+    FROM categories
+    ORDER BY COALESCE(sort_order, 9999), title
   `).all();
 
+  // 2) Hämta senaste poster (UNION: topic, resource, question)
+  const rows = db.prepare(`
+    /* Ämnen (ej resurser) */
+    SELECT tc.category_id AS cid,
+           'topic'        AS type,
+           t.id           AS id,
+           t.title        AS title,
+           b.updated_at   AS ts
+    FROM topic_category tc
+    JOIN topics      t ON t.id = tc.topic_id
+    JOIN topics_base b ON b.id = t.id
+    WHERE t.is_resource = 0
+
+    UNION ALL
+
+    /* Resurser */
+    SELECT tc.category_id AS cid,
+           'resource'     AS type,
+           t.id           AS id,
+           t.title        AS title,
+           b.updated_at   AS ts
+    FROM topic_category tc
+    JOIN topics      t ON t.id = tc.topic_id
+    JOIN topics_base b ON b.id = t.id
+    WHERE t.is_resource = 1
+
+    UNION ALL
+
+    /* Frågor */
+    SELECT qc.category_id AS cid,
+           'question'     AS type,
+           q.id           AS id,
+           q.title        AS title,
+           q.created_at   AS ts
+    FROM question_category qc
+    JOIN questions q ON q.id = qc.question_id
+
+    ORDER BY datetime(ts) DESC
+  `).all();
+
+  // 3) Grupp + begränsa 3–4 per kategori
   const byCat = new Map();
-  for (const row of stmt) {
-    if (!byCat.has(row.cid)) byCat.set(row.cid, []);
-    const arr = byCat.get(row.cid);
-    if (arr.length < 4) arr.push({ id: row.id, title: row.title });
+  for (const r of rows) {
+    if (!byCat.has(r.cid)) byCat.set(r.cid, []);
+    const list = byCat.get(r.cid);
+    if (list.length >= 4) continue;
+    const href =
+      r.type === 'question' ? `/questions/${encodeURIComponent(r.id)}` :
+      r.type === 'resource' ? `/resources/${encodeURIComponent(r.id)}` :
+                              `/topic/${encodeURIComponent(r.id)}`;
+    list.push({ type: r.type, id: String(r.id), title: r.title, href });
   }
 
+  // 4) Bygg kortobjekt
   return cats.map(c => ({
     id: c.id,
     title: c.title,
