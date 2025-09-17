@@ -784,6 +784,21 @@ app.get('/admin/questions/:id', requireAdmin, (req, res) => {
   });
 });
 
+app.put('/api/questions/:id/category', express.json(), (req, res) => {
+  const qid = Number(req.params.id);
+  const { category_id } = req.body;
+  if (!qid || !category_id) return res.status(400).json({ error: 'category_id krävs' });
+
+  const tx = db.transaction(() => {
+    db.prepare(`DELETE FROM question_category WHERE question_id = ?`).run(qid);
+    db.prepare(`INSERT INTO question_category (question_id, category_id) VALUES (?, ?)`)
+      .run(qid, String(category_id));
+  });
+  tx();
+
+  res.json({ ok: true });
+});
+
 app.put('/api/questions/:id/categories', requireAdmin, express.json(), (req, res) => {
   const qid = Number(req.params.id);
   const ids = Array.isArray(req.body.category_ids) ? req.body.category_ids : [];
@@ -2112,23 +2127,60 @@ app.get('/api/search', (req, res) => {
 
 // Kategorisida: visa alla topics som matchar en tagg/kategori
 app.get('/category/:id', (req, res) => {
-  const user = getUser(req);
-  const catId = (req.params.id || '').toLowerCase().trim();
+  const catId = req.params.id;
 
-  // Hämta alla topics som har denna tagg (tags lagras som komma-separerad sträng)
-  const topics = db.prepare(`
-    SELECT b.id, t.title, t.excerpt, t.tags, b.updated_at
-    FROM topics_base b
-    JOIN topics t ON t.id = b.id
-    WHERE ',' || lower(replace(t.tags,' ','')) || ',' LIKE '%,' || ? || ',%'
-    ORDER BY b.updated_at DESC
+  const category = db.prepare(`
+    SELECT id, title FROM categories WHERE id = ?
+  `).get(catId);
+
+  if (!category) {
+    return res.status(404).render('404', { title: 'Kategori saknas' });
+  }
+
+  // Ämnen + resurser i kategorin
+  const topicItems = db.prepare(`
+    SELECT 
+      b.id                AS id,
+      t.title             AS title,
+      COALESCE(NULLIF(t.excerpt,''), NULL) AS excerpt,
+      b.updated_at        AS ts,
+      CASE WHEN t.is_resource=1 THEN 'resource' ELSE 'topic' END AS type
+    FROM topic_category tc
+    JOIN topics_base b ON b.id = tc.topic_id
+    JOIN topics      t ON t.id = b.id
+    WHERE tc.category_id = ?
   `).all(catId);
 
+  // Frågor i kategorin
+  const questionItems = db.prepare(`
+    SELECT 
+      q.id              AS id,
+      q.title           AS title,
+      NULL              AS excerpt,
+      q.created_at      AS ts,
+      'question'        AS type
+    FROM question_category qc
+    JOIN questions q ON q.id = qc.question_id
+    WHERE qc.category_id = ?
+  `).all(catId);
+
+  // Slå ihop och sortera
+  const items = [...topicItems, ...questionItems]
+    .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+    .map(it => ({
+      ...it,
+      href: it.type === 'question' 
+              ? `/questions/${encodeURIComponent(it.id)}`
+              : it.type === 'resource'
+                ? `/resources/${encodeURIComponent(it.id)}`
+                : `/topic/${encodeURIComponent(it.id)}`
+    }));
+
   res.render('category', {
-    user,
-    categoryId: catId,
-    categoryTitle: catId.charAt(0).toUpperCase() + catId.slice(1),
-    topics
+    title: category.title,
+    category,
+    items,
+    user: getUser(req)
   });
 });
 
