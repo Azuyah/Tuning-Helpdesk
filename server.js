@@ -1217,6 +1217,79 @@ function getTopByTag(tag, limit = 4) {
   `).all(tag, limit);
 }
 
+// Slump-hjälpare (Fisher–Yates)
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Bygg kategorier + senaste items (ämne/fråga/resurs) per kategori
+function buildCategoriesMixed() {
+  // 1) Hämta kategorier (id, title, icon)
+  const cats = db.prepare(`
+    SELECT id, title, icon, sort_order
+    FROM categories
+    ORDER BY COALESCE(sort_order, 9999), title
+  `).all();
+
+  // 2) Hämta senaste items per kategori (ämnen + resurser + frågor)
+  // OBS: vi ger varje rad ett "type" och en tidskolumn "ts"
+  const rows = db.prepare(`
+    SELECT
+      CASE WHEN t.is_resource = 1 THEN 'resource' ELSE 'topic' END AS type,
+      tc.category_id AS cid,
+      t.id           AS id,
+      t.title        AS title,
+      b.updated_at   AS ts
+    FROM topic_category tc
+    JOIN topics t      ON t.id = tc.topic_id
+    JOIN topics_base b ON b.id = t.id
+
+    UNION ALL
+
+    SELECT
+      'question'     AS type,
+      qc.category_id AS cid,
+      q.id           AS id,
+      q.title        AS title,
+      q.created_at   AS ts
+    FROM question_category qc
+    JOIN questions q ON q.id = qc.question_id
+    -- ev. WHERE q.status != 'closed' om du vill filtrera
+
+    ORDER BY ts DESC
+  `).all();
+
+  // 3) Gruppér items per kategori (max 4 st på kortet)
+  const byCat = new Map();
+  for (const r of rows) {
+    if (!byCat.has(r.cid)) byCat.set(r.cid, []);
+    const bucket = byCat.get(r.cid);
+    if (bucket.length < 4) {
+      bucket.push({
+        id: r.id,
+        title: r.title,
+        type: r.type, // 'topic' | 'resource' | 'question'
+      });
+    }
+  }
+
+  // 4) Bygg cat-objekt och filtrera bort tomma
+  const full = cats.map(c => ({
+    id: c.id,
+    title: c.title,
+    icon: c.icon || 'ti-folder',
+    items: byCat.get(c.id) || []
+  })).filter(c => c.items.length > 0);
+
+  // 5) Slumpa ordningen och ta 3
+  shuffle(full);
+  return full.slice(0, 3);
+}
+
 // Bygger upp "kategorikort" till startsidan (ämnen + resurser + frågor)
 function buildCategories() {
   // 1) Kategorier

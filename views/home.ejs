@@ -112,19 +112,30 @@ async function fetchSuggest(q){
 
 <ul class="space-y-3">
   <% (cat.items || []).forEach(function(it){ %>
-    <li class="flex items-start gap-2">
-      <% /* Badge per typ */ %>
-      <% if (it.type === 'resource') { %>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 shrink-0">Resurs</span>
-      <% } else if (it.type === 'question') { %>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200 shrink-0">Fråga</span>
-      <% } else { %>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200 shrink-0">Ämne</span>
-      <% } %>
+    <li class="flex items-start gap-3">
+      <i class="ti ti-file-description text-slate-400 mt-1"></i>
 
-      <a href="<%= it.href %>" class="text-slate-700 hover:text-sky-700">
-        <%= it.title %>
-      </a>
+      <% 
+        const href =
+          it.type === 'resource' ? `/resources/${encodeURIComponent(it.id)}` :
+          it.type === 'question' ? `/questions/${encodeURIComponent(it.id)}` :
+                                   `/topic/${encodeURIComponent(it.id)}`;
+        const badge =
+          it.type === 'question'
+            ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>'
+            : (it.type === 'resource'
+                ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>'
+                : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>');
+      %>
+
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <%- badge %>
+          <a href="<%= href %>" class="text-slate-700 hover:text-sky-700 truncate">
+            <%= it.title %>
+          </a>
+        </div>
+      </div>
     </li>
   <% }); %>
 </ul>
