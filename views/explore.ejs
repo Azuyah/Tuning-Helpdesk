@@ -71,82 +71,51 @@
   </aside>
 
 <!-- Lista -->
-<div class="lg:col-span-3 space-y-10 min-w-0">
+<!-- Lista (sammanfogad) -->
+<div class="lg:col-span-3 min-w-0">
+  <h1 class="text-2xl font-bold text-slate-900 mb-4">
+    <%= tab==='topics' ? 'Ämnen' : tab==='questions' ? 'Frågor' : tab==='resources' ? 'Resurser' : 'Alla' %>
+    <% if (cat) { %><span class="text-slate-500 font-normal">· filtrerat på kategori</span><% } %>
+  </h1>
 
-  <% if (tab === 'topics' || tab === 'all') { %>
-    <h1 class="text-2xl font-bold text-slate-900 mb-4">Ämnen</h1>
-    <% if (!topics || topics.length === 0) { %>
-      <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600">
-        Inga ämnen hittades.
-      </div>
-    <% } else { %>
-      <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
-        <% topics.forEach(t => { %>
-          <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
-            <div class="min-w-0">
-              <div class="font-medium text-slate-800 truncate">
-                <a href="/topic/<%= t.id %>" class="hover:underline"><%= t.title %></a>
-              </div>
-              <% if (t.excerpt) { %>
-                <div class="text-xs text-slate-500 mt-1 line-clamp-2"><%= t.excerpt %></div>
+  <% if (!items || items.length === 0) { %>
+    <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600">
+      Inga resultat hittades.
+    </div>
+  <% } else { %>
+    <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
+      <% items.forEach(it => { %>
+        <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <% if (it.type === 'resource') { %>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>
+              <% } else if (it.type === 'question') { %>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>
+              <% } else { %>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>
               <% } %>
-            </div>
-            <a href="/topic/<%= t.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
-              Visa <i class="ti ti-arrow-right"></i>
-            </a>
-          </li>
-        <% }) %>
-      </ul>
-    <% } %>
-  <% } %>
 
-  <% if (tab === 'questions' || tab === 'all') { %>
-    <h1 class="text-2xl font-bold text-slate-900 mb-4">Frågor</h1>
-    <% if (!questions || questions.length === 0) { %>
-      <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600">Inga frågor hittades.</div>
-    <% } else { %>
-      <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
-        <% questions.forEach(q => { %>
-          <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
-            <div class="min-w-0">
-              <div class="font-medium text-slate-800 truncate"><%= q.title %></div>
-              <div class="text-xs text-slate-500 mt-0.5">
-                <%= new Date(q.created_at).toLocaleDateString('sv-SE') %>
-              </div>
+              <a href="<%= it.href %>" class="font-medium text-slate-800 hover:underline truncate max-w-[60ch]">
+                <%= it.title %>
+              </a>
             </div>
-            <a href="/questions/<%= q.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
-              Visa <i class="ti ti-arrow-right"></i>
-            </a>
-          </li>
-        <% }) %>
-      </ul>
-    <% } %>
-  <% } %>
 
-  <% if (tab === 'resources' || tab === 'all') { %>
-    <h1 class="text-2xl font-bold text-slate-900 mb-4">Resurser</h1>
-    <% if (!resources || resources.length === 0) { %>
-      <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600">Inga resurser hittades.</div>
-    <% } else { %>
-      <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
-        <% resources.forEach(r => { %>
-          <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
-            <div class="min-w-0">
-              <div class="font-medium text-slate-800 truncate">
-                <a href="/resources/<%= r.id %>" class="hover:underline"><%= r.title %></a>
-              </div>
-              <% if (r.excerpt) { %>
-                <div class="text-xs text-slate-500 mt-1 line-clamp-2"><%= r.excerpt %></div>
-              <% } %>
+            <% if (it.excerpt) { %>
+              <div class="text-xs text-slate-500 line-clamp-2"><%= it.excerpt %></div>
+            <% } %>
+
+            <div class="text-xs text-slate-500 mt-1">
+              <%= new Date(it.ts || Date.now()).toLocaleDateString('sv-SE') %>
             </div>
-<a href="/resources/<%= r.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
-  Visa <i class="ti ti-arrow-right"></i>
-</a>
-          </li>
-        <% }) %>
-      </ul>
-    <% } %>
-  <% } %>
+          </div>
 
+          <a href="<%= it.href %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
+            Visa <i class="ti ti-arrow-right"></i>
+          </a>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
 </div>
 </section>

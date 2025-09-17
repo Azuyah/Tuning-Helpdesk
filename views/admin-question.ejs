@@ -133,6 +133,36 @@
       <% } %>
     </div>
 
+    <!-- Kategorier för frågan -->
+<div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+  <h3 class="font-semibold text-slate-900 mb-3">Kategori</h3>
+
+  <% if (!categories || categories.length === 0) { %>
+    <p class="text-sm text-slate-500">Inga kategorier skapade ännu.</p>
+  <% } else { 
+       const selectedCatId = Array.isArray(qCategoryIds) && qCategoryIds.length ? String(qCategoryIds[0]) : '';
+  %>
+    <form id="catForm" class="space-y-3">
+      <div class="relative">
+        <select id="catSelect" name="category_id"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm sm:text-sm
+                       focus:border-sky-500 focus:ring-sky-500 appearance-none">
+          <option value="">— Välj kategori —</option>
+          <% categories.forEach(function(c){ %>
+            <option value="<%= c.id %>" <%= String(c.id)===selectedCatId ? 'selected' : '' %>><%= c.title %></option>
+          <% }) %>
+        </select>
+        <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+      </div>
+
+      <button type="button" id="btnSaveCat"
+              class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
+        <i class="ti ti-device-floppy"></i> Spara kategori
+      </button>
+    </form>
+  <% } %>
+</div>
+
     <!-- Ta bort fråga -->
     <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
       <form method="POST"
@@ -266,5 +296,43 @@
       if (!confirm('Ta bort frågan "' + t + '"? Detta går inte att ångra.')) e.preventDefault();
     });
   }
+
+  // Spara EN kategori
+  var saveBtn   = document.getElementById('btnSaveCat');
+  var selectEl  = document.getElementById('catSelect');
+  var qroot     = document.getElementById('qView');
+  var qid       = Number(qroot && qroot.dataset.qid);
+
+  function toast(text, ok){
+    var snack = document.getElementById('snack');
+    snack.textContent = text;
+    snack.className =
+      'fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow ' +
+      (ok !== false
+        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+        : 'bg-red-50 text-red-800 border border-red-200');
+    snack.classList.remove('hidden');
+    setTimeout(function(){ snack.classList.add('hidden'); }, 2000);
+  }
+
+  if (saveBtn && selectEl) {
+    saveBtn.addEventListener('click', function(){
+      var val = selectEl.value ? [ String(selectEl.value) ] : []; // skicka en array med 1 id (eller tomt)
+      fetch('/api/questions/' + qid + '/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ category_ids: val })
+      })
+      .then(function(res){ return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
+      .then(function(resp){
+        if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
+        toast('Kategori sparad');
+        // valfritt: location.reload();
+      })
+      .catch(function(){ toast('Kunde inte spara kategori', false); });
+    });
+  }
+
+
 })();
 </script>

@@ -265,6 +265,17 @@ try {
   // (Index skapas idempotent i CREATE INDEX ovan)
 } catch (e) {
 }
+// Frågekategorier (junction)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS question_category (
+    question_id INTEGER NOT NULL,
+    category_id TEXT    NOT NULL,
+    PRIMARY KEY (question_id, category_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_qc_cat ON question_category (category_id);
+  CREATE INDEX IF NOT EXISTS idx_qc_q   ON question_category (question_id);
+`);
 
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
@@ -731,36 +742,77 @@ app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
 
 // Visa en fråga i admin
 app.get('/admin/questions/:id', requireAdmin, (req, res) => {
+  const id = Number(req.params.id);
+
   const q = db.prepare(`
     SELECT q.*, u.name AS user_name, u.email AS user_email
     FROM questions q
     LEFT JOIN users u ON u.id = q.user_id
-    WHERE q.id = ?
-  `).get(req.params.id);
+    WHERE q.id=?
+  `).get(id);
 
-  if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
+  if (!q) return res.status(404).send('Not found');
 
+  // ev. redan kopplade ämnen (om du hade detta)
   const linked = db.prepare(`
     SELECT t.id, t.title
     FROM question_topic qt
-    JOIN topics t ON t.id = qt.topic_id
-    WHERE qt.question_id = ?
+    JOIN topics t ON t.id=qt.topic_id
+    WHERE qt.question_id=?
     ORDER BY t.title
-  `).all(q.id);
+  `).all(id);
 
+  // NYTT: alla kategorier + denna frågas kategorier
   const categories = db.prepare(`
     SELECT id, title
     FROM categories
-    ORDER BY COALESCE(sort_order, 9999), title
+    ORDER BY COALESCE(sort_order,9999), title
   `).all();
 
+  const qCategoryIds = db.prepare(`
+    SELECT category_id AS id
+    FROM question_category
+    WHERE question_id=?
+  `).all(id).map(r => r.id);
+
   res.render('admin-question', {
-    title: `Fråga #${q.id}`,
+    title: 'Fråga',
     q,
     linked,
-    categories,     // <- WICHTIG: behövs för "Svara och publicera"-formuläret
-    user: getUser(req)
+    categories,
+    qCategoryIds
   });
+});
+
+app.put('/api/questions/:id/categories', requireAdmin, express.json(), (req, res) => {
+  const qid = Number(req.params.id);
+  const ids = Array.isArray(req.body.category_ids) ? req.body.category_ids : [];
+
+  // validera att frågan finns
+  const exists = db.prepare(`SELECT 1 FROM questions WHERE id=?`).get(qid);
+  if (!exists) return res.status(404).json({ error: 'Fråga saknas' });
+
+  const tx = db.transaction(() => {
+    db.prepare(`DELETE FROM question_category WHERE question_id=?`).run(qid);
+
+    if (ids.length) {
+      const ins = db.prepare(`INSERT OR IGNORE INTO question_category (question_id, category_id) VALUES (?, ?)`);
+      for (const cid of ids) {
+        if (!cid) continue;
+        ins.run(qid, String(cid));
+      }
+    }
+    // uppdatera updated_at på frågan
+    db.prepare(`UPDATE questions SET updated_at=datetime('now') WHERE id=?`).run(qid);
+  });
+
+  try {
+    tx();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('save categories failed', e);
+    res.status(500).json({ error: 'Kunde inte spara kategorier' });
+  }
 });
 
 // Admin: spara/redigera svar direkt på frågan
@@ -1424,7 +1476,6 @@ const q = db.prepare(`
 });
 
 app.get('/explore', (req, res) => {
-  // --- Tabs: all / topics / questions / resources (default: all)
   const tabParam = String(req.query.tab || '').toLowerCase();
   const tab = ['topics','questions','resources','all'].includes(tabParam) ? tabParam : 'all';
 
@@ -1447,28 +1498,27 @@ app.get('/explore', (req, res) => {
   `).all();
   const tagCounter = {};
   for (const r of tagRows) {
-    (r.tags || '').split(',').map(s => s.trim()).filter(Boolean).forEach(tg => {
+    (r.tags || '').split(',').map(s=>s.trim()).filter(Boolean).forEach(tg=>{
       const key = tg.toLowerCase();
-      tagCounter[key] = (tagCounter[key] || 0) + 1;
+      tagCounter[key] = (tagCounter[key]||0) + 1;
     });
   }
-  const allTags = Object.entries(tagCounter)
-    .sort((a,b) => b[1] - a[1])
-    .slice(0, 30)
-    .map(([name,count]) => ({ name, count }));
+  const tags = Object.entries(tagCounter)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,30)
+    .map(([name,count])=>({ name, count }));
 
-  // --- Queries byggstenar
   const like = q ? `%${q}%` : null;
 
-  // Ämnen (ej resurser)
-  function fetchTopics() {
+  // ---- helpers (ämnen/resurser delar baskod)
+  function fetchTopicsBase(isResource) {
     let sql = `
-      SELECT b.id, t.title, t.excerpt, t.tags, b.updated_at
+      SELECT b.id, t.title, t.excerpt, t.tags, t.is_resource, b.updated_at AS ts
       FROM topics_base b
       JOIN topics t ON t.id = b.id
-      WHERE t.is_resource = 0
+      WHERE t.is_resource = ?
     `;
-    const params = [];
+    const params = [isResource ? 1 : 0];
 
     if (q) {
       sql += ` AND (lower(t.title) LIKE ? OR lower(t.excerpt) LIKE ? OR lower(t.body) LIKE ?) `;
@@ -1478,72 +1528,93 @@ app.get('/explore', (req, res) => {
       sql += ` AND EXISTS (SELECT 1 FROM topic_category tc WHERE tc.topic_id=b.id AND tc.category_id=?) `;
       params.push(cat);
     }
-    if (tag) {
+    if (!isResource && tag) {
       sql += ` AND lower(IFNULL(t.tags,'')) LIKE ? `;
       params.push(`%${tag}%`);
     }
 
-    sql += ` ORDER BY b.updated_at DESC LIMIT 30 `;
+    sql += ` ORDER BY datetime(ts) DESC LIMIT 100 `;
     return db.prepare(sql).all(...params);
   }
 
-  // Resurser (is_resource=1)
-  function fetchResources() {
-    let sql = `
-      SELECT b.id, t.title, t.excerpt, b.updated_at
-      FROM topics_base b
-      JOIN topics t ON t.id = b.id
-      WHERE t.is_resource = 1
-    `;
-    const params = [];
-    if (q) {
-      sql += ` AND (lower(t.title) LIKE ? OR lower(t.excerpt) LIKE ? OR lower(t.body) LIKE ?) `;
-      params.push(like, like, like);
-    }
-    sql += ` ORDER BY b.updated_at DESC LIMIT 30 `;
-    return db.prepare(sql).all(...params);
-  }
+  function fetchTopics()    { return fetchTopicsBase(false); }
+  function fetchResources() { return fetchTopicsBase(true);  }
 
-  // Frågor
   function fetchQuestions() {
     let sql = `
-      SELECT q.id, q.title, q.status, q.created_at
+      SELECT q.id, q.title, q.status, q.created_at AS ts
       FROM questions q
       WHERE 1=1
     `;
     const params = [];
     if (q) {
-      // Viktigt: parenteser runt OR
       sql += ` AND (lower(q.title) LIKE ? OR lower(IFNULL(q.body,'')) LIKE ?) `;
       params.push(like, like);
     }
-    sql += ` ORDER BY datetime(q.created_at) DESC LIMIT 30 `;
+    if (cat) {
+      sql += ` AND EXISTS (SELECT 1 FROM question_category qc WHERE qc.question_id=q.id AND qc.category_id=?) `;
+      params.push(cat);
+    }
+    sql += ` ORDER BY datetime(ts) DESC LIMIT 100 `;
     return db.prepare(sql).all(...params);
   }
 
-  // Hämta beroende på tab
-  let topics = [], questions = [], resources = [];
+  // Hämta enligt tab
+  let T=[], R=[], Q=[];
   if (tab === 'topics') {
-    topics = fetchTopics();
-  } else if (tab === 'questions') {
-    questions = fetchQuestions();
+    T = fetchTopics();
   } else if (tab === 'resources') {
-    resources = fetchResources();
-  } else { // 'all'
-    topics    = fetchTopics();
-    questions = fetchQuestions();
-    resources = fetchResources();
+    R = fetchResources();
+  } else if (tab === 'questions') {
+    Q = fetchQuestions();
+  } else { // all
+    T = fetchTopics();
+    R = fetchResources();
+    Q = fetchQuestions();
   }
+
+  // Slå ihop till en enhetlig lista
+  const items = [];
+  for (const t of T) {
+    items.push({
+      type: 'topic',
+      id:   t.id,
+      title: t.title,
+      excerpt: t.excerpt || '',
+      ts:  t.ts,
+      href: `/topic/${encodeURIComponent(t.id)}`
+    });
+  }
+  for (const r of R) {
+    items.push({
+      type: 'resource',
+      id:   r.id,
+      title: r.title,
+      excerpt: r.excerpt || '',
+      ts:  r.ts,
+      href: `/resources/${encodeURIComponent(r.id)}`
+    });
+  }
+  for (const qrow of Q) {
+    items.push({
+      type: 'question',
+      id:   String(qrow.id),
+      title: qrow.title,
+      excerpt: '', // kan fyllas med snippet om du vill
+      ts:  qrow.ts,
+      href: `/questions/${encodeURIComponent(qrow.id)}`
+    });
+  }
+
+  items.sort((a,b)=> new Date(b.ts) - new Date(a.ts));
 
   res.render('explore', {
     title: 'Utforska',
     tab,
     q, cat, tag,
     categories,
-    tags: allTags,
-    topics,
-    questions,
-    resources,
+    tags,
+    items,
     user: getUser(req)
   });
 });
