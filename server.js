@@ -1578,17 +1578,17 @@ app.get('/questions/:id', (req, res) => {
   const me = getUser(req);
 
   // Frågan
-const q = db.prepare(`
-  SELECT q.id, q.user_id, q.title, q.body, q.status, 
-         q.created_at, q.updated_at,
-         q.answer_title, q.answer_body, q.answer_tags,
-         q.answered_by, q.answered_at, q.is_answered,
-         u.name  AS user_name,
-         u.email AS user_email
-  FROM questions q
-  LEFT JOIN users u ON u.id = q.user_id
-  WHERE q.id = ?
-`).get(id);
+  const q = db.prepare(`
+    SELECT q.id, q.user_id, q.title, q.body, q.status, 
+           q.created_at, q.updated_at,
+           q.answer_title, q.answer_body, q.answer_tags,
+           q.answered_by, q.answered_at, q.is_answered,
+           u.name  AS user_name,
+           u.email AS user_email
+    FROM questions q
+    LEFT JOIN users u ON u.id = q.user_id
+    WHERE q.id = ?
+  `).get(id);
   if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
 
   // Hämta kopplat svar-ämne (om något)
@@ -1612,57 +1612,100 @@ const q = db.prepare(`
       WHERE b.id = ?
     `).get(link.topic_id);
 
-    // Om frågeställaren tittar på sin besvarade fråga → markera sedd
+    // Markera som sedd om ägaren tittar på besvarad fråga
     if (me && me.id === q.user_id && q.status === 'answered') {
       db.prepare(`UPDATE questions SET user_seen_answer_at = datetime('now') WHERE id=?`).run(q.id);
     }
   }
 
-// Relaterade frågor i samma kategori som answerTopic
-relatedQuestions = [];
-try {
-  // hämta kategorier för answerTopic (m2m)
-  const catIds = db.prepare(`
-    SELECT category_id
-    FROM topic_categories
-    WHERE topic_id = ?
-  `).all(answerTopic.id).map(r => r.category_id);
+  // Sidokolumn
+  let relatedQuestions = [];
+  let relatedTopics    = [];
 
-  if (catIds.length) {
-    const placeholders = catIds.map(() => '?').join(',');
-    relatedQuestions = db.prepare(`
-      SELECT DISTINCT q.id, q.title
-      FROM questions q
-      JOIN question_topic qt ON qt.question_id = q.id
-      JOIN topic_categories tc ON tc.topic_id = qt.topic_id
-      WHERE tc.category_id IN (${placeholders})
-        AND q.id <> ?
-      ORDER BY q.created_at DESC
-      LIMIT 5
-    `).all(...catIds, q.id);
+  if (answerTopic) {
+    // Relaterade FRÅGOR i samma kategori(er) som answerTopic (m2m)
+    try {
+      const catIds = db.prepare(`
+        SELECT category_id FROM topic_categories WHERE topic_id = ?
+      `).all(answerTopic.id).map(r => r.category_id);
+
+      if (catIds.length) {
+        const placeholders = catIds.map(() => '?').join(',');
+        relatedQuestions = db.prepare(`
+          SELECT DISTINCT q.id, q.title
+          FROM questions q
+          JOIN question_topic qt ON qt.question_id = q.id
+          JOIN topic_categories tc ON tc.topic_id = qt.topic_id
+          WHERE tc.category_id IN (${placeholders})
+            AND q.id <> ?
+          ORDER BY q.created_at DESC
+          LIMIT 5
+        `).all(...catIds, q.id);
+      }
+    } catch (e) {
+      // Fallback: frågor via samma topic
+      relatedQuestions = db.prepare(`
+        SELECT DISTINCT q.id, q.title
+        FROM questions q
+        JOIN question_topic qt ON qt.question_id = q.id
+        WHERE qt.topic_id = ?
+          AND q.id <> ?
+        ORDER BY q.created_at DESC
+        LIMIT 5
+      `).all(answerTopic.id, q.id);
+    }
+
+    // Relaterade ÄMNEN (m2m)
+    try {
+      const catIds = db.prepare(`
+        SELECT category_id FROM topic_categories WHERE topic_id = ?
+      `).all(answerTopic.id).map(r => r.category_id);
+
+      if (catIds.length) {
+        const placeholders = catIds.map(() => '?').join(',');
+        relatedTopics = db.prepare(`
+          SELECT DISTINCT b.id, t.title
+          FROM topics_base b
+          JOIN topics t ON t.id = b.id
+          JOIN topic_categories tc ON tc.topic_id = t.id
+          WHERE tc.category_id IN (${placeholders})
+            AND b.id <> ?
+            AND IFNULL(t.is_resource, 0) = 0
+          ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+          LIMIT 6
+        `).all(...catIds, answerTopic.id);
+      }
+    } catch (e) {
+      // Ignorera, gå till tagg-fallback
+    }
+
+    // Tagg-fallback om inga kategori-träffar
+    if (!relatedTopics.length) {
+      const firstTag = (answerTopic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
+      if (firstTag) {
+        relatedTopics = db.prepare(`
+          SELECT b.id, t.title
+          FROM topics_base b
+          JOIN topics t ON t.id = b.id
+          WHERE b.id <> ?
+            AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
+            AND IFNULL(t.is_resource, 0) = 0
+          ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+          LIMIT 6
+        `).all(answerTopic.id, firstTag);
+      }
+    }
   }
-} catch (e) {
-  // fallback: samma topic som tidigare
-  relatedQuestions = db.prepare(`
-    SELECT DISTINCT q.id, q.title
-    FROM questions q
-    JOIN question_topic qt ON qt.question_id = q.id
-    WHERE qt.topic_id = ?
-      AND q.id <> ?
-    ORDER BY q.created_at DESC
-    LIMIT 5
-  `).all(answerTopic.id, q.id);
-}
 
-res.locals.showHero = false;
-res.render('question', {
-  title: `Fråga: ${q.title}`,
-  q,
-  answerTopic,
-  relatedQuestions,
-  relatedTopics,
-  user: me
-});
+  res.locals.showHero = false;
+  res.render('question', {
+    title: `Fråga: ${q.title}`,
+    q,
+    answerTopic,
+    relatedQuestions,
+    relatedTopics,
+    user: me
+  });
 });
 
 app.get('/explore', (req, res) => {
