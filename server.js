@@ -1618,12 +1618,31 @@ const q = db.prepare(`
     }
   }
 
-// Sidokolumn: relaterade frågor + fler ämnen i samma kategori
-let relatedQuestions = [];
-let relatedTopics    = [];
+// Relaterade frågor i samma kategori som answerTopic
+relatedQuestions = [];
+try {
+  // hämta kategorier för answerTopic (m2m)
+  const catIds = db.prepare(`
+    SELECT category_id
+    FROM topic_categories
+    WHERE topic_id = ?
+  `).all(answerTopic.id).map(r => r.category_id);
 
-if (answerTopic) {
-  // Relaterade frågor via samma topic, exkludera denna fråga
+  if (catIds.length) {
+    const placeholders = catIds.map(() => '?').join(',');
+    relatedQuestions = db.prepare(`
+      SELECT DISTINCT q.id, q.title
+      FROM questions q
+      JOIN question_topic qt ON qt.question_id = q.id
+      JOIN topic_categories tc ON tc.topic_id = qt.topic_id
+      WHERE tc.category_id IN (${placeholders})
+        AND q.id <> ?
+      ORDER BY q.created_at DESC
+      LIMIT 5
+    `).all(...catIds, q.id);
+  }
+} catch (e) {
+  // fallback: samma topic som tidigare
   relatedQuestions = db.prepare(`
     SELECT DISTINCT q.id, q.title
     FROM questions q
@@ -1633,48 +1652,6 @@ if (answerTopic) {
     ORDER BY q.created_at DESC
     LIMIT 5
   `).all(answerTopic.id, q.id);
-
-  // --- RELATERADE ÄMNEN (m2m + tagg-fallback) ---
-  try {
-    // 1) many-to-many via topic_categories
-    const catIds = db.prepare(`
-      SELECT category_id FROM topic_categories WHERE topic_id = ?
-    `).all(answerTopic.id).map(r => r.category_id);
-
-    if (catIds.length) {
-      const placeholders = catIds.map(() => '?').join(',');
-      relatedTopics = db.prepare(`
-        SELECT DISTINCT b.id, t.title
-        FROM topics_base b
-        JOIN topics t ON t.id = b.id
-        JOIN topic_categories tc ON tc.topic_id = t.id
-        WHERE tc.category_id IN (${placeholders})
-          AND b.id <> ?
-          AND IFNULL(t.is_resource, 0) = 0
-        ORDER BY COALESCE(b.updated_at, b.created_at) DESC
-        LIMIT 6
-      `).all(...catIds, answerTopic.id);
-    }
-  } catch (e) {
-    // Om topic_categories saknas eller något går fel: fortsätt till tagg-fallback
-  }
-
-  // 2) Tagg-fallback (om inga kategori-träffar)
-  if (!relatedTopics.length) {
-    const firstTag = (answerTopic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
-    if (firstTag) {
-      relatedTopics = db.prepare(`
-        SELECT b.id, t.title
-        FROM topics_base b
-        JOIN topics t ON t.id = b.id
-        WHERE b.id <> ?
-          AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
-          AND IFNULL(t.is_resource, 0) = 0
-        ORDER BY COALESCE(b.updated_at, b.created_at) DESC
-        LIMIT 6
-      `).all(answerTopic.id, firstTag);
-    }
-  }
 }
 
 res.locals.showHero = false;
