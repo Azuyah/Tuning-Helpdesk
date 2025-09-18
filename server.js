@@ -1669,89 +1669,64 @@ app.get('/questions/:id', (req, res) => {
 let relatedQuestions = [];
 let relatedTopics    = [];
 
-// Kör vidare om vi har några kategorier alls (från topic_categories eller question_category ovan)
 if (catIds.length) {
   const ph = catIds.map(() => '?').join(',');
 
-  // 1) Fler ÄMNEN i samma kategori (STRICT kategori, inkluderar resurser)
-  //    Primärt: topic_categories
-  relatedTopics = db.prepare(`
+  // 1) Alla ÄMNEN + FRÅGOR i samma kategori
+  // a) Topics (inkl resurser)
+  const sameCatTopics = db.prepare(`
     SELECT DISTINCT 
       b.id   AS id,
       t.title,
       IFNULL(t.is_resource,0) AS is_resource,
-      COALESCE(b.updated_at, b.created_at) AS ts
+      COALESCE(b.updated_at, b.created_at) AS ts,
+      'topic' AS kind
     FROM topics_base b
     JOIN topics t            ON t.id = b.id
     JOIN topic_categories tc ON tc.topic_id = t.id
     WHERE tc.category_id IN (${ph})
       AND ( ? IS NULL OR b.id <> ? )
-    ORDER BY ts DESC
-    LIMIT 10
-  `).all(
-    ...catIds,
-    (answerTopic ? answerTopic.id : null),
-    (answerTopic ? answerTopic.id : null)
-  );
+  `).all(...catIds, answerTopic ? answerTopic.id : null, answerTopic ? answerTopic.id : null);
 
-  // Fallback för ÄMNEN: härled via FRÅGOR i samma kategori (ifall topic_categories är tom)
-  if (!relatedTopics.length) {
-    relatedTopics = db.prepare(`
-      SELECT DISTINCT 
-        b.id   AS id,
-        t.title,
-        IFNULL(t.is_resource,0) AS is_resource,
-        COALESCE(b.updated_at, b.created_at) AS ts
-      FROM question_category qc
-      JOIN question_topic   qt ON qt.question_id = qc.question_id
-      JOIN topics_base      b  ON b.id = qt.topic_id
-      JOIN topics           t  ON t.id = b.id
-      WHERE qc.category_id IN (${ph})
-        AND ( ? IS NULL OR b.id <> ? )
-      ORDER BY ts DESC
-      LIMIT 10
-    `).all(
-      ...catIds,
-      (answerTopic ? answerTopic.id : null),
-      (answerTopic ? answerTopic.id : null)
-    );
-  }
+  // b) Frågor i samma kategori
+  const sameCatQuestions = db.prepare(`
+    SELECT DISTINCT
+      q2.id   AS id,
+      q2.title,
+      0       AS is_resource,
+      COALESCE(q2.updated_at, q2.created_at) AS ts,
+      'question' AS kind
+    FROM questions q2
+    JOIN question_category qc2 ON qc2.question_id = q2.id
+    WHERE qc2.category_id IN (${ph})
+      AND q2.id <> ?
+  `).all(...catIds, q.id);
 
-  // 2) Relaterade FRÅGOR
-  //    Försök tagg-baserat först om vi har ett answerTopic med taggar
-  if (answerTopic) {
-    const rawTags = (answerTopic.tags || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
-    if (rawTags.length) {
-      const likeConds = rawTags.map(() => `lower(IFNULL(t.tags,'')) LIKE ?`).join(' OR ');
-      const likeVals  = rawTags.map(tag => `%${tag.toLowerCase()}%`);
-      relatedQuestions = db.prepare(`
-        SELECT DISTINCT q2.id, q2.title
-        FROM questions q2
-        JOIN question_topic qt2 ON qt2.question_id = q2.id
-        JOIN topics t           ON t.id = qt2.topic_id
-        WHERE (${likeConds})
-          AND q2.id <> ?
-        ORDER BY q2.created_at DESC
-        LIMIT 5
-      `).all(...likeVals, q.id);
-    }
-  }
+  relatedTopics = [...sameCatTopics, ...sameCatQuestions]
+    .sort((a,b) => new Date(b.ts) - new Date(a.ts))
+    .slice(0, 10);
+}
 
-  // Fallback: kategori-baserade frågor (om taggar saknas/ger noll)
-  if (!relatedQuestions.length) {
+// 2) Relaterade FRÅGOR (endast tagg-baserat + fallback samma topic)
+if (answerTopic) {
+  const rawTags = (answerTopic.tags || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
+  if (rawTags.length) {
+    const likeConds = rawTags.map(() => `lower(IFNULL(t.tags,'')) LIKE ?`).join(' OR ');
+    const likeVals  = rawTags.map(tag => `%${tag.toLowerCase()}%`);
     relatedQuestions = db.prepare(`
       SELECT DISTINCT q2.id, q2.title
       FROM questions q2
-      JOIN question_category qc2 ON qc2.question_id = q2.id
-      WHERE qc2.category_id IN (${ph})
+      JOIN question_topic qt2 ON qt2.question_id = q2.id
+      JOIN topics t           ON t.id = qt2.topic_id
+      WHERE (${likeConds})
         AND q2.id <> ?
       ORDER BY q2.created_at DESC
       LIMIT 5
-    `).all(...catIds, q.id);
+    `).all(...likeVals, q.id);
   }
 
-  // Sista fallback: frågor via samma topic (endast om answerTopic finns)
-  if (!relatedQuestions.length && answerTopic) {
+  if (!relatedQuestions.length) {
+    // fallback: frågor via samma topic
     relatedQuestions = db.prepare(`
       SELECT DISTINCT q2.id, q2.title
       FROM questions q2
