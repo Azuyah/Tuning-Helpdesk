@@ -693,18 +693,66 @@ app.get('/topic/:id', (req, res) => {
   // Relaterade ämnen via första taggen
   const firstTag = (topic.tags || '').split(',')[0];
   const cat = firstTag ? firstTag.trim().toLowerCase() : '';
-  let relatedTopics = [];
+// --- RELATERADE ÄMNEN ---
+// 1) Försök via kategori först
+let relatedTopics = [];
+
+// a) Single-column kategori (topics.category_id)
+const topicWithCat = db.prepare(`
+  SELECT t.category_id
+  FROM topics t
+  WHERE t.id = ?
+`).get(topic.id);
+
+if (topicWithCat && topicWithCat.category_id) {
+  relatedTopics = db.prepare(`
+    SELECT b.id, t.title
+    FROM topics_base b
+    JOIN topics t ON t.id = b.id
+    WHERE t.category_id = ?
+      AND b.id <> ?
+    ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+    LIMIT 6
+  `).all(topicWithCat.category_id, topic.id);
+}
+
+// b) Many-to-many (topic_categories)
+if (!relatedTopics.length) {
+  const catIds = db.prepare(`
+    SELECT category_id FROM topic_categories WHERE topic_id = ?
+  `).all(topic.id).map(r => r.category_id);
+
+  if (catIds.length) {
+    const placeholders = catIds.map(() => '?').join(',');
+    relatedTopics = db.prepare(`
+      SELECT DISTINCT b.id, t.title
+      FROM topics_base b
+      JOIN topics t ON t.id = b.id
+      JOIN topic_categories tc ON tc.topic_id = t.id
+      WHERE tc.category_id IN (${placeholders})
+        AND b.id <> ?
+      ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+      LIMIT 6
+    `).all(...catIds, topic.id);
+  }
+}
+
+// c) Fallback via första taggen (som du hade tidigare)
+if (!relatedTopics.length) {
+  const firstTag = (topic.tags || '').split(',')[0];
+  const cat = firstTag ? firstTag.trim().toLowerCase() : '';
   if (cat) {
     relatedTopics = db.prepare(`
       SELECT b.id, t.title
       FROM topics_base b
       JOIN topics t ON t.id = b.id
       WHERE b.id <> ?
-        AND lower(t.tags) LIKE '%' || ? || '%'
-      ORDER BY b.updated_at DESC
-      LIMIT 5
+        AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
+      ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+      LIMIT 6
     `).all(topic.id, cat);
   }
+}
 
   res.locals.showHero = false;
   res.render('topic', {
@@ -1587,20 +1635,62 @@ const q = db.prepare(`
     }
   }
 
-  // Sidokolumn: relaterade frågor + fler ämnen i samma kategori (utifrån första taggen)
-  let relatedQuestions = [];
-  let relatedTopics    = [];
-  if (answerTopic) {
-    relatedQuestions = db.prepare(`
-      SELECT DISTINCT q.id, q.title
-      FROM questions q
-      JOIN question_topic qt ON qt.question_id = q.id
-      WHERE qt.topic_id = ?
-        AND q.id <> ?
-      ORDER BY q.created_at DESC
-      LIMIT 5
-    `).all(answerTopic.id, q.id);
+// Sidokolumn: relaterade frågor + fler ämnen i samma kategori
+let relatedQuestions = [];
+let relatedTopics    = [];
 
+if (answerTopic) {
+  // Relaterade frågor via samma topic, exkludera denna fråga
+  relatedQuestions = db.prepare(`
+    SELECT DISTINCT q.id, q.title
+    FROM questions q
+    JOIN question_topic qt ON qt.question_id = q.id
+    WHERE qt.topic_id = ?
+      AND q.id <> ?
+    ORDER BY q.created_at DESC
+    LIMIT 5
+  `).all(answerTopic.id, q.id);
+
+  // --- RELATERADE ÄMNEN ---
+  // 1) Single-column kategori (topics.category_id)
+  const tCat = db.prepare(`SELECT category_id FROM topics WHERE id = ?`).get(answerTopic.id);
+  if (tCat && tCat.category_id != null) {
+    relatedTopics = db.prepare(`
+      SELECT b.id, t.title
+      FROM topics_base b
+      JOIN topics t ON t.id = b.id
+      WHERE t.category_id = ?
+        AND b.id <> ?
+        AND t.is_resource = 0
+      ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+      LIMIT 6
+    `).all(tCat.category_id, answerTopic.id);
+  }
+
+  // 2) Many-to-many fallback (topic_categories)
+  if (!relatedTopics.length) {
+    const catIds = db.prepare(`
+      SELECT category_id FROM topic_categories WHERE topic_id = ?
+    `).all(answerTopic.id).map(r => r.category_id);
+
+    if (catIds.length) {
+      const placeholders = catIds.map(() => '?').join(',');
+      relatedTopics = db.prepare(`
+        SELECT DISTINCT b.id, t.title
+        FROM topics_base b
+        JOIN topics t ON t.id = b.id
+        JOIN topic_categories tc ON tc.topic_id = t.id
+        WHERE tc.category_id IN (${placeholders})
+          AND b.id <> ?
+          AND t.is_resource = 0
+        ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+        LIMIT 6
+      `).all(...catIds, answerTopic.id);
+    }
+  }
+
+  // 3) Tagg-fallback om inget hittades via kategori
+  if (!relatedTopics.length) {
     const firstTag = (answerTopic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
     if (firstTag) {
       relatedTopics = db.prepare(`
@@ -1609,21 +1699,23 @@ const q = db.prepare(`
         JOIN topics t ON t.id = b.id
         WHERE b.id <> ?
           AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
-        ORDER BY b.updated_at DESC
-        LIMIT 5
+          AND t.is_resource = 0
+        ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+        LIMIT 6
       `).all(answerTopic.id, firstTag);
     }
   }
+}
 
-  res.locals.showHero = false;
-  res.render('question', {
-    title: `Fråga: ${q.title}`,
-    q,
-    answerTopic,
-    relatedQuestions,
-    relatedTopics,
-    user: me
-  });
+res.locals.showHero = false;
+res.render('question', {
+  title: `Fråga: ${q.title}`,
+  q,
+  answerTopic,
+  relatedQuestions,
+  relatedTopics,
+  user: me
+});
 });
 
 app.get('/explore', (req, res) => {
