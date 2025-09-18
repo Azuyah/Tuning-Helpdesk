@@ -104,18 +104,20 @@
       <% } %>
     </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-      <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
-      <% if (relatedTopics && relatedTopics.length) { %>
-        <ul class="space-y-3">
-          <% relatedTopics.forEach(function(rt){ %>
-            <li><a href="/topic/<%= rt.id %>" class="text-slate-700 hover:text-sky-700"><%= rt.title %></a></li>
-          <% }) %>
-        </ul>
-      <% } else { %>
-        <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
-      <% } %>
-    </div>
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+  <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
+  <% if (relatedTopics && relatedTopics.length) { %>
+    <ul class="space-y-3">
+      <% relatedTopics.forEach(function(rt){ %>
+        <li>
+          <a href="<%= rt.url %>" class="text-slate-700 hover:text-sky-700"><%= rt.title %></a>
+        </li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
+  <% } %>
+</div>
   </aside>
 </section>
 
