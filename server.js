@@ -277,6 +277,18 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_qc_q   ON question_category (question_id);
 `);
 
+// --- MIGRATION: skapa topic_categories om den saknas ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS topic_categories (
+    topic_id    TEXT    NOT NULL,
+    category_id INTEGER NOT NULL,
+    PRIMARY KEY (topic_id, category_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_topic_categories_cat   ON topic_categories(category_id);
+  CREATE INDEX IF NOT EXISTS idx_topic_categories_topic ON topic_categories(topic_id);
+`);
+
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
