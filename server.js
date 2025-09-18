@@ -694,30 +694,10 @@ app.get('/topic/:id', (req, res) => {
   const firstTag = (topic.tags || '').split(',')[0];
   const cat = firstTag ? firstTag.trim().toLowerCase() : '';
 // --- RELATERADE ÄMNEN ---
-// 1) Försök via kategori först
+// --- RELATERADE ÄMNEN (utan t.category_id: m2m + tagg-fallback) ---
 let relatedTopics = [];
 
-// a) Single-column kategori (topics.category_id)
-const topicWithCat = db.prepare(`
-  SELECT t.category_id
-  FROM topics t
-  WHERE t.id = ?
-`).get(topic.id);
-
-if (topicWithCat && topicWithCat.category_id) {
-  relatedTopics = db.prepare(`
-    SELECT b.id, t.title
-    FROM topics_base b
-    JOIN topics t ON t.id = b.id
-    WHERE t.category_id = ?
-      AND b.id <> ?
-    ORDER BY COALESCE(b.updated_at, b.created_at) DESC
-    LIMIT 6
-  `).all(topicWithCat.category_id, topic.id);
-}
-
-// b) Many-to-many (topic_categories)
-if (!relatedTopics.length) {
+try {
   const catIds = db.prepare(`
     SELECT category_id FROM topic_categories WHERE topic_id = ?
   `).all(topic.id).map(r => r.category_id);
@@ -731,26 +711,29 @@ if (!relatedTopics.length) {
       JOIN topic_categories tc ON tc.topic_id = t.id
       WHERE tc.category_id IN (${placeholders})
         AND b.id <> ?
+        AND IFNULL(t.is_resource, 0) = 0
       ORDER BY COALESCE(b.updated_at, b.created_at) DESC
       LIMIT 6
     `).all(...catIds, topic.id);
   }
+} catch (e) {
+  // Om topic_categories saknas, gå direkt till tagg-fallback
 }
 
-// c) Fallback via första taggen (som du hade tidigare)
+// Fallback via första taggen (om inga kategori-träffar)
 if (!relatedTopics.length) {
-  const firstTag = (topic.tags || '').split(',')[0];
-  const cat = firstTag ? firstTag.trim().toLowerCase() : '';
-  if (cat) {
+  const firstTag = (topic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
+  if (firstTag) {
     relatedTopics = db.prepare(`
       SELECT b.id, t.title
       FROM topics_base b
       JOIN topics t ON t.id = b.id
       WHERE b.id <> ?
         AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
+        AND IFNULL(t.is_resource, 0) = 0
       ORDER BY COALESCE(b.updated_at, b.created_at) DESC
       LIMIT 6
-    `).all(topic.id, cat);
+    `).all(topic.id, firstTag);
   }
 }
 
