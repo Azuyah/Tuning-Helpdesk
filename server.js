@@ -876,24 +876,44 @@ app.put('/api/questions/:id/category', express.json(), (req, res) => {
 
 app.put('/api/questions/:id/categories', requireAdmin, express.json(), (req, res) => {
   const qid = Number(req.params.id);
-  const ids = Array.isArray(req.body.category_ids) ? req.body.category_ids : [];
+  const ids = Array.isArray(req.body.category_ids) ? req.body.category_ids.filter(Boolean) : [];
 
   // validera att frågan finns
   const exists = db.prepare(`SELECT 1 FROM questions WHERE id=?`).get(qid);
   if (!exists) return res.status(404).json({ error: 'Fråga saknas' });
 
   const tx = db.transaction(() => {
+    // 1) Spara frågans kategorier
     db.prepare(`DELETE FROM question_category WHERE question_id=?`).run(qid);
-
     if (ids.length) {
-      const ins = db.prepare(`INSERT OR IGNORE INTO question_category (question_id, category_id) VALUES (?, ?)`);
-      for (const cid of ids) {
-        if (!cid) continue;
-        ins.run(qid, String(cid));
-      }
+      const insQ = db.prepare(`INSERT OR IGNORE INTO question_category (question_id, category_id) VALUES (?, ?)`);
+      for (const cid of ids) insQ.run(qid, String(cid));
     }
-    // uppdatera updated_at på frågan
     db.prepare(`UPDATE questions SET updated_at=datetime('now') WHERE id=?`).run(qid);
+
+    // 2) Synka till kopplat ÄMNE (om frågan har ett svar/ämne)
+    const link = db.prepare(`
+      SELECT topic_id FROM question_topic
+      WHERE question_id=? ORDER BY rowid DESC LIMIT 1
+    `).get(qid);
+
+    if (link && ids.length) {
+      // försök plural-tabellen först (vanligast i resten av koden)
+      try {
+        const insT = db.prepare(`INSERT OR IGNORE INTO topic_categories (topic_id, category_id) VALUES (?, ?)`);
+        for (const cid of ids) insT.run(link.topic_id, String(cid));
+      } catch (e) {
+        // fallback om du råkar ha singular-tabellen
+        try {
+          const insT2 = db.prepare(`INSERT OR IGNORE INTO topic_category (topic_id, category_id) VALUES (?, ?)`);
+          for (const cid of ids) insT2.run(link.topic_id, String(cid));
+        } catch (_) { /* ignorera tyst */ }
+      }
+      // (valfritt) uppdatera topic timestamp
+      try {
+        db.prepare(`UPDATE topics_base SET updated_at=datetime('now') WHERE id=?`).run(link.topic_id);
+      } catch (_) {}
+    }
   });
 
   try {
