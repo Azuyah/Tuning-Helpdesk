@@ -1609,7 +1609,7 @@ app.get('/questions/:id', (req, res) => {
   const id = Number(req.params.id);
   const me = getUser(req);
 
-  // Frågan
+  // 1) Frågan
   const q = db.prepare(`
     SELECT q.id, q.user_id, q.title, q.body, q.status, 
            q.created_at, q.updated_at,
@@ -1623,7 +1623,7 @@ app.get('/questions/:id', (req, res) => {
   `).get(id);
   if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
 
-  // Hämta kopplat svar-ämne (om något)
+  // 2) Kopplat svar-ämne (om något)
   const link = db.prepare(`
     SELECT qt.topic_id
     FROM question_topic qt
@@ -1644,74 +1644,90 @@ app.get('/questions/:id', (req, res) => {
       WHERE b.id = ?
     `).get(link.topic_id);
 
-    // Markera som sedd om ägaren tittar på besvarad fråga
+    // markera sedd för ägaren vid besvarad fråga
     if (me && me.id === q.user_id && q.status === 'answered') {
       db.prepare(`UPDATE questions SET user_seen_answer_at = datetime('now') WHERE id=?`).run(q.id);
     }
   }
 
-  // Sidokolumn
+  // 3) Sidokolumn-data
   let relatedQuestions = [];
   let relatedTopics    = [];
 
   if (answerTopic) {
-    // Relaterade FRÅGOR i samma kategori(er) som answerTopic (m2m)
+    // --- hämta kategori-IDs: topic_categories -> fallback question_category ---
+    let catIds = [];
     try {
-      const catIds = db.prepare(`
-        SELECT category_id FROM topic_categories WHERE topic_id = ?
-      `).all(answerTopic.id).map(r => r.category_id);
+      catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id = ?`)
+                 .all(answerTopic.id).map(r => r.category_id);
+    } catch (_) { /* ignore */ }
+    if (!catIds.length) {
+      try {
+        catIds = db.prepare(`SELECT category_id FROM question_category WHERE question_id = ?`)
+                   .all(q.id).map(r => r.category_id);
+      } catch (_) { /* ignore */ }
+    }
 
-      if (catIds.length) {
-        const placeholders = catIds.map(() => '?').join(',');
-        relatedQuestions = db.prepare(`
-          SELECT DISTINCT q.id, q.title
-          FROM questions q
-          JOIN question_topic qt ON qt.question_id = q.id
-          JOIN topic_categories tc ON tc.topic_id = qt.topic_id
-          WHERE tc.category_id IN (${placeholders})
-            AND q.id <> ?
-          ORDER BY q.created_at DESC
-          LIMIT 5
-        `).all(...catIds, q.id);
-      }
-    } catch (e) {
-      // Fallback: frågor via samma topic
+    // --- Relaterade FRÅGOR via kategori; fallback: samma topic ---
+    if (catIds.length) {
+      const placeholders = catIds.map(() => '?').join(',');
       relatedQuestions = db.prepare(`
-        SELECT DISTINCT q.id, q.title
-        FROM questions q
-        JOIN question_topic qt ON qt.question_id = q.id
-        WHERE qt.topic_id = ?
-          AND q.id <> ?
-        ORDER BY q.created_at DESC
+        SELECT DISTINCT q2.id, q2.title
+        FROM questions q2
+        JOIN question_topic qt2   ON qt2.question_id = q2.id
+        JOIN topic_categories tc2 ON tc2.topic_id    = qt2.topic_id
+        WHERE tc2.category_id IN (${placeholders})
+          AND q2.id <> ?
+        ORDER BY q2.created_at DESC
+        LIMIT 5
+      `).all(...catIds, q.id);
+    }
+    if (!relatedQuestions.length) {
+      relatedQuestions = db.prepare(`
+        SELECT DISTINCT q2.id, q2.title
+        FROM questions q2
+        JOIN question_topic qt2 ON qt2.question_id = q2.id
+        WHERE qt2.topic_id = ?
+          AND q2.id <> ?
+        ORDER BY q2.created_at DESC
         LIMIT 5
       `).all(answerTopic.id, q.id);
     }
 
-    // Relaterade ÄMNEN (m2m)
-    try {
-      const catIds = db.prepare(`
-        SELECT category_id FROM topic_categories WHERE topic_id = ?
-      `).all(answerTopic.id).map(r => r.category_id);
+    // --- Relaterade ÄMNEN via kategori; fallback: härled via frågor i kategorin; sista fallback: tagg ---
+    if (catIds.length) {
+      const placeholders = catIds.map(() => '?').join(',');
+      // primärt: andra topics med samma kategori
+      relatedTopics = db.prepare(`
+        SELECT DISTINCT b.id, t.title
+        FROM topics_base b
+        JOIN topics t            ON t.id = b.id
+        JOIN topic_categories tc ON tc.topic_id = t.id
+        WHERE tc.category_id IN (${placeholders})
+          AND b.id <> ?
+          AND IFNULL(t.is_resource, 0) = 0
+        ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+        LIMIT 6
+      `).all(...catIds, answerTopic.id);
 
-      if (catIds.length) {
-        const placeholders = catIds.map(() => '?').join(',');
+      // fallback: härled topics via andra frågor som har kategorin
+      if (!relatedTopics.length) {
         relatedTopics = db.prepare(`
           SELECT DISTINCT b.id, t.title
-          FROM topics_base b
-          JOIN topics t ON t.id = b.id
-          JOIN topic_categories tc ON tc.topic_id = t.id
-          WHERE tc.category_id IN (${placeholders})
+          FROM question_category qc
+          JOIN question_topic   qt ON qt.question_id = qc.question_id
+          JOIN topics_base      b  ON b.id = qt.topic_id
+          JOIN topics           t  ON t.id = b.id
+          WHERE qc.category_id IN (${placeholders})
             AND b.id <> ?
             AND IFNULL(t.is_resource, 0) = 0
           ORDER BY COALESCE(b.updated_at, b.created_at) DESC
           LIMIT 6
         `).all(...catIds, answerTopic.id);
       }
-    } catch (e) {
-      // Ignorera, gå till tagg-fallback
     }
 
-    // Tagg-fallback om inga kategori-träffar
+    // sista fallback: första taggen
     if (!relatedTopics.length) {
       const firstTag = (answerTopic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
       if (firstTag) {
