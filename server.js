@@ -1709,52 +1709,65 @@ app.get('/questions/:id', (req, res) => {
       .slice(0, 10);
   }
 
-  // 2) Relaterade FRÅGOR (ENBART taggar; fallback = samma topic om finns)
-  {
-    // Bygg taggar från kopplat svar-ämne + frågans egna answer_tags
-    const tagSet = new Set(
-      ((answerTopic?.tags || '') + ',' + (q.answer_tags || ''))
-        .split(',')
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean)
+// 2) Relaterat på taggar (frågor + ämnen + resurser)
+{
+  const tagSet = new Set(
+    ((answerTopic?.tags || '') + ',' + (q.answer_tags || ''))
+      .split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const tags = Array.from(tagSet).slice(0, 8);
+
+  relatedQuestions = []; // återanvänd variabeln, men nu fyller vi den med blandade typer
+
+  if (tags.length) {
+    const likeTopicTags = tags.map(() => `lower(IFNULL(t.tags,'')) LIKE ?`).join(' OR ');
+    const likeQTags     = tags.map(() => `lower(IFNULL(q.answer_tags,'')) LIKE ?`).join(' OR ');
+    const likeVals      = tags.map(t => `%${t}%`);
+
+    // UNION: frågor (via topic.tags ELLER q.answer_tags) + topics (inkl. resurser) som matchar taggar
+    relatedQuestions = db.prepare(`
+      SELECT kind, id, title, is_resource FROM (
+        -- Frågor: via kopplade ämnens taggar
+        SELECT 'question' AS kind, q2.id AS id, q2.title AS title, 0 AS is_resource,
+               datetime(q2.created_at) AS ts
+        FROM questions q2
+        JOIN question_topic qt2 ON qt2.question_id = q2.id
+        JOIN topics t           ON t.id = qt2.topic_id
+        WHERE q2.id <> ?
+          AND ( ${likeTopicTags} )
+
+        UNION
+
+        -- Frågor: via egna answer_tags
+        SELECT 'question' AS kind, q3.id AS id, q3.title AS title, 0 AS is_resource,
+               datetime(q3.created_at) AS ts
+        FROM questions q3
+        WHERE q3.id <> ?
+          AND ( ${likeQTags} )
+
+        UNION
+
+        -- Ämnen + Resurser: via topic.tags
+        SELECT 'topic' AS kind, b.id AS id, t2.title AS title, IFNULL(t2.is_resource,0) AS is_resource,
+               datetime(COALESCE(b.updated_at, b.created_at)) AS ts
+        FROM topics_base b
+        JOIN topics t2 ON t2.id = b.id
+        WHERE ( ${likeTopicTags.replace(/t\./g, 't2.')} )
+          AND b.id <> IFNULL(?, -1)  -- exkludera ev. aktuellt answerTopic
+      )
+      ORDER BY ts DESC
+      LIMIT 10
+    `).all(
+      q.id,                // <> ? (för q2)
+      ...likeVals,         // LIKE t.tags för frågor via topic
+      q.id,                // <> ? (för q3)
+      ...likeVals,         // LIKE q.answer_tags
+      answerTopic ? answerTopic.id : null,  // exkludera aktuellt topic
+      ...likeVals          // LIKE t2.tags för topics/resources
     );
-    const tags = Array.from(tagSet).slice(0, 8);
-
-    relatedQuestions = []; // återanvänd variabeln
-
-    if (tags.length) {
-      const likeCondsTopic = tags.map(() => `lower(IFNULL(t2.tags,'')) LIKE ?`).join(' OR ');
-      const likeCondsQ     = tags.map(() => `lower(IFNULL(q3.answer_tags,'')) LIKE ?`).join(' OR ');
-      const likeVals       = tags.map(t => `%${t}%`);
-
-      // Frågor som delar minst en tag (via kopplade ämnens tags ELLER frågans egna answer_tags)
-      relatedQuestions = db.prepare(`
-        SELECT id, title FROM (
-          -- via kopplade ämnens taggar
-          SELECT DISTINCT q2.id AS id, q2.title AS title, q2.created_at AS created_at
-          FROM questions q2
-          JOIN question_topic qt2 ON qt2.question_id = q2.id
-          JOIN topics t2          ON t2.id = qt2.topic_id
-          WHERE q2.id <> ?
-            AND ( ${likeCondsTopic} )
-
-          UNION
-
-          -- via frågans egna answer_tags
-          SELECT DISTINCT q3.id AS id, q3.title AS title, q3.created_at AS created_at
-          FROM questions q3
-          WHERE q3.id <> ?
-            AND ( ${likeCondsQ} )
-        )
-        ORDER BY datetime(created_at) DESC
-        LIMIT 5
-      `).all(
-        q.id,            // <> ? (för första SELECT)
-        ...likeVals,     // LIKE för t2.tags
-        q.id,            // <> ? (för andra SELECT)
-        ...likeVals      // LIKE för q3.answer_tags
-      );
-    }
+  }
 
     // Fallback: om inga taggar eller 0 träffar — och vi HAR ett answerTopic — ta frågor via samma topic
     if ((!tags.length || !relatedQuestions.length) && answerTopic) {
