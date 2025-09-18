@@ -1666,26 +1666,10 @@ app.get('/questions/:id', (req, res) => {
   }
 
 // --- SIDOKOLUMN START ---
-
 let relatedQuestions = [];
 let relatedTopics    = [];
 
 if (answerTopic) {
-  // 1) Hämta kategori-IDs att utgå från (topic_categories -> fallback frågans kategorier)
-  let catIds = [];
-  try {
-    catIds = db.prepare(`
-      SELECT category_id FROM topic_categories WHERE topic_id = ?
-    `).all(answerTopic.id).map(r => r.category_id);
-  } catch (_) {}
-  if (!catIds.length) {
-    try {
-      catIds = db.prepare(`
-        SELECT category_id FROM question_category WHERE question_id = ?
-      `).all(q.id).map(r => r.category_id);
-    } catch (_) {}
-  }
-
   // 2) Fler ÄMNEN i samma kategori (STRICT kategori, inga frågor, inkluderar resurser)
   if (catIds.length) {
     const ph = catIds.map(() => '?').join(',');
@@ -1699,25 +1683,22 @@ if (answerTopic) {
       JOIN topics t            ON t.id = b.id
       JOIN topic_categories tc ON tc.topic_id = t.id
       WHERE tc.category_id IN (${ph})
-        AND b.id <> ?                -- exkludera ev. svar-ämnet
+        AND ( ? IS NULL OR b.id <> ? )
       ORDER BY ts DESC
       LIMIT 10
-    `).all(...catIds, answerTopic.id);
+    `).all(
+      ...catIds,
+      (answerTopic ? answerTopic.id : null),
+      (answerTopic ? answerTopic.id : null)
+    );
   }
 
   // 3) Relaterade FRÅGOR (TAGG-baserat; fallback kategori; sista fallback samma topic)
-  //    Bygg taggar (nedskalat, ta bort tomma + normalisera)
-  const rawTags = (answerTopic.tags || '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean)
-    .slice(0, 5); // begränsa lite
+  const rawTags = (answerTopic.tags || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
 
   if (rawTags.length) {
-    // LIKE-fragment: lower(t.tags) LIKE %tag%
     const likeConds = rawTags.map(() => `lower(IFNULL(t.tags,'')) LIKE ?`).join(' OR ');
     const likeVals  = rawTags.map(tag => `%${tag.toLowerCase()}%`);
-
     relatedQuestions = db.prepare(`
       SELECT DISTINCT q2.id, q2.title
       FROM questions q2
@@ -1730,7 +1711,6 @@ if (answerTopic) {
     `).all(...likeVals, q.id);
   }
 
-  // Fallback: kategori-baserade frågor om inga taggträffar
   if (!relatedQuestions.length && catIds.length) {
     const ph = catIds.map(() => '?').join(',');
     relatedQuestions = db.prepare(`
@@ -1745,7 +1725,6 @@ if (answerTopic) {
     `).all(...catIds, q.id);
   }
 
-  // Sista fallback: frågor via SAMMA topic
   if (!relatedQuestions.length) {
     relatedQuestions = db.prepare(`
       SELECT DISTINCT q2.id, q2.title
@@ -1758,7 +1737,6 @@ if (answerTopic) {
     `).all(answerTopic.id, q.id);
   }
 }
-
 // --- SIDOKOLUMN SLUT ---
 
   res.locals.showHero = false;
