@@ -1651,24 +1651,9 @@ if (answerTopic) {
     LIMIT 5
   `).all(answerTopic.id, q.id);
 
-  // --- RELATERADE ÄMNEN ---
-  // 1) Single-column kategori (topics.category_id)
-  const tCat = db.prepare(`SELECT category_id FROM topics WHERE id = ?`).get(answerTopic.id);
-  if (tCat && tCat.category_id != null) {
-    relatedTopics = db.prepare(`
-      SELECT b.id, t.title
-      FROM topics_base b
-      JOIN topics t ON t.id = b.id
-      WHERE t.category_id = ?
-        AND b.id <> ?
-        AND t.is_resource = 0
-      ORDER BY COALESCE(b.updated_at, b.created_at) DESC
-      LIMIT 6
-    `).all(tCat.category_id, answerTopic.id);
-  }
-
-  // 2) Many-to-many fallback (topic_categories)
-  if (!relatedTopics.length) {
+  // --- RELATERADE ÄMNEN (m2m + tagg-fallback) ---
+  try {
+    // 1) many-to-many via topic_categories
     const catIds = db.prepare(`
       SELECT category_id FROM topic_categories WHERE topic_id = ?
     `).all(answerTopic.id).map(r => r.category_id);
@@ -1682,14 +1667,16 @@ if (answerTopic) {
         JOIN topic_categories tc ON tc.topic_id = t.id
         WHERE tc.category_id IN (${placeholders})
           AND b.id <> ?
-          AND t.is_resource = 0
+          AND IFNULL(t.is_resource, 0) = 0
         ORDER BY COALESCE(b.updated_at, b.created_at) DESC
         LIMIT 6
       `).all(...catIds, answerTopic.id);
     }
+  } catch (e) {
+    // Om topic_categories saknas eller något går fel: fortsätt till tagg-fallback
   }
 
-  // 3) Tagg-fallback om inget hittades via kategori
+  // 2) Tagg-fallback (om inga kategori-träffar)
   if (!relatedTopics.length) {
     const firstTag = (answerTopic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
     if (firstTag) {
@@ -1699,7 +1686,7 @@ if (answerTopic) {
         JOIN topics t ON t.id = b.id
         WHERE b.id <> ?
           AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
-          AND t.is_resource = 0
+          AND IFNULL(t.is_resource, 0) = 0
         ORDER BY COALESCE(b.updated_at, b.created_at) DESC
         LIMIT 6
       `).all(answerTopic.id, firstTag);
