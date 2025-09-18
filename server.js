@@ -1604,7 +1604,7 @@ app.post('/admin/topics/:id/delete', requireAdmin, (req, res) => {
   }
 });
 
-// Publik vy för en fråga (kategori-drivna relaterade listor)
+// Publik vy för en fråga (kategori-drivna relaterade listor + tagg-drivna relaterade frågor)
 app.get('/questions/:id', (req, res) => {
   const id = Number(req.params.id);
   const me = getUser(req);
@@ -1644,7 +1644,7 @@ app.get('/questions/:id', (req, res) => {
       WHERE b.id = ?
     `).get(link.topic_id);
 
-    // markera sedd för ägaren vid besvarad fråga
+    // Markera sedd för ägaren vid besvarad fråga
     if (me && me.id === q.user_id && q.status === 'answered') {
       db.prepare(`UPDATE questions SET user_seen_answer_at = datetime('now') WHERE id=?`).run(q.id);
     }
@@ -1654,99 +1654,130 @@ app.get('/questions/:id', (req, res) => {
   let catIds = [];
   try {
     if (answerTopic) {
-      catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id = ?`)
-                 .all(answerTopic.id).map(r => r.category_id);
+      catIds = db.prepare(`
+        SELECT category_id FROM topic_categories WHERE topic_id = ?
+      `).all(answerTopic.id).map(r => r.category_id);
     }
   } catch (_) { /* ignore */ }
   if (!catIds.length) {
     try {
-      catIds = db.prepare(`SELECT category_id FROM question_category WHERE question_id = ?`)
-                 .all(q.id).map(r => r.category_id);
+      catIds = db.prepare(`
+        SELECT category_id FROM question_category WHERE question_id = ?
+      `).all(q.id).map(r => r.category_id);
     } catch (_) { /* ignore */ }
   }
 
-// --- SIDOKOLUMN START ---
-let relatedQuestions = [];
-let relatedTopics    = [];
+  // --- SIDOKOLUMN START ---
+  let relatedQuestions = [];
+  let relatedTopics    = [];
 
-if (catIds.length) {
-  const ph = catIds.map(() => '?').join(',');
+  if (catIds.length) {
+    const ph = catIds.map(() => '?').join(',');
 
-  // 1) Alla ÄMNEN + FRÅGOR i samma kategori
-  // a) Topics (inkl resurser)
-  const sameCatTopics = db.prepare(`
-    SELECT DISTINCT 
-      b.id   AS id,
-      t.title,
-      IFNULL(t.is_resource,0) AS is_resource,
-      COALESCE(b.updated_at, b.created_at) AS ts,
-      'topic' AS kind
-    FROM topics_base b
-    JOIN topics t            ON t.id = b.id
-    JOIN topic_categories tc ON tc.topic_id = t.id
-    WHERE tc.category_id IN (${ph})
-      AND ( ? IS NULL OR b.id <> ? )
-  `).all(...catIds, answerTopic ? answerTopic.id : null, answerTopic ? answerTopic.id : null);
+    // 1) Alla ÄMNEN + FRÅGOR i samma kategori
+    // a) Topics (inkl resurser)
+    const sameCatTopics = db.prepare(`
+      SELECT DISTINCT 
+        b.id   AS id,
+        t.title,
+        IFNULL(t.is_resource,0) AS is_resource,
+        COALESCE(b.updated_at, b.created_at) AS ts,
+        'topic' AS kind
+      FROM topics_base b
+      JOIN topics t            ON t.id = b.id
+      JOIN topic_categories tc ON tc.topic_id = t.id
+      WHERE tc.category_id IN (${ph})
+        AND ( ? IS NULL OR b.id <> ? )
+    `).all(...catIds, answerTopic ? answerTopic.id : null, answerTopic ? answerTopic.id : null);
 
-  // b) Frågor i samma kategori
-  const sameCatQuestions = db.prepare(`
-    SELECT DISTINCT
-      q2.id   AS id,
-      q2.title,
-      0       AS is_resource,
-      COALESCE(q2.updated_at, q2.created_at) AS ts,
-      'question' AS kind
-    FROM questions q2
-    JOIN question_category qc2 ON qc2.question_id = q2.id
-    WHERE qc2.category_id IN (${ph})
-      AND q2.id <> ?
-  `).all(...catIds, q.id);
-
-  relatedTopics = [...sameCatTopics, ...sameCatQuestions]
-    .sort((a,b) => new Date(b.ts) - new Date(a.ts))
-    .slice(0, 10);
-}
-
-// 2) Relaterade FRÅGOR (endast tagg-baserat + fallback samma topic)
-if (answerTopic) {
-  const rawTags = (answerTopic.tags || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
-  if (rawTags.length) {
-    const likeConds = rawTags.map(() => `lower(IFNULL(t.tags,'')) LIKE ?`).join(' OR ');
-    const likeVals  = rawTags.map(tag => `%${tag.toLowerCase()}%`);
-    relatedQuestions = db.prepare(`
-      SELECT DISTINCT q2.id, q2.title
+    // b) Frågor i samma kategori
+    const sameCatQuestions = db.prepare(`
+      SELECT DISTINCT
+        q2.id   AS id,
+        q2.title,
+        0       AS is_resource,
+        COALESCE(q2.updated_at, q2.created_at) AS ts,
+        'question' AS kind
       FROM questions q2
-      JOIN question_topic qt2 ON qt2.question_id = q2.id
-      JOIN topics t           ON t.id = qt2.topic_id
-      WHERE (${likeConds})
+      JOIN question_category qc2 ON qc2.question_id = q2.id
+      WHERE qc2.category_id IN (${ph})
         AND q2.id <> ?
-      ORDER BY q2.created_at DESC
-      LIMIT 5
-    `).all(...likeVals, q.id);
+    `).all(...catIds, q.id);
+
+    relatedTopics = [...sameCatTopics, ...sameCatQuestions]
+      .sort((a,b) => new Date(b.ts) - new Date(a.ts))
+      .slice(0, 10);
   }
 
-  if (!relatedQuestions.length) {
-    // fallback: frågor via samma topic
-    relatedQuestions = db.prepare(`
-      SELECT DISTINCT q2.id, q2.title
-      FROM questions q2
-      JOIN question_topic qt2 ON qt2.question_id = q2.id
-      WHERE qt2.topic_id = ?
-        AND q2.id <> ?
-      ORDER BY q2.created_at DESC
-      LIMIT 5
-    `).all(answerTopic.id, q.id);
+  // 2) Relaterade FRÅGOR (ENBART taggar; fallback = samma topic om finns)
+  {
+    // Bygg taggar från kopplat svar-ämne + frågans egna answer_tags
+    const tagSet = new Set(
+      ((answerTopic?.tags || '') + ',' + (q.answer_tags || ''))
+        .split(',')
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const tags = Array.from(tagSet).slice(0, 8);
+
+    relatedQuestions = []; // återanvänd variabeln
+
+    if (tags.length) {
+      const likeCondsTopic = tags.map(() => `lower(IFNULL(t2.tags,'')) LIKE ?`).join(' OR ');
+      const likeCondsQ     = tags.map(() => `lower(IFNULL(q3.answer_tags,'')) LIKE ?`).join(' OR ');
+      const likeVals       = tags.map(t => `%${t}%`);
+
+      // Frågor som delar minst en tag (via kopplade ämnens tags ELLER frågans egna answer_tags)
+      relatedQuestions = db.prepare(`
+        SELECT id, title FROM (
+          -- via kopplade ämnens taggar
+          SELECT DISTINCT q2.id AS id, q2.title AS title, q2.created_at AS created_at
+          FROM questions q2
+          JOIN question_topic qt2 ON qt2.question_id = q2.id
+          JOIN topics t2          ON t2.id = qt2.topic_id
+          WHERE q2.id <> ?
+            AND ( ${likeCondsTopic} )
+
+          UNION
+
+          -- via frågans egna answer_tags
+          SELECT DISTINCT q3.id AS id, q3.title AS title, q3.created_at AS created_at
+          FROM questions q3
+          WHERE q3.id <> ?
+            AND ( ${likeCondsQ} )
+        )
+        ORDER BY datetime(created_at) DESC
+        LIMIT 5
+      `).all(
+        q.id,            // <> ? (för första SELECT)
+        ...likeVals,     // LIKE för t2.tags
+        q.id,            // <> ? (för andra SELECT)
+        ...likeVals      // LIKE för q3.answer_tags
+      );
+    }
+
+    // Fallback: om inga taggar eller 0 träffar — och vi HAR ett answerTopic — ta frågor via samma topic
+    if ((!tags.length || !relatedQuestions.length) && answerTopic) {
+      relatedQuestions = db.prepare(`
+        SELECT DISTINCT q2.id, q2.title
+        FROM questions q2
+        JOIN question_topic qt2 ON qt2.question_id = q2.id
+        WHERE qt2.topic_id = ?
+          AND q2.id <> ?
+        ORDER BY q2.created_at DESC
+        LIMIT 5
+      `).all(answerTopic.id, q.id);
+    }
   }
-}
-// --- SIDOKOLUMN SLUT ---
+  // --- SIDOKOLUMN SLUT ---
 
   res.locals.showHero = false;
   res.render('question', {
     title: `Fråga: ${q.title}`,
     q,
     answerTopic,
-    relatedQuestions, // fortfarande ren frågelista via kategori
-    relatedTopics,    // "Ämnen i samma kategori" = ALLT i kategorin
+    relatedQuestions, // endast taggar (med fallback samma topic)
+    relatedTopics,    // ALLT i samma kategori (ämnen + resurser + frågor)
     user: me
   });
 });
