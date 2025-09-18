@@ -108,18 +108,29 @@
       <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
 <% if (relatedTopics && relatedTopics.length) { %>
   <ul class="space-y-3">
-    <% relatedTopics.forEach(function(rt){ %>
+    <% relatedTopics.forEach(function(rt){ 
+         const isRes    = (rt.kind !== 'question') && Number(rt.is_resource) === 1;
+         const badgeTxt = rt.kind === 'question' ? 'Fråga' : (isRes ? 'Resurs' : 'Ämne');
+         const badgeCls = rt.kind === 'question'
+            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+            : (isRes
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : 'bg-sky-50 text-sky-800 border border-sky-200');
+         const badgeIco = rt.kind === 'question'
+            ? 'ti ti-message-circle'
+            : (isRes ? 'ti ti-download' : 'ti ti-file-text');
+         const href = rt.kind === 'question'
+            ? (`/questions/${rt.id}`)
+            : (isRes ? (`/resources/${rt.id}`) : (`/topic/${rt.id}`));
+    %>
       <li>
-        <% if (rt.kind === 'question') { %>
-          <a href="/questions/<%= rt.id %>" class="text-slate-700 hover:text-sky-700">
-            <%= rt.title %>
-          </a>
-        <% } else { %>
-          <a href="<%= rt.is_resource ? ('/resources/' + rt.id) : ('/topic/' + rt.id) %>"
-             class="text-slate-700 hover:text-sky-700">
-            <%= rt.title %>
-          </a>
-        <% } %>
+        <a href="<%= href %>" class="flex items-center justify-between gap-3 text-slate-700 hover:text-sky-700">
+          <span class="truncate"><%= rt.title %></span>
+          <span class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium <%= badgeCls %>">
+            <i class="<%= badgeIco %>"></i>
+            <%= badgeTxt %>
+          </span>
+        </a>
       </li>
     <% }) %>
   </ul>
