@@ -110,10 +110,16 @@
   <ul class="space-y-3">
     <% relatedTopics.forEach(function(rt){ %>
       <li>
-        <a href="<%= rt.is_resource ? ('/resources/' + rt.id) : ('/topic/' + rt.id) %>"
-           class="text-slate-700 hover:text-sky-700">
-          <%= rt.title %>
-        </a>
+        <% if (rt.kind === 'question') { %>
+          <a href="/questions/<%= rt.id %>" class="text-slate-700 hover:text-sky-700">
+            <%= rt.title %>
+          </a>
+        <% } else { %>
+          <a href="<%= rt.is_resource ? ('/resources/' + rt.id) : ('/topic/' + rt.id) %>"
+             class="text-slate-700 hover:text-sky-700">
+            <%= rt.title %>
+          </a>
+        <% } %>
       </li>
     <% }) %>
   </ul>
