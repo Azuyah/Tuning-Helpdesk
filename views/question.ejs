@@ -90,8 +90,9 @@
   </div>
 
   <!-- Högerkolumn -->
+   <aside class="lg:col-span-1 space-y-8 self-start">
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-  <h2 class="text-lg font-semibold text-slate-900 mb-4">Relaterade frågor</h2>
+  <h2 class="text-lg font-semibold text-slate-900 mb-4">Relaterade ämnen</h2>
   <% if (relatedQuestions && relatedQuestions.length) { %>
     <ul class="space-y-3">
       <% relatedQuestions.forEach(function(it){ 
@@ -118,7 +119,7 @@
       <% }) %>
     </ul>
   <% } else { %>
-    <p class="text-sm text-slate-500">Inga relaterade poster med samma taggar ännu.</p>
+    <p class="text-sm text-slate-500">Inga relaterade ämnen ännu.</p>
   <% } %>
 </div>
 
