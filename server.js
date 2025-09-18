@@ -404,15 +404,35 @@ async function syncAllDealers() {
 
 app.use((req, res, next) => {
   const u = getUser(req);
+  res.locals.me = u || null;
   res.locals.notifCount = 0;
   res.locals.adminOpenCount = 0;
+  res.locals.notifications = []; // <-- viktigt
 
   try {
     if (u && u.role === 'admin') {
+      // Badge-count
       const row = db.prepare(`SELECT COUNT(*) AS n FROM questions WHERE status='open'`).get();
       res.locals.adminOpenCount = row?.n || 0;
-    }
-    if (u && u.role === 'user') {
+
+      // Lista till popupen (senaste öppna)
+      const rows = db.prepare(`
+        SELECT id, title, created_at
+        FROM questions
+        WHERE status = 'open'
+        ORDER BY created_at DESC
+        LIMIT 10
+      `).all();
+
+      res.locals.notifications = rows.map(q => ({
+        id: q.id,
+        title: q.title || 'Ny fråga',
+        message: 'Ny obesvarad fråga',
+        href: `/questions/${q.id}`
+      }));
+
+    } else if (u && u.role === 'user') {
+      // Badge-count
       const row = db.prepare(`
         SELECT COUNT(*) AS n
         FROM questions
@@ -421,6 +441,24 @@ app.use((req, res, next) => {
           AND (user_seen_answer_at IS NULL OR user_seen_answer_at < answered_at)
       `).get(u.id);
       res.locals.notifCount = row?.n || 0;
+
+      // Lista till popupen (obesedda svar)
+      const rows = db.prepare(`
+        SELECT id, title, answered_at
+        FROM questions
+        WHERE user_id = ?
+          AND status = 'answered'
+          AND (user_seen_answer_at IS NULL OR user_seen_answer_at < answered_at)
+        ORDER BY answered_at DESC
+        LIMIT 10
+      `).all(u.id);
+
+      res.locals.notifications = rows.map(q => ({
+        id: q.id,
+        title: q.title || 'Ditt svar är klart',
+        message: 'Nytt svar på din fråga',
+        href: `/questions/${q.id}`
+      }));
     }
   } catch (e) {
     res.locals.notifCount = 0;

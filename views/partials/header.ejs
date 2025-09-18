@@ -56,22 +56,47 @@
       <!-- Spacer -->
       <div class="flex-1"></div>
 
-      <!-- Notification/Bell (syns endast om inloggad) -->
-      <% if (me) { %>
-        <a href="<%= me.role === 'admin' ? '/admin' : '/profile' %>" class="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
-          <i class="ti ti-bell"></i>
-          <% if (me.role === 'admin' && Number(adminOpenCount||0) > 0) { %>
-            <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">
-              <%= adminOpenCount %>
-            </span>
-          <% } %>
-          <% if (me.role !== 'admin' && Number(notifCount||0) > 0) { %>
-            <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">
-              <%= notifCount %>
-            </span>
-          <% } %>
-        </a>
+<!-- Notification/Bell (syns endast om inloggad) -->
+<% if (me) { %>
+  <div class="relative" id="notifWrapper">
+    <button id="notifBtn"
+            class="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 focus:outline-none">
+      <i class="ti ti-bell text-xl"></i>
+      <% if (me.role === 'admin' && Number(adminOpenCount||0) > 0) { %>
+        <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">
+          <%= adminOpenCount %>
+        </span>
       <% } %>
+      <% if (me.role !== 'admin' && Number(notifCount||0) > 0) { %>
+        <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">
+          <%= notifCount %>
+        </span>
+      <% } %>
+    </button>
+
+    <!-- Popup -->
+    <div id="notifPopup"
+         class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden">
+      <div class="p-4 border-b border-slate-100 font-semibold text-slate-700">
+        Notiser
+      </div>
+<ul class="max-h-64 overflow-y-auto divide-y divide-slate-100" id="notifList">
+  <% if (Array.isArray(notifications) && notifications.length) { %>
+    <% notifications.forEach(n => { %>
+      <li class="p-3 hover:bg-slate-50">
+        <a href="<%= n.href || '#' %>" class="block">
+          <div class="text-sm font-medium text-slate-900"><%= n.title %></div>
+          <div class="text-xs text-slate-500"><%= n.message || '' %></div>
+        </a>
+      </li>
+    <% }) %>
+  <% } else { %>
+    <li class="p-3 text-sm text-slate-500">Inga nya notiser</li>
+  <% } %>
+</ul>
+    </div>
+  </div>
+<% } %>
 
       <!-- Right side (desktop) -->
       <div class="hidden md:flex items-center gap-2">
@@ -176,4 +201,25 @@
       syncIcon();
     });
   })();
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const wrap  = document.getElementById('notifWrapper');
+  const btn   = document.getElementById('notifBtn');
+  const popup = document.getElementById('notifPopup');
+
+  if (btn && popup) {
+    btn.addEventListener('click', () => popup.classList.toggle('hidden'));
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#notifWrapper')) popup.classList.add('hidden');
+    });
+
+    // stäng popup när man klickar en notis-länk
+    popup.addEventListener('click', (e) => {
+      const a = e.target.closest('a');
+      if (a) popup.classList.add('hidden');
+    });
+  }
+});
 </script>
