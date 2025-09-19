@@ -62,19 +62,19 @@
             ></div>
           </div>
 
-          <% if (typeof popularTags !== 'undefined' && popularTags.length) { %>
-            <div class="mt-4 flex flex-wrap items-center gap-2 <%= (popularTags && popularTags.length) ? 'justify-center md:justify-start' : '' %>">
-              <span class="text-sm text-slate-600 dark:text-slate-400 mr-1">Populärt:</span>
-              <% popularTags.forEach(t => { %>
-                <button
-                  data-tag="<%= t %>"
-                  class="tag-btn text-xs rounded-full px-3 py-1 border border-slate-300 dark:border-slate-700 
-                         text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-700 
-                         dark:hover:border-red-500 dark:hover:text-red-400"
-                ><%= t %></button>
-              <% }) %>
-            </div>
-          <% } %>
+<% if (typeof popularTags !== 'undefined' && popularTags.length) { %>
+  <div class="mt-4 flex flex-wrap items-center gap-2 <%= (popularTags && popularTags.length) ? 'justify-center md:justify-start' : '' %>">
+    <span class="text-sm text-slate-600 dark:text-slate-400 mr-1">Populärt:</span>
+    <% popularTags.forEach(t => { %>
+      <a
+        href="/explore?tab=all&tag=<%= encodeURIComponent(t) %><%= q?`&q=${encodeURIComponent(q)}`:'' %><%= cat?`&cat=${encodeURIComponent(cat)}`:'' %>"
+        class="text-xs rounded-full px-3 py-1 border border-slate-300 dark:border-slate-700 
+               text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-700 
+               dark:hover:border-red-500 dark:hover:text-red-400"
+      ><%= t %></a>
+    <% }) %>
+  </div>
+<% } %>
         </div>
       </div>
 
