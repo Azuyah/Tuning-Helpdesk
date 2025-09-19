@@ -2087,6 +2087,7 @@ app.get('/explore', (req, res) => {
 
 // Visa en specifik resurs (separat layout från vanliga topics)
 app.get('/resources/:id', (req, res) => {
+  // Försök via topic_categories först
   const row = db.prepare(`
     SELECT
       b.id,
@@ -2099,25 +2100,64 @@ app.get('/resources/:id', (req, res) => {
       t.download_url,
       t.downloads,
       u.name AS author_name,
-      c.id    AS category_id,
-      c.title AS category_title
+
+      /* Kategori som SUBSELECT → funkar även om det finns flera, tar 1 st */
+      (
+        SELECT c.id
+        FROM topic_categories tc
+        JOIN categories c ON c.id = tc.category_id
+        WHERE tc.topic_id = t.id
+        LIMIT 1
+      ) AS category_id,
+      (
+        SELECT c.title
+        FROM topic_categories tc
+        JOIN categories c ON c.id = tc.category_id
+        WHERE tc.topic_id = t.id
+        LIMIT 1
+      ) AS category_title
+
     FROM topics_base b
-    JOIN topics t              ON t.id = b.id
-    LEFT JOIN users u          ON u.id = b.created_by
-    LEFT JOIN topic_categories tc ON tc.topic_id = t.id
-    LEFT JOIN categories c         ON c.id = tc.category_id
+    JOIN topics t ON t.id = b.id
+    LEFT JOIN users u ON u.id = b.created_by
     WHERE b.id = ?
     LIMIT 1
   `).get(req.params.id);
 
-  if (!row || !row.is_resource) {
+  // Fallback om din DB råkar heta "topic_category" (singular)
+  let resource = row;
+  if (resource && !resource.category_id && !resource.category_title) {
+    try {
+      const alt = db.prepare(`
+        SELECT
+          (
+            SELECT c.id
+            FROM topic_category tc
+            JOIN categories c ON c.id = tc.category_id
+            WHERE tc.topic_id = ?
+            LIMIT 1
+          ) AS category_id,
+          (
+            SELECT c.title
+            FROM topic_category tc
+            JOIN categories c ON c.id = tc.category_id
+            WHERE tc.topic_id = ?
+            LIMIT 1
+          ) AS category_title
+      `).get(req.params.id, req.params.id);
+      resource.category_id    = alt?.category_id ?? null;
+      resource.category_title = alt?.category_title ?? null;
+    } catch (_) {/* ignore */}
+  }
+
+  if (!resource || !resource.is_resource) {
     return res.status(404).render('404', { title: 'Resurs saknas' });
   }
 
   res.locals.showHero = false;
   res.render('resource-show', {
-    title: row.title,
-    resource: row,
+    title: resource.title,
+    resource,
     user: getUser(req)
   });
 });
