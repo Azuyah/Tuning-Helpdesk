@@ -155,7 +155,7 @@
   <dt class="text-slate-600">Kategori</dt>
   <dd class="font-medium">
     <% if (q.category_id && q.category_title) { %>
-      <a href="/explore?tab=all&cat=<%= encodeURIComponent(q.category_id) %>" 
+      <a href="/explore?tab=all&cat=<%= encodeURIComponent(String(q.category_id).toLowerCase()) %>" 
          class="text-sky-600 hover:underline">
         <%= q.category_title %>
       </a>
