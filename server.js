@@ -1338,17 +1338,50 @@ app.get('/api/questions/:id', requireAuth, (req, res) => {
   res.json({ ...q, topics: links.map(x => x.topic_id) });
 });
 
+// Ersätt hela denna handler
 app.put('/api/questions/:id/attach-topic', requireAdmin, (req, res) => {
-  const { topicId } = req.body;
-  const q = db.prepare('SELECT * FROM questions WHERE id=?').get(req.params.id);
+  const qid = Number(req.params.id);
+  const { topicId, replace } = req.body;
+
+  // Validera fråga + ämne
+  const q = db.prepare('SELECT id FROM questions WHERE id=?').get(qid);
   if (!q) return res.status(404).json({ error: 'not found' });
-  const t = db.prepare('SELECT 1 FROM topics_base WHERE id=?').get(topicId);
-  if (!t) return res.status(400).json({ error: 'topic not found' });
-  db.prepare('INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)')
-    .run(q.id, topicId);
-db.prepare("UPDATE questions SET status=?, updated_at=datetime('now') WHERE id=?")
-  .run('answered', q.id);
-  res.json({ ok: true });
+
+  const topic = db.prepare(`
+    SELECT b.id, t.title
+    FROM topics_base b
+    JOIN topics t ON t.id = b.id
+    WHERE b.id = ?
+  `).get(topicId);
+  if (!topic) return res.status(400).json({ error: 'topic not found' });
+
+  const tx = db.transaction(() => {
+    // Om replace => ta bort ev. tidigare koppling(ar)
+    if (replace) {
+      db.prepare('DELETE FROM question_topic WHERE question_id=?').run(qid);
+    }
+
+    // Lägg till kopplingen (ignorera om samma redan finns)
+    db.prepare(`
+      INSERT OR IGNORE INTO question_topic (question_id, topic_id)
+      VALUES (?,?)
+    `).run(qid, topic.id);
+
+    // Sätt status till answered och bumpa updated_at
+    db.prepare(`
+      UPDATE questions
+      SET status='answered', updated_at=datetime('now')
+      WHERE id=?
+    `).run(qid);
+  });
+
+  try {
+    tx();
+    return res.json({ ok: true, linked: { id: topic.id, title: topic.title } });
+  } catch (e) {
+    console.error('attach-topic failed', e);
+    return res.status(500).json({ error: 'failed to attach topic' });
+  }
 });
 
 app.put('/api/questions/:id/status', requireAdmin, (req, res) => {
@@ -1666,12 +1699,18 @@ app.get('/questions/:id', (req, res) => {
 
   // --- 1) Frågan (robust mot saknad answer_tags-kolumn) ---
 const q = db.prepare(`
-  SELECT q.*,                          -- ← tar med ALLT från questions
-         u.name  AS user_name,
-         u.email AS user_email
+  SELECT
+    q.*,
+    u.name  AS user_name,
+    u.email AS user_email,
+    c.id    AS category_id,
+    c.title AS category_title
   FROM questions q
-  LEFT JOIN users u ON u.id = q.user_id
+  LEFT JOIN users u              ON u.id = q.user_id
+  LEFT JOIN question_category qc ON qc.question_id = q.id
+  LEFT JOIN categories c         ON c.id = qc.category_id
   WHERE q.id = ?
+  LIMIT 1
 `).get(id);
 
 if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
@@ -1863,11 +1902,21 @@ if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
   }
   // --- SIDOKOLUMN SLUT ---
 
+  const linked = db.prepare(`
+  SELECT t.id, t.title
+  FROM question_topic qt
+  JOIN topics t ON t.id = qt.topic_id
+  WHERE qt.question_id = ?
+  ORDER BY t.title
+`).all(id);
+
+
   res.locals.showHero = false;
   res.render('question', {
     title: `Fråga: ${q.title}`,
     q,
     answerTopic,
+    linked,
     relatedQuestions, // blandat (fråga/ämne/resurs) på taggar
     relatedTopics,    // allt i samma kategori (ämnen + resurser + frågor)
     user: me

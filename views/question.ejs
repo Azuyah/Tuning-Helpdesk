@@ -62,101 +62,182 @@
     </article>
 
     <!-- SVAR (kort under frågan) -->
-    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-      <div class="mb-4 flex items-center justify-between">
-        <div>
-          <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Svar</div>
-          <h2 class="text-2xl font-bold text-slate-900">
-            <%= q.is_answered ? (q.answer_title || 'Svar') : 'Svar' %>
-          </h2>
-        </div>
-      </div>
-
-      <% if (q.is_answered && q.answer_body) { %>
-        <div class="prose prose-slate max-w-none mb-6">
-          <%- include('partials/richtext', { id: 'answer-' + q.id, html: q.answer_body }) %>
-        </div>
-
-        <div class="text-sm text-slate-500">
-          Svarat av: <span class="font-medium"><%= q.answered_by || 'Okänd' %></span>
-          • <%= new Date(q.answered_at || q.updated_at || Date.now()).toLocaleString('sv-SE') %>
-          <% if (q.answer_tags) { %> • Taggar: <%= q.answer_tags %><% } %>
-        </div>
-      <% } else { %>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 flex items-center justify-between">
-          <span>Frågan har ej blivit besvarad än.</span>
-        </div>
-      <% } %>
-    </article>
+<!-- SVAR (kort under frågan) -->
+<article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+  <div class="mb-4">
+    <div class="text-xs uppercase tracking-wide text-slate-500">Svar</div>
+    <h2 class="text-2xl font-bold text-slate-900 mt-1">Svar</h2>
   </div>
 
-  <!-- Högerkolumn -->
-   <aside class="lg:col-span-1 space-y-8 self-start">
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-  <h2 class="text-lg font-semibold text-slate-900 mb-4">Relaterade ämnen</h2>
-  <% if (relatedQuestions && relatedQuestions.length) { %>
-    <ul class="space-y-3">
-      <% relatedQuestions.forEach(function(it){ 
-           const isRes  = (it.kind !== 'question') && Number(it.is_resource) === 1;
-           const href   = it.kind === 'question'
-              ? (`/questions/${it.id}`)
-              : (isRes ? (`/resources/${it.id}`) : (`/topic/${it.id}`));
-
-           let badgeHtml;
-           if (it.kind === 'question') {
-             badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>';
-           } else if (isRes) {
-             badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>';
-           } else {
-             badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>';
-           }
-      %>
-        <li>
-          <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
-            <%- badgeHtml %>
-            <span class="truncate"><%= it.title %></span>
+  <% if (linked && linked.length) { 
+       const t = linked[0]; %>
+    <!-- Info-ruta: tidigare besvarat -->
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-start gap-3">
+          <i class="ti ti-link text-lg mt-0.5 text-emerald-700"></i>
+          <div>
+            <div class="text-slate-800">
+              Din fråga har besvarats tidigare i följande inlägg:
+            </div>
+            <a href="/topic/<%= t.id %>" class="mt-1 inline-flex items-center gap-2 font-medium text-emerald-700 hover:underline">
+              <span class="truncate"><%= t.title %></span>
+            </a>
+          </div>
+        </div>
+        <div class="shrink-0">
+          <a href="/topic/<%= t.id %>"
+             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
+            <i class="ti ti-external-link"></i> Visa inlägg
           </a>
-        </li>
-      <% }) %>
-    </ul>
+        </div>
+      </div>
+    </div>
+  <% } else if (q.is_answered && q.answer_body) { %>
+    <!-- Internt skrivet svar -->
+    <div class="prose prose-slate max-w-none mb-6">
+      <%- include('partials/richtext', { id: 'answer-' + q.id, html: q.answer_body }) %>
+    </div>
+    <div class="text-sm text-slate-500">
+      Svarat av: <span class="font-medium"><%= q.answered_by || 'Okänd' %></span>
+      • <%= new Date(q.answered_at || q.updated_at || Date.now()).toLocaleString('sv-SE') %>
+      <% if (q.answer_tags) { %> • Taggar: <%= q.answer_tags %><% } %>
+    </div>
   <% } else { %>
-    <p class="text-sm text-slate-500">Inga relaterade ämnen ännu.</p>
+    <!-- Ej besvarad -->
+    <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700">
+      Frågan har ej blivit besvarad än.
+    </div>
   <% } %>
+</article>
+  </div>
+
+  <% function svStatus(s){
+     return s === 'open' ? 'Öppen'
+          : s === 'answered' ? 'Besvarad'
+          : s === 'closed' ? 'Stängd'
+          : (s || '-');
+   }
+   function statusTone(s){
+     return s === 'answered' ? 'text-emerald-600'
+          : s === 'open'     ? 'text-sky-600'
+          : 'text-slate-500';
+   }
+%>
+<!-- Högerkolumn -->
+<aside class="lg:col-span-1 space-y-8 self-start">
+
+<!-- Info-ruta -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+  <h2 class="text-lg font-semibold text-slate-900 mb-4">Information</h2>
+  <dl class="space-y-2 text-sm">
+    <div class="flex justify-between">
+      <dt class="text-slate-600">Antal visningar</dt>
+      <dd class="font-medium text-slate-900"><%= q.views || 0 %></dd>
+    </div>
+
+<!-- Kopplat ämne -->
+<div class="flex items-center justify-between gap-3">
+  <dt class="text-slate-600">Kopplat ämne</dt>
+  <dd class="flex items-center gap-3 font-medium text-slate-900">
+    <% if (linked && linked.length) { 
+         const t = linked[0]; %>
+      <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline truncate max-w-[14rem]">
+        <%= t.title %>
+      </a>
+    <% } else { %>
+      <span class="text-slate-400 italic">Inget kopplat ämne</span>
+    <% } %>
+  </dd>
 </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-      <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
-<% if (relatedTopics && relatedTopics.length) { %>
-  <ul class="space-y-3">
-    <% relatedTopics.forEach(function(rt){ 
-         const isRes  = (rt.kind !== 'question') && Number(rt.is_resource) === 1;
-         const href   = rt.kind === 'question'
-            ? (`/questions/${rt.id}`)
-            : (isRes ? (`/resources/${rt.id}`) : (`/topic/${rt.id}`));
+<div class="flex justify-between">
+  <dt class="text-slate-600">Kategori</dt>
+  <dd class="font-medium text-slate-900">
+    <% if (q.category_title) { %>
+      <a href="/explore?category=<%= q.category_id %>" 
+         class="text-sky-600 hover:underline">
+        <%= q.category_title %>
+      </a>
+    <% } else { %>
+      <span class="text-slate-400 italic">Ingen kategori</span>
+    <% } %>
+  </dd>
+</div>
 
-         let badgeHtml;
-         if (rt.kind === 'question') {
-           badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>';
-         } else if (isRes) {
-           badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>';
-         } else {
-           badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>';
-         }
-    %>
-      <li>
-        <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
-          <%- badgeHtml %>
-          <span class="truncate"><%= rt.title %></span>
-        </a>
-      </li>
-    <% }) %>
-  </ul>
-<% } else { %>
-  <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
-<% } %>
+    <div class="flex justify-between">
+      <dt class="text-slate-600">Status</dt>
+      <dd class="font-medium <%= statusTone(q.status) %>"><%= svStatus(q.status) %></dd>
     </div>
-  </aside>
-</section>
+  </dl>
+</div>
+
+  <!-- Relaterade ämnen -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">Relaterade ämnen</h2>
+    <% if (relatedQuestions && relatedQuestions.length) { %>
+      <ul class="space-y-3">
+        <% relatedQuestions.forEach(function(it){ 
+             const isRes  = (it.kind !== 'question') && Number(it.is_resource) === 1;
+             const href   = it.kind === 'question'
+                ? (`/questions/${it.id}`)
+                : (isRes ? (`/resources/${it.id}`) : (`/topic/${it.id}`));
+
+             let badgeHtml;
+             if (it.kind === 'question') {
+               badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>';
+             } else if (isRes) {
+               badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>';
+             } else {
+               badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>';
+             }
+        %>
+          <li>
+            <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
+              <%- badgeHtml %>
+              <span class="truncate"><%= it.title %></span>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="text-sm text-slate-500">Inga relaterade ämnen ännu.</p>
+    <% } %>
+  </div>
+
+  <!-- Fler ämnen i denna kategori -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
+    <% if (relatedTopics && relatedTopics.length) { %>
+      <ul class="space-y-3">
+        <% relatedTopics.forEach(function(rt){ 
+             const isRes  = (rt.kind !== 'question') && Number(rt.is_resource) === 1;
+             const href   = rt.kind === 'question'
+                ? (`/questions/${rt.id}`)
+                : (isRes ? (`/resources/${rt.id}`) : (`/topic/${rt.id}`));
+
+             let badgeHtml;
+             if (rt.kind === 'question') {
+               badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>';
+             } else if (isRes) {
+               badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>';
+             } else {
+               badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>';
+             }
+        %>
+          <li>
+            <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
+              <%- badgeHtml %>
+              <span class="truncate"><%= rt.title %></span>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
+    <% } %>
+  </div>
+</aside>
 
 <script>
   (function(){

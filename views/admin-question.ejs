@@ -105,29 +105,33 @@
       </div>
     </div>
 
-    <!-- Koppla ämne -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 class="font-semibold text-slate-900 mb-3">Koppla ämne</h3>
-      <div class="relative">
-        <input id="topicSearch" type="search" placeholder="Sök ämne…"
-               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500"/>
-        <div id="suggestBox"
-             class="absolute z-10 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-lg hidden overflow-hidden"></div>
-      </div>
+<!-- Koppla ämne (max 1 kopplat) -->
+<div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+  <h3 class="font-semibold text-slate-900 mb-3">Koppla ämne</h3>
 
-      <% if (linked && linked.length) { %>
-        <div class="mt-4">
-          <div class="text-sm text-slate-600 mb-2">Kopplade ämnen:</div>
-          <ul class="space-y-1">
-            <% linked.forEach(function(t){ %>
-              <li>
-                <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline"><%= t.title %></a>
-              </li>
-            <% }); %>
-          </ul>
-        </div>
-      <% } %>
-    </div>
+  <div class="relative">
+    <input id="topicSearch" type="search" placeholder="Sök ämne…"
+           class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500"/>
+    <div id="suggestBox"
+         class="absolute z-10 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-lg hidden overflow-hidden"></div>
+  </div>
+
+  <div class="mt-4">
+    <div class="text-sm text-slate-600 mb-2">Kopplat ämne:</div>
+    <% if (linked && linked.length) { 
+         const t = linked[0]; %>
+      <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+        <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline"><%= t.title %></a>
+        <button type="button" id="btnChangeTopic"
+                class="text-xs rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-50">Byt</button>
+      </div>
+    <% } else { %>
+      <div class="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500">
+        Inget ämne kopplat ännu.
+      </div>
+    <% } %>
+  </div>
+</div>
 
     <!-- Kategorier för frågan -->
 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -269,11 +273,11 @@
       var btn = e.target.closest('button[data-id]');
       if (!btn) return;
       var topicId = btn.getAttribute('data-id');
-      fetch('/api/questions/' + qid + '/attach-topic', {
-        method: 'PUT',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ topicId: topicId })
-      })
+fetch('/api/questions/' + qid + '/attach-topic', {
+  method: 'PUT',
+  headers: { 'Content-Type':'application/json' },
+  body: JSON.stringify({ topicId: topicId, replace: true })
+})
       .then(function(res){ return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
       .then(function(resp){
         if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
