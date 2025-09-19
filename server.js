@@ -297,6 +297,11 @@ try {
 } catch (e) {
   // kolumnen finns redan – ignorera
 }
+try {
+  db.prepare(`ALTER TABLE questions ADD COLUMN views INTEGER DEFAULT 0`).run();
+} catch (e) {
+  // kolumnen finns redan – ignorera
+}
 
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
@@ -1559,6 +1564,12 @@ app.get('/question/:id', (req, res) => {
   `).get(id);
 
   if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
+ 
+  // Räkna upp visningar (enkelt läge)
+db.prepare(`UPDATE questions SET views = COALESCE(views,0) + 1 WHERE id = ?`).run(id);
+
+// Uppdatera minnesobjektet så siffran syns direkt vid render
+q.views = (q.views || 0) + 1;
 
   const me = getUser(req);
   const isOwner = me && me.id === q.user_id;
@@ -1714,6 +1725,12 @@ const q = db.prepare(`
 `).get(id);
 
 if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
+
+// Räkna upp visningar (enkelt läge)
+db.prepare(`UPDATE questions SET views = COALESCE(views,0) + 1 WHERE id = ?`).run(id);
+
+// Uppdatera minnesobjektet så siffran syns direkt vid render
+q.views = (q.views || 0) + 1;
 
   // --- 2) Kopplat svar-ämne (om något) ---
   const link = db.prepare(`
