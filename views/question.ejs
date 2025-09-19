@@ -70,13 +70,6 @@
             <%= q.is_answered ? (q.answer_title || 'Svar') : 'Svar' %>
           </h2>
         </div>
-
-        <% if (!q.is_answered && user && user.role === 'admin') { %>
-          <a href="/admin/questions/<%= q.id %>"
-             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
-            <i class="ti ti-message-plus"></i> Svara
-          </a>
-        <% } %>
       </div>
 
       <% if (q.is_answered && q.answer_body) { %>
