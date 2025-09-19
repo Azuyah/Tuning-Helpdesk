@@ -2013,10 +2013,16 @@ app.get('/explore', (req, res) => {
       params.push(cat, cat);
     }
 
-    if (tag) {
-      sql += ` AND lower(IFNULL(t.tags,'')) LIKE ? `;
-      params.push(likeTag);
-    }
+if (tag) {
+  const safeTag = tag.toLowerCase().trim();
+  // normalisera t.tags lite (ta bort mellanslag runt komman), kapsla in med komman och matcha hel tagg
+  sql += `
+    AND (
+      ',' || REPLACE(REPLACE(lower(IFNULL(t.tags,'')), ' ,', ','), ', ', ',') || ','
+    ) LIKE ?
+  `;
+  params.push(`%,${safeTag},%`);
+}
 
     sql += ` ORDER BY datetime(ts) DESC LIMIT 100 `;
     return db.prepare(sql).all(...params);
@@ -2045,23 +2051,29 @@ app.get('/explore', (req, res) => {
       params.push(cat);
     }
 
-    if (tag) {
-      // matcha via kopplat ämnes tags (topics.tags) ELLER via q.answer_tags (om kolumnen finns)
-      sql += `
-        AND (
-          EXISTS (
-            SELECT 1
-            FROM question_topic qt
-            JOIN topics t ON t.id = qt.topic_id
-            WHERE qt.question_id = q.id
-              AND lower(IFNULL(t.tags,'')) LIKE ?
-          )
-          ${hasAnswerTags ? ` OR lower(IFNULL(q.answer_tags,'')) LIKE ?` : ``}
-        )
-      `;
-      params.push(likeTag);
-      if (hasAnswerTags) params.push(likeTag);
-    }
+if (tag) {
+  const safeTag = tag.toLowerCase().trim();
+  sql += `
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM question_topic qt
+        JOIN topics t ON t.id = qt.topic_id
+        WHERE qt.question_id = q.id
+          AND (
+            ',' || REPLACE(REPLACE(lower(IFNULL(t.tags,'')), ' ,', ','), ', ', ',') || ','
+          ) LIKE ?
+      )
+      ${hasAnswerTags ? `
+        OR (
+          ',' || REPLACE(REPLACE(lower(IFNULL(q.answer_tags,'')), ' ,', ','), ', ', ',') || ','
+        ) LIKE ?
+      ` : ``}
+    )
+  `;
+  params.push(`%,${safeTag},%`);
+  if (hasAnswerTags) params.push(`%,${safeTag},%`);
+}
 
     sql += ` ORDER BY datetime(ts) DESC LIMIT 100 `;
     return db.prepare(sql).all(...params);
