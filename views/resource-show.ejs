@@ -61,7 +61,7 @@
       const catParam = resource.category_slug || resource.category_title || resource.category_id;
     %>
     <% if (catParam) { %>
-      <a href="/explore?tab=all&cat=<%= encodeURIComponent(String(q.category_id).toLowerCase()) %>" 
+      <a href="/explore?tab=all&cat=<%= encodeURIComponent(catParam.toLowerCase()) %>"
          class="text-sky-600 hover:underline">
         <%= resource.category_title || catParam %>
       </a>
