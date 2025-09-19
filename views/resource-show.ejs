@@ -53,15 +53,14 @@
         <dd class="text-slate-900 font-medium"><%= resource.author_name || '—' %></dd>
       </div>
 
-<!-- Kategori + Visa-knapp till Explore -->
+<!-- Kategori (klickbar länk) -->
 <div class="flex items-center justify-between gap-3">
   <dt>Kategori</dt>
-  <dd class="text-slate-900 font-medium flex items-center gap-2">
+  <dd class="font-medium">
     <% if (resource.category_id && resource.category_title) { %>
-      <span><%= resource.category_title %></span>
       <a href="/explore?category=<%= encodeURIComponent(resource.category_id) %>"
-         class="inline-flex items-center gap-1 rounded-lg border border-sky-600 text-sky-700 px-2.5 py-1 text-xs font-medium hover:bg-sky-50">
-        Visa
+         class="text-sky-600 hover:underline">
+        <%= resource.category_title %>
       </a>
     <% } else { %>
       <span class="text-slate-400 italic">Ingen kategori</span>
