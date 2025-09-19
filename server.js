@@ -2084,21 +2084,37 @@ app.get('/explore', (req, res) => {
   });
 });
 
+
 // Visa en specifik resurs (separat layout från vanliga topics)
 app.get('/resources/:id', (req, res) => {
   const row = db.prepare(`
-    SELECT b.id, t.title, t.excerpt, t.body, t.tags, b.updated_at,
-           t.is_resource, t.download_url, t.downloads
+    SELECT
+      b.id,
+      t.title,
+      t.excerpt,
+      t.body,
+      t.tags,
+      b.updated_at,
+      t.is_resource,
+      t.download_url,
+      t.downloads,
+      u.name AS author_name,
+      c.id    AS category_id,
+      c.title AS category_title
     FROM topics_base b
-    JOIN topics t ON t.id=b.id
+    JOIN topics t              ON t.id = b.id
+    LEFT JOIN users u          ON u.id = b.created_by
+    LEFT JOIN topic_categories tc ON tc.topic_id = t.id
+    LEFT JOIN categories c         ON c.id = tc.category_id
     WHERE b.id = ?
+    LIMIT 1
   `).get(req.params.id);
 
   if (!row || !row.is_resource) {
     return res.status(404).render('404', { title: 'Resurs saknas' });
   }
 
-  res.locals.showHero = false; // (om du vill dölja hero på detaljsidor)
+  res.locals.showHero = false;
   res.render('resource-show', {
     title: row.title,
     resource: row,

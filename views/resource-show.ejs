@@ -40,36 +40,61 @@
     </article>
   </div>
 
-  <!-- Höger: nedladdning / metadata -->
-  <aside class="space-y-6">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sticky top-24">
-      <div class="text-sm uppercase text-slate-500 mb-1">Resurs</div>
-      <div class="text-slate-900 font-semibold"><%= resource.title %></div>
+<!-- Höger: nedladdning / metadata -->
+<aside class="space-y-6">
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sticky top-24">
+    <div class="text-sm uppercase text-slate-500 mb-1">Resurs</div>
+    <div class="text-slate-900 font-semibold"><%= resource.title %></div>
 
-      <dl class="mt-4 text-sm text-slate-600 space-y-1">
+    <dl class="mt-4 text-sm text-slate-600 space-y-2">
+      <!-- Författare -->
+      <div class="flex items-center justify-between gap-3">
+        <dt>Författare</dt>
+        <dd class="text-slate-900 font-medium"><%= resource.author_name || '—' %></dd>
+      </div>
+
+<!-- Kategori + Visa-knapp till Explore -->
+<div class="flex items-center justify-between gap-3">
+  <dt>Kategori</dt>
+  <dd class="text-slate-900 font-medium flex items-center gap-2">
+    <% if (resource.category_id && resource.category_title) { %>
+      <span><%= resource.category_title %></span>
+      <a href="/explore?category=<%= encodeURIComponent(resource.category_id) %>"
+         class="inline-flex items-center gap-1 rounded-lg border border-sky-600 text-sky-700 px-2.5 py-1 text-xs font-medium hover:bg-sky-50">
+        Visa
+      </a>
+    <% } else { %>
+      <span class="text-slate-400 italic">Ingen kategori</span>
+    <% } %>
+  </dd>
+</div>
+
+      <!-- Uppdaterad -->
         <div class="flex items-center justify-between gap-3">
           <dt>Uppdaterad</dt>
           <dd class="text-slate-800">
             <%= new Date(resource.updated_at).toLocaleDateString('sv-SE') %>
           </dd>
         </div>
-    <span class="text-xs text-slate-500 whitespace-nowrap">
-      Nedladdad <%= resource.downloads || 0 %> gånger
-    </span>
       </dl>
 
+    <!-- Nedladdningsknapp / info -->
 <% if (resource.download_url) { %>
-  <div class="mt-6 flex items-center justify-between gap-3">
+  <div class="mt-6">
     <a href="/resources/<%= encodeURIComponent(resource.id) %>/download"
        class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2.5 font-semibold hover:bg-sky-700">
       <i class="ti ti-download"></i> Ladda ner
     </a>
   </div>
+  <span class="block mt-4 text-xs text-slate-500 whitespace-nowrap">
+    Nedladdad <%= resource.downloads || 0 %> gånger
+  </span>
 <% } else { %>
   <div class="mt-6 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
     Ingen nedladdningslänk är angiven.
   </div>
 <% } %>
-
-  </aside>
+  </div>
+  
+</aside>
 </section>
