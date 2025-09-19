@@ -53,14 +53,17 @@
         <dd class="text-slate-900 font-medium"><%= resource.author_name || '—' %></dd>
       </div>
 
-<!-- Kategori (klickbar länk) -->
+<!-- Kategori (klickbar länk till Explore med tab=all&cat=...) -->
 <div class="flex items-center justify-between gap-3">
   <dt>Kategori</dt>
   <dd class="font-medium">
-    <% if (resource.category_id && resource.category_title) { %>
-      <a href="/explore?category=<%= encodeURIComponent(resource.category_id) %>"
+    <% 
+      const catParam = resource.category_slug || resource.category_title || resource.category_id;
+    %>
+    <% if (catParam) { %>
+      <a href="/explore?tab=all&cat=<%= encodeURIComponent(catParam) %>"
          class="text-sky-600 hover:underline">
-        <%= resource.category_title %>
+        <%= resource.category_title || catParam %>
       </a>
     <% } else { %>
       <span class="text-slate-400 italic">Ingen kategori</span>

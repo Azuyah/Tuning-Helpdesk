@@ -153,9 +153,9 @@
 
 <div class="flex justify-between">
   <dt class="text-slate-600">Kategori</dt>
-  <dd class="font-medium text-slate-900">
-    <% if (q.category_title) { %>
-      <a href="/explore?category=<%= q.category_id %>" 
+  <dd class="font-medium">
+    <% if (q.category_id && q.category_title) { %>
+      <a href="/explore?tab=all&cat=<%= encodeURIComponent(q.category_id) %>" 
          class="text-sky-600 hover:underline">
         <%= q.category_title %>
       </a>
