@@ -61,10 +61,10 @@
       <div class="text-sm font-medium text-slate-700 mb-2">Populära taggar</div>
       <div class="flex flex-wrap gap-2">
         <% tags.forEach(t => { %>
-          <a href="/explore?tab=<%= tab %>&tag=<%= encodeURIComponent(t.name) %><%= q?`&q=${encodeURIComponent(q)}`:'' %><%= cat?`&cat=${encodeURIComponent(cat)}`:'' %>"
-             class="text-xs rounded-full px-3 py-1 border border-slate-300 hover:border-sky-400 hover:text-sky-700 <%= tag===t.name?'bg-slate-100 font-medium':'' %>">
-            <%= t.name %>
-          </a>
+<a href="/explore?tab=<%= tab %>&tag=<%= encodeURIComponent(t.name) %><%= q?`&q=${encodeURIComponent(q)}`:'' %><%= cat?`&cat=${encodeURIComponent(cat)}`:'' %>"
+   class="text-xs rounded-full px-3 py-1 border border-slate-300 hover:border-sky-400 hover:text-sky-700 <%= (tag||'').toLowerCase()===t.name.toLowerCase() ? 'bg-slate-100 font-medium' : '' %>">
+  <%= t.name %>
+</a>
         <% }) %>
       </div>
     </div>

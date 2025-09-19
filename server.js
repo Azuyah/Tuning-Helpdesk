@@ -1940,45 +1940,56 @@ q.views = (q.views || 0) + 1;
   });
 });
 
+// Explore
 app.get('/explore', (req, res) => {
+  const me       = getUser(req);
   const tabParam = String(req.query.tab || '').toLowerCase();
-  const tab = ['topics','questions','resources','all'].includes(tabParam) ? tabParam : 'all';
+  const tab      = ['topics','questions','resources','all'].includes(tabParam) ? tabParam : 'all';
 
-  const q   = (req.query.q   || '').trim().toLowerCase();
-  const cat = (req.query.cat || '').trim();                   // category id
-  const tag = (req.query.tag || '').trim().toLowerCase();
+  const qRaw = (req.query.q   || '').trim();
+  const q    = qRaw.toLowerCase();
+  const cat  = (req.query.cat || '').trim();               // category id/slug/etc
+  const tag  = (req.query.tag || '').trim().toLowerCase(); // taggtext
 
-  // Sidebar: kategorier
+  // Kategorier (sidebar)
   const categories = db.prepare(`
     SELECT id, title
     FROM categories
     ORDER BY COALESCE(sort_order, 9999), title
   `).all();
 
-  // Sidebar: populära taggar (från icke-resursämnen)
-  const tagRows = db.prepare(`
+  // Populära taggar (från ämnen)
+  const tagRowsRaw = db.prepare(`
     SELECT t.tags
     FROM topics t
-    WHERE t.is_resource = 0 AND IFNULL(t.tags,'') <> ''
+    WHERE IFNULL(t.tags,'') <> ''
   `).all();
   const tagCounter = {};
-  for (const r of tagRows) {
-    (r.tags || '').split(',').map(s=>s.trim()).filter(Boolean).forEach(tg=>{
+  for (const r of tagRowsRaw) {
+    (r.tags || '').split(',').map(s => s.trim()).filter(Boolean).forEach(tg => {
       const key = tg.toLowerCase();
-      tagCounter[key] = (tagCounter[key]||0) + 1;
+      tagCounter[key] = (tagCounter[key] || 0) + 1;
     });
   }
   const tags = Object.entries(tagCounter)
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,30)
-    .map(([name,count])=>({ name, count }));
+    .sort((a,b) => b[1]-a[1])
+    .slice(0, 30)
+    .map(([name, count]) => ({ name, count }));
 
-  const like = q ? `%${q}%` : null;
+  const likeQ   = q   ? `%${q}%`   : null;
+  const likeTag = tag ? `%${tag}%` : null;
 
-  // ---- helpers (ämnen/resurser delar baskod)
+  // Finns questions.answer_tags?
+  let hasAnswerTags = false;
+  try {
+    hasAnswerTags = db.prepare(`PRAGMA table_info(questions)`).all().some(c => c.name === 'answer_tags');
+  } catch {}
+
+  // --- Helpers för ämnen/resurser (delar baslogik) ---
   function fetchTopicsBase(isResource) {
     let sql = `
-      SELECT b.id, t.title, t.excerpt, t.tags, t.is_resource, b.updated_at AS ts
+      SELECT b.id, t.title, t.excerpt, t.tags, t.is_resource,
+             COALESCE(b.updated_at, b.created_at) AS ts
       FROM topics_base b
       JOIN topics t ON t.id = b.id
       WHERE t.is_resource = ?
@@ -1986,16 +1997,25 @@ app.get('/explore', (req, res) => {
     const params = [isResource ? 1 : 0];
 
     if (q) {
-      sql += ` AND (lower(t.title) LIKE ? OR lower(t.excerpt) LIKE ? OR lower(t.body) LIKE ?) `;
-      params.push(like, like, like);
+      sql += ` AND (lower(t.title) LIKE ? OR lower(IFNULL(t.excerpt,'')) LIKE ? OR lower(IFNULL(t.body,'')) LIKE ?) `;
+      params.push(likeQ, likeQ, likeQ);
     }
+
     if (cat) {
-      sql += ` AND EXISTS (SELECT 1 FROM topic_category tc WHERE tc.topic_id=b.id AND tc.category_id=?) `;
-      params.push(cat);
+      // stöd för både topic_categories (plural) och topic_category (singular)
+      sql += `
+        AND (
+          EXISTS (SELECT 1 FROM topic_categories tc WHERE tc.topic_id=b.id AND tc.category_id = ?)
+          OR
+          EXISTS (SELECT 1 FROM topic_category  tc WHERE tc.topic_id=b.id AND tc.category_id = ?)
+        )
+      `;
+      params.push(cat, cat);
     }
-    if (!isResource && tag) {
+
+    if (tag) {
       sql += ` AND lower(IFNULL(t.tags,'')) LIKE ? `;
-      params.push(`%${tag}%`);
+      params.push(likeTag);
     }
 
     sql += ` ORDER BY datetime(ts) DESC LIMIT 100 `;
@@ -2012,39 +2032,62 @@ app.get('/explore', (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
     if (q) {
       sql += ` AND (lower(q.title) LIKE ? OR lower(IFNULL(q.body,'')) LIKE ?) `;
-      params.push(like, like);
+      params.push(likeQ, likeQ);
     }
+
     if (cat) {
-      sql += ` AND EXISTS (SELECT 1 FROM question_category qc WHERE qc.question_id=q.id AND qc.category_id=?) `;
+      sql += `
+        AND EXISTS (SELECT 1 FROM question_category qc WHERE qc.question_id=q.id AND qc.category_id=?)
+      `;
       params.push(cat);
     }
+
+    if (tag) {
+      // matcha via kopplat ämnes tags (topics.tags) ELLER via q.answer_tags (om kolumnen finns)
+      sql += `
+        AND (
+          EXISTS (
+            SELECT 1
+            FROM question_topic qt
+            JOIN topics t ON t.id = qt.topic_id
+            WHERE qt.question_id = q.id
+              AND lower(IFNULL(t.tags,'')) LIKE ?
+          )
+          ${hasAnswerTags ? ` OR lower(IFNULL(q.answer_tags,'')) LIKE ?` : ``}
+        )
+      `;
+      params.push(likeTag);
+      if (hasAnswerTags) params.push(likeTag);
+    }
+
     sql += ` ORDER BY datetime(ts) DESC LIMIT 100 `;
     return db.prepare(sql).all(...params);
   }
 
   // Hämta enligt tab
-  let T=[], R=[], Q=[];
+  let T = [], R = [], Q = [];
   if (tab === 'topics') {
     T = fetchTopics();
   } else if (tab === 'resources') {
     R = fetchResources();
   } else if (tab === 'questions') {
     Q = fetchQuestions();
-  } else { // all
+  } else {
     T = fetchTopics();
     R = fetchResources();
     Q = fetchQuestions();
   }
 
-  // Slå ihop till en enhetlig lista
+  // Slå ihop till en enhetlig lista för rendering
   const items = [];
   for (const t of T) {
     items.push({
       type: 'topic',
       id:   t.id,
-      title: t.title,
+      title:   t.title,
       excerpt: t.excerpt || '',
       ts:  t.ts,
       href: `/topic/${encodeURIComponent(t.id)}`
@@ -2054,7 +2097,7 @@ app.get('/explore', (req, res) => {
     items.push({
       type: 'resource',
       id:   r.id,
-      title: r.title,
+      title:   r.title,
       excerpt: r.excerpt || '',
       ts:  r.ts,
       href: `/resources/${encodeURIComponent(r.id)}`
@@ -2064,26 +2107,27 @@ app.get('/explore', (req, res) => {
     items.push({
       type: 'question',
       id:   String(qrow.id),
-      title: qrow.title,
-      excerpt: '', // kan fyllas med snippet om du vill
+      title:   qrow.title,
+      excerpt: '',
       ts:  qrow.ts,
       href: `/questions/${encodeURIComponent(qrow.id)}`
     });
   }
 
-  items.sort((a,b)=> new Date(b.ts) - new Date(a.ts));
+  items.sort((a,b) => new Date(b.ts) - new Date(a.ts));
 
   res.render('explore', {
     title: 'Utforska',
+    user: me,
     tab,
-    q, cat, tag,
+    q: qRaw,          // original, så sökrutan visar exakt det man skrev
+    cat,
+    tag,
     categories,
     tags,
-    items,
-    user: getUser(req)
+    items
   });
 });
-
 
 // Visa en specifik resurs (separat layout från vanliga topics)
 app.get('/resources/:id', (req, res) => {
