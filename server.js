@@ -313,6 +313,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use('/tinymce', express.static(path.join(__dirname, 'node_modules', 'tinymce')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ---- Globala locals (EN källa för showHero + popularTags) ----
 app.use((req, res, next) => {
@@ -1512,10 +1513,11 @@ app.post('/admin/categories/bulk', requireAdmin, (req, res) => {
 app.get('/question/:id', (req, res) => {
   const id = Number(req.params.id);
 
-  // Hämta fråga + lite användardata (om du vill visa avsändare)
+  // Hämta fråga + användardata (inkl. image_url via q.*)
   const q = db.prepare(`
-    SELECT q.id, q.user_id, q.title, q.body, q.status, q.created_at, q.updated_at,
-           u.name  AS user_name, u.email AS user_email
+    SELECT q.*, 
+           u.name  AS user_name, 
+           u.email AS user_email
     FROM questions q
     LEFT JOIN users u ON u.id = q.user_id
     WHERE q.id = ?
@@ -1523,14 +1525,12 @@ app.get('/question/:id', (req, res) => {
 
   if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
 
-  // Visa helst inte stängda frågor för andra än ägaren (valfritt)
   const me = getUser(req);
   const isOwner = me && me.id === q.user_id;
   if (q.status === 'closed' && !isOwner && (!me || me.role !== 'admin')) {
     return res.status(403).render('403', { title: 'Åtkomst nekad' });
   }
 
-  // Hämta kopplade ämnen
   const linked = db.prepare(`
     SELECT t.id, t.title, t.excerpt
     FROM question_topic qt
@@ -1539,14 +1539,14 @@ app.get('/question/:id', (req, res) => {
     ORDER BY t.title
   `).all(q.id);
 
-  res.locals.showHero = false; // dölj hero på frågesidan
+  res.locals.showHero = false;
   res.render('question', {
     title: `Fråga #${q.id}`,
     q,
     linked,
     user: me,
     relatedQuestions: [],
-    relatedTopics: [] 
+    relatedTopics: []
   });
 });
 
