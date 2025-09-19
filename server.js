@@ -15,7 +15,7 @@ import multer from 'multer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
-const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'questions');
+const uploadDir = path.join(__dirname, 'uploads', 'questions');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 const app = express();
@@ -771,20 +771,22 @@ if (!relatedTopics.length) {
 });
 
 
+// 2) Multer sparar i just den mappen
 const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, uploadDir),
-  filename: (_, file, cb) => {
-    // unik fil: ts-random.ext
-    const ext = path.extname(file.originalname || '').toLowerCase();
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => {
+    // Sätt EXAKT rätt filändelse baserat på mimetype -> rätt Content-Type
+    const ext = file.mimetype === 'image/png'  ? '.png'
+              : file.mimetype === 'image/webp' ? '.webp'
+              : '.jpg'; // default jpeg
     const name = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     cb(null, name);
   }
 });
-
 const upload = multer({
   storage,
-  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
-  fileFilter: (_, file, cb) => {
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
     const ok = ['image/jpeg','image/png','image/webp'].includes(file.mimetype);
     cb(ok ? null : new Error('INVALID_FILETYPE'), ok);
   }
