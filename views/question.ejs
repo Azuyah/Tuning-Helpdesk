@@ -44,6 +44,14 @@
         <p class="text-slate-500 italic">Ingen beskrivning bifogad.</p>
       <% } %>
 
+        <% if (q.image_url) { %>
+    <div class="mt-4">
+      <img src="<%= q.image_url %>"
+           alt="Bilagd bild"
+           class="max-h-96 rounded-xl border border-slate-200 object-contain bg-white" />
+    </div>
+  <% } %>
+
       <div class="mt-4 text-sm text-slate-500">
         Från: <span class="font-medium"><%= q.user_name || 'Anonym' %></span>
         • Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>

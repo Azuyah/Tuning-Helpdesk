@@ -11,9 +11,12 @@ import slugify from 'slugify';
 import expressLayouts from 'express-ejs-layouts';
 import crypto from 'crypto';
 import cron from 'node-cron';
+import multer from 'multer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
+const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'questions');
+fs.mkdirSync(uploadDir, { recursive: true });
 
 const app = express();
 
@@ -288,6 +291,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_topic_categories_cat   ON topic_categories(category_id);
   CREATE INDEX IF NOT EXISTS idx_topic_categories_topic ON topic_categories(topic_id);
 `);
+
+try {
+  db.prepare(`ALTER TABLE questions ADD COLUMN image_url TEXT`).run();
+} catch (e) {
+  // kolumnen finns redan – ignorera
+}
 
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
@@ -760,6 +769,26 @@ if (!relatedTopics.length) {
   });
 });
 
+
+const storage = multer.diskStorage({
+  destination: (_, __, cb) => cb(null, uploadDir),
+  filename: (_, file, cb) => {
+    // unik fil: ts-random.ext
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const name = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    cb(null, name);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
+  fileFilter: (_, file, cb) => {
+    const ok = ['image/jpeg','image/png','image/webp'].includes(file.mimetype);
+    cb(ok ? null : new Error('INVALID_FILETYPE'), ok);
+  }
+});
+
 // --- EDIT TOPIC (admin) ---
 app.get('/admin/edit-topic/:id', requireAdmin, (req, res) => {
   const topic = db.prepare(`
@@ -1162,12 +1191,28 @@ app.post('/admin/categories/:id/topics/:topicId/remove', requireAdmin, (req, res
 });
 
 // ---------- QUESTIONS ----------
-app.post('/api/questions', requireAuth, (req, res) => {
-  const { title, body } = req.body;
-  if (!title) return res.status(400).json({ error: 'title required' });
-  const info = db.prepare('INSERT INTO questions (user_id,title,body) VALUES (?,?,?)')
-    .run(req.user.id, title, body || '');
-  res.json({ ok: true, id: info.lastInsertRowid });
+app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
+  try {
+    const title = (req.body.title || '').trim();
+    const body  = (req.body.body  || '').trim();
+    if (!title) return res.status(400).json({ error: 'Titel krävs' });
+
+    // lagra relativ path
+    const image_url = req.file ? `/uploads/questions/${req.file.filename}` : null;
+
+    const info = db.prepare(`
+      INSERT INTO questions (user_id,title,body,image_url,created_at,updated_at)
+      VALUES (?,?,?, ?, datetime('now'), datetime('now'))
+    `).run(req.user.id, title, body, image_url);
+
+    res.json({ ok: true, id: info.lastInsertRowid });
+  } catch (err) {
+    if (err && err.message === 'INVALID_FILETYPE') {
+      return res.status(400).json({ error: 'Endast JPG/PNG/WEBP tillåts' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Kunde inte spara frågan' });
+  }
 });
 
 app.get('/api/questions', requireAuth, (req, res) => {
