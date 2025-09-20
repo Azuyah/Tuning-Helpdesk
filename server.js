@@ -2084,19 +2084,30 @@ app.get('/questions/:id', (req, res) => {
   }
 
   // 3) Kategorier att utgå ifrån (topic_categories → fallback question_category)
-  let catIds = [];
+let catIds = [];
+try {
+  if (answerTopic) {
+    catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id = ?`)
+      .all(answerTopic.id).map(r => r.category_id);
+  }
+} catch {}
+
+if (!catIds.length) {
   try {
-    if (answerTopic) {
-      catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id = ?`)
-        .all(answerTopic.id).map(r => r.category_id);
-    }
+    catIds = db.prepare(`SELECT category_id FROM question_category WHERE question_id = ?`)
+      .all(q.id).map(r => r.category_id);
   } catch {}
+}
+
+// ➜ NYTT: prova plural-tabellen också
 if (!catIds.length) {
   try {
     catIds = db.prepare(`SELECT category_id FROM question_categories WHERE question_id = ?`)
-               .all(q.id).map(r => r.category_id);
+      .all(q.id).map(r => r.category_id);
   } catch {}
 }
+
+// sista fallbacken du redan har
 if (!catIds.length && q.category_id) {
   catIds = [q.category_id];
 }
