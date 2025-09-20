@@ -278,13 +278,13 @@ fetch('/api/questions/' + qid + '/attach-topic', {
   headers: { 'Content-Type':'application/json' },
   body: JSON.stringify({ id: topicId, replace: true })
 })
-  .then(function(res){ return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
-  .then(function(resp){
-    if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
-    toast('Koppling lyckades');
-    location.reload();
-  })
-  .catch(function(){ toast('Kunde inte koppla', false); });
+.then(res => res.json().then(d => ({ ok: res.ok, data: d })))
+.then(resp => {
+  if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
+  toast('Koppling lyckades');
+  location.reload();
+})
+.catch(() => toast('Kunde inte koppla', false));
     });
   }
 
