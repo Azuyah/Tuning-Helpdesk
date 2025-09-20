@@ -276,15 +276,15 @@
 fetch('/api/questions/' + qid + '/attach-topic', {
   method: 'PUT',
   headers: { 'Content-Type':'application/json' },
-  body: JSON.stringify({ topicId: topicId, replace: true })
+  body: JSON.stringify({ id: topicId, replace: true })
 })
-      .then(function(res){ return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
-      .then(function(resp){
-        if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
-        toast('Ämne kopplat');
-        location.reload();
-      })
-      .catch(function(){ toast('Kunde inte koppla ämne', false); });
+  .then(function(res){ return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
+  .then(function(resp){
+    if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
+    toast('Koppling lyckades');
+    location.reload();
+  })
+  .catch(function(){ toast('Kunde inte koppla', false); });
     });
   }
 

@@ -1485,49 +1485,79 @@ app.get('/api/questions/:id', requireAuth, (req, res) => {
   res.json({ ...q, topics: links.map(x => x.topic_id) });
 });
 
-// Ersätt hela denna handler
-app.put('/api/questions/:id/attach-topic', requireAdmin, (req, res) => {
-  const qid = Number(req.params.id);
-  const { topicId, replace } = req.body;
+// Ersätter din befintliga handler – OBS: express.json() behövs för att läsa body
+app.put('/api/questions/:id/attach-topic', requireAdmin, express.json(), (req, res) => {
+  try {
+    const qid = Number(req.params.id);
+    const raw = (req.body && (req.body.id ?? req.body.topicId)) ?? null; // tillåt id eller topicId
+    const replace = !!req.body?.replace;
 
-  // Validera fråga + ämne
-  const q = db.prepare('SELECT id FROM questions WHERE id=?').get(qid);
-  if (!q) return res.status(404).json({ error: 'not found' });
+    if (!qid || !raw) return res.status(400).json({ error: 'id (topic/resource eller question) saknas' });
 
-  const topic = db.prepare(`
-    SELECT b.id, t.title
-    FROM topics_base b
-    JOIN topics t ON t.id = b.id
-    WHERE b.id = ?
-  `).get(topicId);
-  if (!topic) return res.status(400).json({ error: 'topic not found' });
+    // 1) Finns frågan vi kopplar TILL?
+    const qExists = db.prepare('SELECT 1 FROM questions WHERE id=?').get(qid);
+    if (!qExists) return res.status(404).json({ error: 'question not found' });
 
-  const tx = db.transaction(() => {
-    // Om replace => ta bort ev. tidigare koppling(ar)
-    if (replace) {
-      db.prepare('DELETE FROM question_topic WHERE question_id=?').run(qid);
+    // ---------- Resolver: ta reda på vilket TOPIC som ska kopplas ----------
+    // a) Är det redan ett topic/resource-id (topics_base)?
+    let topic = db.prepare(`
+      SELECT b.id, t.title
+      FROM topics_base b
+      JOIN topics t ON t.id = b.id
+      WHERE b.id = ?
+    `).get(String(raw));
+
+    // b) Om inte hittat: tolka som question-id och hämta *kopplat ämne* till den frågan
+    if (!topic) {
+      const maybeQid = Number(raw);
+      if (Number.isFinite(maybeQid)) {
+        const linked = db.prepare(`
+          SELECT t.id, t.title
+          FROM question_topic qt
+          JOIN topics t ON t.id = qt.topic_id
+          WHERE qt.question_id = ?
+          ORDER BY qt.rowid DESC
+          LIMIT 1
+        `).get(maybeQid);
+
+        if (linked) {
+          topic = linked; // använd det ämne som besvarar den där frågan
+        } else {
+          return res.status(400).json({
+            error: 'no_answer_topic_for_question',
+            detail: 'Den angivna frågan har inget kopplat ämne/resurs än.'
+          });
+        }
+      }
     }
 
-    // Lägg till kopplingen (ignorera om samma redan finns)
-    db.prepare(`
-      INSERT OR IGNORE INTO question_topic (question_id, topic_id)
-      VALUES (?,?)
-    `).run(qid, topic.id);
+    if (!topic) {
+      return res.status(400).json({ error: 'topic_or_question_not_found' });
+    }
 
-    // Sätt status till answered och bumpa updated_at
-    db.prepare(`
-      UPDATE questions
-      SET status='answered', updated_at=datetime('now')
-      WHERE id=?
-    `).run(qid);
-  });
+    // ---------- Kör kopplingen ----------
+    const tx = db.transaction(() => {
+      if (replace) {
+        db.prepare('DELETE FROM question_topic WHERE question_id=?').run(qid);
+      }
+      db.prepare(`
+        INSERT OR IGNORE INTO question_topic (question_id, topic_id)
+        VALUES (?, ?)
+      `).run(qid, topic.id);
 
-  try {
+      db.prepare(`
+        UPDATE questions
+        SET status='answered', updated_at=datetime('now')
+        WHERE id=?
+      `).run(qid);
+    });
+
     tx();
+
     return res.json({ ok: true, linked: { id: topic.id, title: topic.title } });
   } catch (e) {
     console.error('attach-topic failed', e);
-    return res.status(500).json({ error: 'failed to attach topic' });
+    return res.status(500).json({ error: 'failed_to_attach' });
   }
 });
 
