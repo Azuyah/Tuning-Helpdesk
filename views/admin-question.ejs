@@ -229,21 +229,35 @@
 
 function renderSuggest(rows){
   if (!rows || !rows.length){ box.classList.add('hidden'); box.innerHTML=''; return; }
+
   var html = rows.map(function(r){
-    var t  = escapeHtml(r.title || '');
-    var sn = r.snippet ? '<div class="text-sm text-slate-600">' + escapeHtml(r.snippet) + '</div>' : '';
-    var kind = r.kind || r.type || 'topic';  // <-- fix
-    var badge = kind === 'question' ? 'Fråga' : (kind === 'resource' ? 'Resurs' : 'Ämne');
+    var t    = escapeHtml(r.title || '');
+    var sn   = r.snippet ? '<div class="text-sm text-slate-600">' + escapeHtml(r.snippet) + '</div>' : '';
+    var kind = (r.kind || r.type || 'topic').toLowerCase(); // viktigt
+
+    var badgeTxt, badgeCls;
+    if (kind === 'question') {
+      badgeTxt = 'Fråga';
+      badgeCls = 'bg-violet-100 text-violet-700 border border-violet-200';
+    } else if (kind === 'resource') {
+      badgeTxt = 'Resurs';
+      badgeCls = 'bg-amber-100 text-amber-700 border border-amber-200';
+    } else {
+      badgeTxt = 'Ämne';
+      badgeCls = 'bg-sky-100 text-sky-700 border border-sky-200';
+    }
+
     return (
       '<button type="button" data-id="' + r.id + '" data-kind="' + kind + '" class="w-full text-left px-4 py-3 hover:bg-slate-50">' +
         '<div class="flex items-center gap-2">' +
-          '<span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">' + badge + '</span>' +
+          '<span class="text-[10px] px-1.5 py-0.5 rounded ' + badgeCls + '">' + badgeTxt + '</span>' +
           '<div class="font-medium text-slate-900">' + t + '</div>' +
         '</div>' +
         sn +
       '</button>'
     );
   }).join('');
+
   box.innerHTML = html;
   box.classList.remove('hidden');
 }

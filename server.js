@@ -978,12 +978,14 @@ app.get('/admin/questions/:id', requireAdmin, (req, res) => {
     WHERE question_id=?
   `).all(id).map(r => r.id);
 
-  res.render('admin-question', {
-    title: 'Fråga',
-    q,
-    linked,
-    categories,
-    qCategoryIds
+
+res.render('admin-question', {
+  title: `Fråga #${q.id}`,
+  q,
+  linked: linkedTopic ? [linkedTopic] : [], 
+  linkedQuestion,           
+  categories,
+  qCategoryIds,
   });
 });
 
@@ -1580,6 +1582,7 @@ app.put('/api/questions/:id/attach', requireAdmin, express.json(), (req, res) =>
     return res.status(500).json({ error: 'serverfel vid attach' });
   }
 });
+
 app.put('/api/questions/:id/status', requireAdmin, (req, res) => {
   const { status } = req.body;
   if (!['open', 'answered', 'closed'].includes(status)) return res.status(400).json({ error: 'bad status' });
