@@ -779,28 +779,47 @@ if (category) {
     }
   }
 
-  // Relaterade frågor (uteslut källfrågan om sådan finns)
-  let relatedQuestions = [];
-  if (topic.answer_for_question_id) {
-    relatedQuestions = db.prepare(`
-      SELECT DISTINCT q.id, q.title
-      FROM questions q
-      JOIN question_topic qt ON qt.question_id = q.id
-      WHERE qt.topic_id = ?
-        AND q.id <> ?
-      ORDER BY q.created_at DESC
-      LIMIT 5
-    `).all(topic.id, topic.answer_for_question_id);
-  } else {
-    relatedQuestions = db.prepare(`
-      SELECT DISTINCT q.id, q.title
-      FROM questions q
-      JOIN question_topic qt ON qt.question_id = q.id
-      WHERE qt.topic_id = ?
-      ORDER BY q.created_at DESC
-      LIMIT 5
-    `).all(topic.id);
+// --- Relaterat (mix: ämnen + resurser + frågor) baserat på kategori ---
+let relatedMixed = [];
+try {
+  const catIds = db.prepare(`
+    SELECT category_id FROM topic_categories WHERE topic_id = ?
+  `).all(topic.id).map(r => r.category_id);
+
+  if (catIds.length) {
+    const ph = catIds.map(()=>'?').join(',');
+
+    const sameCatTopics = db.prepare(`
+      SELECT DISTINCT 
+        b.id AS id,
+        t.title,
+        IFNULL(t.is_resource,0) AS is_resource,
+        COALESCE(b.updated_at, b.created_at) AS ts,
+        'topic' AS kind
+      FROM topics_base b
+      JOIN topics t            ON t.id = b.id
+      JOIN topic_categories tc ON tc.topic_id = t.id
+      WHERE tc.category_id IN (${ph})
+        AND b.id <> ?
+    `).all(...catIds, topic.id);
+
+    const sameCatQuestions = db.prepare(`
+      SELECT DISTINCT
+        q2.id AS id,
+        q2.title,
+        0     AS is_resource,
+        COALESCE(q2.updated_at, q2.created_at) AS ts,
+        'question' AS kind
+      FROM questions q2
+      JOIN question_category qc2 ON qc2.question_id = q2.id
+      WHERE qc2.category_id IN (${ph})
+    `).all(...catIds);
+
+    relatedMixed = [...sameCatTopics, ...sameCatQuestions]
+      .sort((a,b) => new Date(b.ts) - new Date(a.ts))
+      .slice(0, 10);
   }
+} catch (e) { /* ignore */ }
 
 // --- Relaterade ämnen ---
 
@@ -848,7 +867,7 @@ if (!relatedTopics.length && firstTagLower) {
     title: topic.title,
     topic,
     sourceQuestion,
-    relatedQuestions,
+    relatedMixed,
     relatedTopics,
     user: getUser(req)
   });
