@@ -161,33 +161,33 @@
 <!-- Fler ämnen i denna kategori -->
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
   <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
+  <% if (relatedMixed && relatedMixed.length) { %>
+    <ul class="space-y-3">
+      <% relatedMixed.forEach(function(it){ 
+           var kind = String(it.kind || 'topic').toLowerCase();
+           var isRes = (kind !== 'question') && Number(it.is_resource) === 1;
+           var href  = (kind === 'question')
+             ? ('/questions/' + it.id)
+             : (isRes ? ('/resources/' + it.id) : ('/topic/' + it.id));
 
-<% if (relatedTopics && relatedTopics.length) { %>
-  <ul class="space-y-3">
-    <% relatedTopics.forEach(function(rt){ 
-         var kind = (rt.kind
-                     || (typeof rt.is_resource !== 'undefined' && Number(rt.is_resource)===1 ? 'resource' : 'topic'))
-                     .toLowerCase();
-         var href = rt.url || (kind==='question'
-                     ? ('/questions/' + rt.id)
-                     : (kind==='resource' ? ('/resources/' + rt.id) : ('/topic/' + rt.id)));
-
-         var badgeHtml =
-           kind==='question' ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>' :
-           kind==='resource' ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>' :
-                               '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>';
-    %>
-      <li>
-        <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
-          <%- badgeHtml %>
-          <span class="truncate"><%= rt.title %></span>
-        </a>
-      </li>
-    <% }) %>
-  </ul>
-<% } else { %>
-  <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
-<% } %>
+           var badgeHtml =
+             (kind === 'question')
+               ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>'
+               : (isRes
+                   ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>'
+                   : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>');
+      %>
+        <li>
+          <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
+            <%- badgeHtml %>
+            <span class="truncate"><%= it.title %></span>
+          </a>
+        </li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
+  <% } %>
 </div>
 
 </aside>
