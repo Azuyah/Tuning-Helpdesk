@@ -156,17 +156,21 @@
       <dd class="font-medium text-slate-900"><%= q.views || 0 %></dd>
     </div>
 
-<!-- Kopplat ämne -->
+<!-- Koppling -->
 <div class="flex items-center justify-between gap-3">
-  <dt class="text-slate-600">Kopplat ämne</dt>
+  <dt class="text-slate-600">Koppling</dt>
   <dd class="flex items-center gap-3 font-medium text-slate-900">
     <% if (linked && linked.length) { 
          const t = linked[0]; %>
       <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline truncate max-w-[14rem]">
         <%= t.title %>
       </a>
+    <% } else if (linkedQuestion) { %>
+      <a href="/questions/<%= linkedQuestion.id %>" class="text-sky-600 hover:underline truncate max-w-[14rem]">
+        <%= linkedQuestion.title %>
+      </a>
     <% } else { %>
-      <span class="text-slate-400 italic">Inget kopplat ämne</span>
+      <span class="text-slate-400 italic">Ingen koppling</span>
     <% } %>
   </dd>
 </div>
