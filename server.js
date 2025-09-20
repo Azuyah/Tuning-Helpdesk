@@ -668,30 +668,51 @@ app.get('/topic/:id', (req, res) => {
            b.created_at,
            b.updated_at,
            b.answer_for_question_id,
-           b.views AS views,                 -- <-- NYTT
+           b.views,
            t.title,
            t.excerpt,
            t.body,
            t.tags,
            t.is_resource,
            t.download_url,
-           u.name  AS author_name,
-           c.id    AS category_id,           -- <-- NYTT
-           c.title AS category_title         -- <-- NYTT
+           u.name AS author_name
     FROM topics_base b
-    JOIN topics t              ON t.id = b.id
-    LEFT JOIN users u          ON u.id = b.created_by
-    LEFT JOIN topic_categories tc ON tc.topic_id = b.id
-    LEFT JOIN categories c     ON c.id = tc.category_id
+    JOIN topics t ON t.id = b.id
+    LEFT JOIN users u ON u.id = b.created_by
     WHERE b.id = ?
     LIMIT 1
   `).get(req.params.id);
 
   if (!topic) return res.status(404).render('404', { title: 'Hittades inte' });
-
-  // Resurs? skicka vidare
   if (topic.is_resource) return res.redirect(301, `/resources/${topic.id}`);
 
+    // --- Hämta EN kategori (robust mot plural/singular tabellnamn) ---
+  let cat = null;
+  try {
+    cat = db.prepare(`
+      SELECT c.id, c.title
+      FROM topic_categories tc
+      JOIN categories c ON c.id = tc.category_id
+      WHERE tc.topic_id = ?
+      ORDER BY tc.rowid ASC
+      LIMIT 1
+    `).get(topic.id);
+  } catch (_) {
+    try {
+      cat = db.prepare(`
+        SELECT c.id, c.title
+        FROM topic_category tc
+        JOIN categories c ON c.id = tc.category_id
+        WHERE tc.topic_id = ?
+        ORDER BY tc.rowid ASC
+        LIMIT 1
+      `).get(topic.id);
+    } catch (_) {}
+  }
+  if (cat) {
+    topic.category_id = cat.id;
+    topic.category_title = cat.title;
+  }
   // Räkna upp visningar
   db.prepare(`UPDATE topics_base SET views = COALESCE(views,0)+1 WHERE id = ?`).run(topic.id);
   topic.views = (topic.views || 0) + 1;
@@ -741,13 +762,11 @@ app.get('/topic/:id', (req, res) => {
     `).all(topic.id);
   }
 
-  // Relaterade ämnen via första taggen
-  const firstTag = (topic.tags || '').split(',')[0];
-  const cat = firstTag ? firstTag.trim().toLowerCase() : '';
-// --- RELATERADE ÄMNEN ---
-// --- RELATERADE ÄMNEN (utan t.category_id: m2m + tagg-fallback) ---
+// --- Relaterade ämnen ---
+
 let relatedTopics = [];
 
+// (ev. kategori-baserade träffar – din kod oförändrad)
 try {
   const catIds = db.prepare(`
     SELECT category_id FROM topic_categories WHERE topic_id = ?
@@ -767,25 +786,21 @@ try {
       LIMIT 6
     `).all(...catIds, topic.id);
   }
-} catch (e) {
-  // Om topic_categories saknas, gå direkt till tagg-fallback
-}
+} catch (e) { /* ignore */ }
 
 // Fallback via första taggen (om inga kategori-träffar)
-if (!relatedTopics.length) {
-  const firstTag = (topic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
-  if (firstTag) {
-    relatedTopics = db.prepare(`
-      SELECT b.id, t.title
-      FROM topics_base b
-      JOIN topics t ON t.id = b.id
-      WHERE b.id <> ?
-        AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
-        AND IFNULL(t.is_resource, 0) = 0
-      ORDER BY COALESCE(b.updated_at, b.created_at) DESC
-      LIMIT 6
-    `).all(topic.id, firstTag);
-  }
+const firstTagLower = (topic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
+if (!relatedTopics.length && firstTagLower) {
+  relatedTopics = db.prepare(`
+    SELECT b.id, t.title
+    FROM topics_base b
+    JOIN topics t ON t.id = b.id
+    WHERE b.id <> ?
+      AND lower(IFNULL(t.tags,'')) LIKE '%' || ? || '%'
+      AND IFNULL(t.is_resource, 0) = 0
+    ORDER BY COALESCE(b.updated_at, b.created_at) DESC
+    LIMIT 6
+  `).all(topic.id, firstTagLower);
 }
 
   res.locals.showHero = false;

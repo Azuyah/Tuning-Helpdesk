@@ -91,13 +91,20 @@
 
 <!-- Högerkolumn -->
 <aside class="space-y-8">
-  <!-- Info-ruta -->
+  <!-- Information -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
     <h2 class="text-lg font-semibold text-slate-900 mb-4">Information</h2>
     <dl class="space-y-2 text-sm">
       <div class="flex justify-between">
         <dt class="text-slate-600">Visningar</dt>
         <dd class="font-medium text-slate-900"><%= topic.views || 0 %></dd>
+      </div>
+
+      <div class="flex justify-between">
+        <dt class="text-slate-600">Senast uppdaterad</dt>
+        <dd class="font-medium text-slate-900">
+          <%= new Date(topic.updated_at || topic.created_at).toLocaleDateString('sv-SE') %>
+        </dd>
       </div>
 
       <div class="flex justify-between">
