@@ -59,22 +59,22 @@
                 <!-- Åtgärd -->
                 <td class="px-4 py-2">
                   <div class="relative inline-block">
-                    <button type="button"
-                            class="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50 btn-role"
-                            data-user-id="<%= u.id %>">
-                      Ändra roll
-                    </button>
+<button type="button"
+        class="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50 btn-role-user"
+        data-user-id="<%= u.id %>">
+  Ändra roll
+</button>
 
-                    <div class="role-menu absolute z-10 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-lg hidden">
-                      <% ['user','support','dealer','admin'].forEach(function(r){ %>
-                        <button type="button"
-                                class="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm role-option"
-                                data-user-id="<%= u.id %>"
-                                data-role="<%= r %>">
-                          <%= r %>
-                        </button>
-                      <% }) %>
-                    </div>
+<div class="role-menu-user absolute z-50 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-lg hidden">
+  <% ['user','support','dealer','admin'].forEach(function(r){ %>
+    <button type="button"
+            class="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm role-option-user"
+            data-user-id="<%= u.id %>"
+            data-role="<%= r %>">
+      <%= r %>
+    </button>
+  <% }) %>
+</div>
                   </div>
                 </td>
               </tr>
@@ -257,23 +257,18 @@
 
 <script>
 (function(){
-  // Öppna/stäng + välj roll för USERS
   document.addEventListener('click', function(e){
-    const btn = e.target.closest('.btn-role');
-    const opt = e.target.closest('.role-option');
+    const btn = e.target.closest('.btn-role-user');
+    const opt = e.target.closest('.role-option-user');
 
-    // Klick på "Ändra roll"
     if (btn) {
       e.stopPropagation();
-      // stäng alla andra dropdowns
-      document.querySelectorAll('.role-menu').forEach(m => m.classList.add('hidden'));
-      // öppna den som hör till denna rad
-      const menu = btn.parentElement.querySelector('.role-menu');
+      document.querySelectorAll('.role-menu-user').forEach(m => m.classList.add('hidden'));
+      const menu = btn.parentElement.querySelector('.role-menu-user');
       if (menu) menu.classList.toggle('hidden');
       return;
     }
 
-    // Val i dropdownen
     if (opt) {
       e.stopPropagation();
       const userId = opt.getAttribute('data-user-id');
@@ -293,8 +288,8 @@
       return;
     }
 
-    // Klick utanför => stäng alla
-    document.querySelectorAll('.role-menu').forEach(m => m.classList.add('hidden'));
+    // Stäng bara USERS-menyer här
+    document.querySelectorAll('.role-menu-user').forEach(m => m.classList.add('hidden'));
   });
 })();
 </script>
