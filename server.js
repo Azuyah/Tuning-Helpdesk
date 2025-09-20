@@ -1514,37 +1514,26 @@ app.put('/api/questions/:id/attach', requireAdmin, express.json(), (req, res) =>
   const type = String(raw.type || '').toLowerCase();
   const idRaw = raw.id;
 
-  // Debug-logg (hjälper när något går snett)
   console.log('[attach] qid=%s type=%s id=%s replace=%s', qid, type, idRaw, !!raw.replace);
 
-  if (!Number.isFinite(qid)) {
-    return res.status(400).json({ error: 'ogiltigt question id' });
-  }
-  if (!idRaw) {
-    return res.status(400).json({ error: 'id (target) saknas' });
-  }
-  if (!['topic','resource','question'].includes(type)) {
+  if (!Number.isFinite(qid)) return res.status(400).json({ error: 'ogiltigt question id' });
+  if (!idRaw)                return res.status(400).json({ error: 'id (target) saknas' });
+  if (!['topic','resource','question'].includes(type))
     return res.status(400).json({ error: 'type måste vara topic|resource|question' });
-  }
 
-  // Finns frågan?
   const q = db.prepare(`SELECT id FROM questions WHERE id=?`).get(qid);
   if (!q) return res.status(404).json({ error: 'fråga saknas' });
 
   try {
     const result = db.transaction(() => {
       if (type === 'topic' || type === 'resource') {
-        // topic/resource-ID är en STRÄNG (topics_base.id)
         const topic = db.prepare(`
           SELECT b.id, t.title
           FROM topics_base b
           JOIN topics t ON t.id = b.id
           WHERE b.id = ?
         `).get(String(idRaw));
-
-        if (!topic) {
-          throw Object.assign(new Error('topic_not_found'), { code: 'topic_not_found' });
-        }
+        if (!topic) throw Object.assign(new Error('topic_not_found'), { code: 'topic_not_found' });
 
         if (raw.replace) {
           db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
@@ -1554,29 +1543,28 @@ app.put('/api/questions/:id/attach', requireAdmin, express.json(), (req, res) =>
         db.prepare(`INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)`)
           .run(qid, topic.id);
 
-        db.prepare(`UPDATE questions SET status='answered', updated_at=datetime('now') WHERE id=?`)
-          .run(qid);
+        db.prepare(`
+          UPDATE questions
+          SET status='answered', is_answered=1, updated_at=datetime('now')
+          WHERE id=?
+        `).run(qid);
 
         return { kind: type, linked: { id: topic.id, title: topic.title } };
       }
 
       // type === 'question'
       const targetQid = Number(idRaw);
-      if (!Number.isFinite(targetQid)) {
+      if (!Number.isFinite(targetQid))
         throw Object.assign(new Error('bad_question_id'), { code: 'bad_question_id' });
-      }
-      const other = db.prepare(`SELECT id, title FROM questions WHERE id=?`).get(targetQid);
-      if (!other) {
-        throw Object.assign(new Error('question_not_found'), { code: 'question_not_found' });
-      }
 
-      if (raw.replace) {
-        db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
-      }
+      const other = db.prepare(`SELECT id, title FROM questions WHERE id=?`).get(targetQid);
+      if (!other) throw Object.assign(new Error('question_not_found'), { code: 'question_not_found' });
+
+      if (raw.replace) db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
 
       db.prepare(`
         UPDATE questions
-        SET linked_question_id=?, status='answered', updated_at=datetime('now')
+        SET linked_question_id=?, status='answered', is_answered=1, updated_at=datetime('now')
         WHERE id=?
       `).run(other.id, qid);
 
@@ -1585,11 +1573,9 @@ app.put('/api/questions/:id/attach', requireAdmin, express.json(), (req, res) =>
 
     return res.json({ ok: true, ...result });
   } catch (e) {
-    // Tydliga 4xx istället för 500 där det går
     if (e.code === 'topic_not_found')    return res.status(400).json({ error: 'hittade inget ämne/resurs med detta id' });
     if (e.code === 'question_not_found') return res.status(400).json({ error: 'hittade ingen fråga med detta id' });
     if (e.code === 'bad_question_id')    return res.status(400).json({ error: 'ogiltigt mål-id för fråga' });
-
     console.error('attach failed:', e && e.stack || e);
     return res.status(500).json({ error: 'serverfel vid attach' });
   }
