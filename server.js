@@ -780,46 +780,80 @@ if (category) {
   }
 
 // --- Relaterat (mix: ämnen + resurser + frågor) baserat på kategori ---
+// --- Relaterat (TAGGAR: ämnen + resurser + frågor) ---
 let relatedMixed = [];
-try {
-  const catIds = db.prepare(`
-    SELECT category_id FROM topic_categories WHERE topic_id = ?
-  `).all(topic.id).map(r => r.category_id);
+const tags = (topic.tags || '')
+  .split(',')
+  .map(s => s.trim().toLowerCase())
+  .filter(Boolean);
 
-  if (catIds.length) {
-    const ph = catIds.map(()=>'?').join(',');
+if (tags.length) {
+  const likeTopic = tags.map(() => `lower(IFNULL(t.tags,'')) LIKE ?`).join(' OR ');
+  const likeVals  = tags.map(t => `%${t}%`);
 
-    const sameCatTopics = db.prepare(`
-      SELECT DISTINCT 
-        b.id AS id,
-        t.title,
-        IFNULL(t.is_resource,0) AS is_resource,
-        COALESCE(b.updated_at, b.created_at) AS ts,
-        'topic' AS kind
+  // Bas: topics/resurser via t.tags + frågor via sina kopplade topic-tags
+  const baseSql = `
+    SELECT DISTINCT kind, id, title, is_resource, ts FROM (
+      -- Ämnen/Resurser
+      SELECT 'topic' AS kind, b.id AS id, t.title, IFNULL(t.is_resource,0) AS is_resource,
+             datetime(COALESCE(b.updated_at,b.created_at)) AS ts
       FROM topics_base b
-      JOIN topics t            ON t.id = b.id
-      JOIN topic_categories tc ON tc.topic_id = t.id
-      WHERE tc.category_id IN (${ph})
-        AND b.id <> ?
-    `).all(...catIds, topic.id);
+      JOIN topics t ON t.id=b.id
+      WHERE b.id <> ?
+        AND ( ${likeTopic} )
 
-    const sameCatQuestions = db.prepare(`
-      SELECT DISTINCT
-        q2.id AS id,
-        q2.title,
-        0     AS is_resource,
-        COALESCE(q2.updated_at, q2.created_at) AS ts,
-        'question' AS kind
-      FROM questions q2
-      JOIN question_category qc2 ON qc2.question_id = q2.id
-      WHERE qc2.category_id IN (${ph})
-    `).all(...catIds);
+      UNION
 
-    relatedMixed = [...sameCatTopics, ...sameCatQuestions]
-      .sort((a,b) => new Date(b.ts) - new Date(a.ts))
-      .slice(0, 10);
+      -- Frågor vars kopplade ämnen matchar taggarna
+      SELECT 'question' AS kind, q.id AS id, q.title, 0 AS is_resource,
+             datetime(COALESCE(q.updated_at,q.created_at)) AS ts
+      FROM questions q
+      JOIN question_topic qt ON qt.question_id = q.id
+      JOIN topics t ON t.id = qt.topic_id
+      WHERE ( ${likeTopic} )
+    )
+    ORDER BY ts DESC
+    LIMIT 10
+  `;
+  const baseParams = [ topic.id, ...likeVals, ...likeVals ];
+
+  // Om kolumnen questions.answer_tags finns: ta även med frågor som matchar egna tags
+  let sql = baseSql;
+  let params = baseParams;
+
+  let hasAnswerTagsCol = false;
+  try {
+    hasAnswerTagsCol = db.prepare(`PRAGMA table_info(questions)`)
+      .all()
+      .some(c => c.name === 'answer_tags');
+  } catch (_) {}
+
+  if (hasAnswerTagsCol) {
+    const likeQ     = tags.map(() => `lower(IFNULL(q2.answer_tags,'')) LIKE ?`).join(' OR ');
+    const likeQVals = tags.map(t => `%${t}%`);
+    sql = `
+      SELECT DISTINCT kind, id, title, is_resource, ts FROM (
+        ${baseSql.replace(/ORDER BY[\s\S]*$/,'')}
+        UNION
+        -- Frågor som matchar via egna answer_tags
+        SELECT 'question' AS kind, q2.id AS id, q2.title, 0 AS is_resource,
+               datetime(COALESCE(q2.updated_at,q2.created_at)) AS ts
+        FROM questions q2
+        WHERE ( ${likeQ} )
+      )
+      ORDER BY ts DESC
+      LIMIT 10
+    `;
+    params = [...baseParams, ...likeQVals];
   }
-} catch (e) { /* ignore */ }
+
+  try {
+    relatedMixed = db.prepare(sql).all(...params);
+  } catch (_) {
+    // Fallback utan answer_tags om något går snett
+    relatedMixed = db.prepare(baseSql).all(...baseParams);
+  }
+}
 
 // --- Relaterade ämnen ---
 
