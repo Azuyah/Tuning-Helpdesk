@@ -107,21 +107,19 @@
         </dd>
       </div>
 
-      <div class="flex justify-between">
-        <dt class="text-slate-600">Kategori</dt>
-        <dd class="font-medium">
-          <% if (topic.category_id && topic.category_title) { %>
-            <a href="/explore?tab=all&cat=<%= encodeURIComponent(String(topic.category_id).toLowerCase()) %>"
-               class="text-sky-600 hover:underline">
-              <%= topic.category_title %>
-            </a>
-          <% } else { %>
-            <span class="text-slate-400 italic">Ingen kategori</span>
-          <% } %>
-        </dd>
-      </div>
-    </dl>
-  </div>
+<div class="flex justify-between">
+  <dt class="text-slate-600">Kategori</dt>
+  <dd class="font-medium">
+    <% if (topic.category_id && topic.category_title) { %>
+      <a href="/explore?tab=all&cat=<%= encodeURIComponent(String(topic.category_id)) %>"
+         class="text-sky-600 hover:underline">
+        <%= topic.category_title %>
+      </a>
+    <% } else { %>
+      <span class="text-slate-400 italic">Ingen kategori</span>
+    <% } %>
+  </dd>
+</div>
 
   <!-- Relaterade frågor -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
