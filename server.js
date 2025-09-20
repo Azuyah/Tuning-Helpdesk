@@ -313,7 +313,7 @@ app.set('layout extractStyles', true);       // valfritt: <%- style %> block
 
 
 // ---------- Middleware ----------
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '8mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use('/public', express.static(path.join(__dirname, 'public')));
@@ -492,6 +492,14 @@ app.use((req, res, next) => {
     res.locals.adminOpenCount = 0;
   }
   next();
+});
+
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.too.large') {
+    return res.status(413).send('Din text är för stor. Försök korta ner innehållet.');
+  }
+  console.error(err);
+  res.status(500).send('Ett oväntat fel uppstod.');
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
