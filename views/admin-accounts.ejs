@@ -71,7 +71,7 @@
             class="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm role-option-user"
             data-user-id="<%= u.id %>"
             data-role="<%= r %>">
-      <%= r %>
+      <%= r.charAt(0).toUpperCase() + r.slice(1) %>
     </button>
   <% }) %>
 </div>
@@ -197,26 +197,26 @@
                 <td class="px-4 py-2"><%= d.telephone || '-' %></td>
 
                 <!-- Åtgärd -->
-                <td class="px-4 py-2">
-                  <div class="relative inline-block">
-                    <button type="button"
-                            class="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50 btn-role-dealer"
-                            data-email="<%= d.email || '' %>">
-                      Ändra roll
-                    </button>
+<td class="px-4 py-2">
+  <div class="relative inline-block">
+    <button type="button"
+            class="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50 btn-role-dealer"
+            data-email="<%= d.email || '' %>">
+      Ändra roll
+    </button>
 
-                    <div class="role-menu absolute z-10 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-lg hidden">
-                      <% ['user','support','dealer','admin'].forEach(function(r){ %>
-                        <button type="button"
-                                class="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm role-option-dealer"
-                                data-email="<%= d.email || '' %>"
-                                data-role="<%= r %>">
-                          <%= r %>
-                        </button>
-                      <% }) %>
-                    </div>
-                  </div>
-                </td>
+    <div class="role-menu-dealer absolute z-50 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-lg hidden">
+      <% ['user','support','dealer','admin'].forEach(function(r){ %>
+        <button type="button"
+                class="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm role-option-dealer capitalize"
+                data-email="<%= d.email || '' %>"
+                data-role="<%= r %>">
+          <%= r %>
+        </button>
+      <% }) %>
+    </div>
+  </div>
+</td>
               </tr>
             <% }) %>
           </tbody>
@@ -257,18 +257,53 @@
 
 <script>
 (function(){
+  let openMenu = null;
+
+  function closeAll() {
+    if (openMenu) {
+      openMenu.classList.add('hidden');
+      openMenu = null;
+    }
+  }
+
   document.addEventListener('click', function(e){
     const btn = e.target.closest('.btn-role-user');
     const opt = e.target.closest('.role-option-user');
 
+    // Öppna/stäng
     if (btn) {
       e.stopPropagation();
-      document.querySelectorAll('.role-menu-user').forEach(m => m.classList.add('hidden'));
+      // Stäng ev. tidigare
+      closeAll();
+
+      // Hämta menyn som hör till knappen
       const menu = btn.parentElement.querySelector('.role-menu-user');
-      if (menu) menu.classList.toggle('hidden');
+      if (!menu) return;
+
+      // Gör menyn flytande ovanför allt
+      menu.classList.remove('hidden');
+      menu.style.position = 'fixed';
+      menu.style.zIndex = '9999';
+
+      // Placera vid knappen (viewport-coords)
+      const r = btn.getBoundingClientRect();
+      // För att kunna mäta bredden, visa menyn osynligt först
+      menu.style.visibility = 'hidden';
+      document.body.appendChild(menu); // flytta ut ur overflow-containern
+      // Räkna ut vänster så den inte sticker ut utanför högerkanten
+      const menuW = menu.offsetWidth || 160;
+      const left  = Math.min(Math.max(8, r.left), window.innerWidth - menuW - 8);
+      const top   = Math.min(r.bottom + 6, window.innerHeight - 8);
+      // Sätt slutlig position
+      menu.style.left = left + 'px';
+      menu.style.top  = top  + 'px';
+      menu.style.visibility = ''; // synlig nu
+
+      openMenu = menu;
       return;
     }
 
+    // Val av roll
     if (opt) {
       e.stopPropagation();
       const userId = opt.getAttribute('data-user-id');
@@ -288,25 +323,57 @@
       return;
     }
 
-    // Stäng bara USERS-menyer här
-    document.querySelectorAll('.role-menu-user').forEach(m => m.classList.add('hidden'));
+    // Klick utanför => stäng
+    closeAll();
   });
+
+  // Stäng även vid scroll/resize (så menyn inte "hänger kvar" fel)
+  window.addEventListener('scroll', closeAll, true);
+  window.addEventListener('resize', closeAll);
 })();
 </script>
 
 <!-- Dropdown-hantering: DEALERS (uppdatera roll via email) -->
 <script>
 (function(){
+  let openMenu = null;
+
+  function closeAll() {
+    if (openMenu) {
+      openMenu.classList.add('hidden');
+      openMenu = null;
+    }
+  }
+
   document.addEventListener('click', function(e){
     const btn = e.target.closest('.btn-role-dealer');
     const opt = e.target.closest('.role-option-dealer');
 
-    // Knapp
+    // Öppna/stäng
     if (btn) {
       e.stopPropagation();
-      document.querySelectorAll('.role-menu').forEach(m => m.classList.add('hidden'));
-      const menu = btn.parentElement.querySelector('.role-menu');
-      if (menu) menu.classList.toggle('hidden');
+      closeAll();
+
+      const menu = btn.parentElement.querySelector('.role-menu-dealer');
+      if (!menu) return;
+
+      menu.classList.remove('hidden');
+      menu.style.position = 'fixed';
+      menu.style.zIndex = '9999';
+
+      const r = btn.getBoundingClientRect();
+      menu.style.visibility = 'hidden';
+      document.body.appendChild(menu);
+
+      const menuW = menu.offsetWidth || 160;
+      const left  = Math.min(Math.max(8, r.left), window.innerWidth - menuW - 8);
+      const top   = Math.min(r.bottom + 6, window.innerHeight - 8);
+
+      menu.style.left = left + 'px';
+      menu.style.top  = top  + 'px';
+      menu.style.visibility = '';
+
+      openMenu = menu;
       return;
     }
 
@@ -316,10 +383,10 @@
       const email = opt.getAttribute('data-email');
       const role  = opt.getAttribute('data-role');
 
-      fetch('/api/dealers/' + dealerId + '/role', {
+      fetch('/api/dealers/' + encodeURIComponent(email) + '/role', {
         method: 'PUT',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ email, role })
+        body: JSON.stringify({ role })
       })
       .then(res => res.json().then(d => ({ ok: res.ok, data: d })))
       .then(resp => {
@@ -330,8 +397,11 @@
       return;
     }
 
-    // Klick utanför
-    document.querySelectorAll('.role-menu').forEach(m => m.classList.add('hidden'));
+    // Klick utanför stänger
+    closeAll();
   });
+
+  window.addEventListener('scroll', closeAll, true);
+  window.addEventListener('resize', closeAll);
 })();
 </script>
