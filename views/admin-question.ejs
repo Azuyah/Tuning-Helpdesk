@@ -273,10 +273,10 @@
       var btn = e.target.closest('button[data-id]');
       if (!btn) return;
       var topicId = btn.getAttribute('data-id');
-fetch('/api/questions/' + qid + '/attach-topic', {
+fetch('/api/questions/' + qid + '/attach', {
   method: 'PUT',
-  headers: { 'Content-Type':'application/json' },
-  body: JSON.stringify({ id: topicId, replace: true })
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ id: chosenId, type: chosenKind, replace: true })
 })
 .then(res => res.json().then(d => ({ ok: res.ok, data: d })))
 .then(resp => {
@@ -284,7 +284,7 @@ fetch('/api/questions/' + qid + '/attach-topic', {
   toast('Koppling lyckades');
   location.reload();
 })
-.catch(() => toast('Kunde inte koppla', false));
+.catch(e => toast(e.message || 'Kunde inte koppla', false));
     });
   }
 

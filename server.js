@@ -76,6 +76,9 @@ function addColumnIfMissing(table, col, ddl) {
 try {
   db.prepare(`ALTER TABLE topics_base ADD COLUMN views INTEGER DEFAULT 0`).run();
 } catch (e) { /* finns redan */ }
+try {
+  db.prepare(`ALTER TABLE topics_base ADD COLUMN views INTEGER DEFAULT 0`).run();
+} catch (_) {}
 
 function initSchemaAndSeed() {
   // Bas-schema
@@ -1485,72 +1488,65 @@ app.get('/api/questions/:id', requireAuth, (req, res) => {
   res.json({ ...q, topics: links.map(x => x.topic_id) });
 });
 
-// Koppla ett svar (ämne/resurs) till en fråga – även via en "fråge-id" (hämtar dess kopplade ämne)
-app.put('/api/questions/:id/attach-topic', requireAdmin, express.json(), (req, res) => {
+// PUT /api/questions/:id/attach
+app.put('/api/questions/:id/attach', requireAdmin, express.json(), (req, res) => {
   const qid = Number(req.params.id);
-  const { id, replace } = req.body || {};
+  const { id, type, replace } = req.body || {};
 
-  if (!qid || !id) {
-    return res.status(400).json({ error: 'question id och id (target) krävs' });
+  if (!qid || !id || !type) {
+    return res.status(400).json({ error: 'question id, id (target) och type krävs' });
   }
 
-  // Finns frågan?
   const q = db.prepare(`SELECT id FROM questions WHERE id=?`).get(qid);
   if (!q) return res.status(404).json({ error: 'fråga saknas' });
 
-  // Försök 1: id är ett topic/resource
-  let targetTopic = db.prepare(`
-    SELECT b.id, t.title
-    FROM topics_base b
-    JOIN topics t ON t.id = b.id
-    WHERE b.id = ?
-  `).get(String(id));
-
-  // Försök 2: id är en fråga → hämta dess kopplade ämne
-  if (!targetTopic) {
-    const theirQ = db.prepare(`SELECT id FROM questions WHERE id=?`).get(Number(id));
-    if (theirQ) {
-      const linked = db.prepare(`
-        SELECT t.id, t.title
-        FROM question_topic qt
-        JOIN topics t ON t.id = qt.topic_id
-        WHERE qt.question_id = ?
-        ORDER BY qt.rowid DESC
-        LIMIT 1
-      `).get(theirQ.id);
-      if (!linked) {
-        return res.status(400).json({ error: 'frågan du valde har inget kopplat ämne ännu' });
-      }
-      targetTopic = linked;
-    }
-  }
-
-  if (!targetTopic) {
-    return res.status(400).json({ error: 'kunde inte hitta ämne/resurs för angivet id' });
-  }
-
   const tx = db.transaction(() => {
-    if (replace) {
-      db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
-    }
-    db.prepare(`
-      INSERT OR IGNORE INTO question_topic (question_id, topic_id)
-      VALUES (?,?)
-    `).run(qid, targetTopic.id);
+    if (type === 'topic' || type === 'resource') {
+      // Verifiera att målet är ett topic/resource
+      const topic = db.prepare(`
+        SELECT b.id, t.title
+        FROM topics_base b
+        JOIN topics t ON t.id=b.id
+        WHERE b.id=?
+      `).get(String(id));
+      if (!topic) throw new Error('topic_not_found');
 
-    db.prepare(`
-      UPDATE questions
-      SET status='answered', updated_at=datetime('now')
-      WHERE id=?
-    `).run(qid);
+      if (replace) db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
+      db.prepare(`INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)`).run(qid, topic.id);
+
+      db.prepare(`UPDATE questions SET status='answered', updated_at=datetime('now'), linked_question_id=NULL WHERE id=?`).run(qid);
+      return { kind: 'topic', linked: { id: topic.id, title: topic.title } };
+    }
+
+    if (type === 'question') {
+      // Koppla fråga→fråga (duplikat/läs där)
+      const other = db.prepare(`SELECT id, title FROM questions WHERE id=?`).get(Number(id));
+      if (!other) throw new Error('question_not_found');
+
+      // Valfritt: rensa ev. gamla topic-kopplingar om replace är true
+      if (replace) db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
+
+      db.prepare(`
+        UPDATE questions
+        SET linked_question_id=?, status='answered', updated_at=datetime('now')
+        WHERE id=?
+      `).run(other.id, qid);
+
+      return { kind: 'question', linked: { id: other.id, title: other.title } };
+    }
+
+    throw new Error('bad_type');
   });
 
   try {
-    tx();
-    return res.json({ ok: true, linked: { id: targetTopic.id, title: targetTopic.title } });
+    const result = tx();
+    return res.json({ ok: true, ...result });
   } catch (e) {
-    console.error('attach-topic failed', e);
-    return res.status(500).json({ error: 'failed to attach topic' });
+    if (e.message === 'topic_not_found')     return res.status(400).json({ error: 'hittade inget ämne/resurs med detta id' });
+    if (e.message === 'question_not_found')  return res.status(400).json({ error: 'hittade ingen fråga med detta id' });
+    if (e.message === 'bad_type')            return res.status(400).json({ error: 'type måste vara topic|resource|question' });
+    console.error('attach failed', e);
+    return res.status(500).json({ error: 'serverfel vid attach' });
   }
 });
 
