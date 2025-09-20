@@ -161,15 +161,26 @@
   <!-- Fler ämnen i denna kategori -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
     <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
-    <% if (relatedTopics && relatedTopics.length) { %>
-      <ul class="space-y-3">
-        <% relatedTopics.forEach(function(rt){ %>
-          <li>
-            <a href="<%= rt.url %>" class="text-slate-700 hover:text-sky-700">
-              <%= rt.title %>
-            </a>
-          </li>
-        <% }) %>
+<% relatedTopics.forEach(function(rt){ 
+     const isRes = (rt.kind !== 'question') && Number(rt.is_resource) === 1;
+     const href  = rt.url;
+
+     let badgeHtml;
+     if (rt.kind === 'question') {
+       badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>';
+     } else if (isRes) {
+       badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>';
+     } else {
+       badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>';
+     }
+%>
+  <li>
+    <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
+      <%- badgeHtml %>
+      <span class="truncate"><%= rt.title %></span>
+    </a>
+  </li>
+<% }) %>
       </ul>
     <% } else { %>
       <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>

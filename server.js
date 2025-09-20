@@ -902,7 +902,14 @@ try {
     ]
     .sort((a,b) => new Date(b.ts) - new Date(a.ts))
     .slice(0, 10)
-    .map(({url, title}) => ({ url, title }));
+    .map(r => ({
+  url: r.is_resource === 1 ? `/resources/${r.id}`
+       : r.kind === 'question' ? `/questions/${r.id}`
+       : `/topic/${r.id}`,
+  title: r.title,
+  kind: r.kind,
+  is_resource: r.is_resource
+}));
 
     relatedTopics = mixed;
   }
