@@ -686,37 +686,36 @@ app.get('/topic/:id', (req, res) => {
   if (!topic) return res.status(404).render('404', { title: 'Hittades inte' });
   if (topic.is_resource) return res.redirect(301, `/resources/${topic.id}`);
 
-    // --- Hämta EN kategori (robust mot plural/singular tabellnamn) ---
-  let cat = null;
+// --- Hämta EN kategori (pröva plural, sedan singular) ---
+let category = null;
+try {
+  category = db.prepare(`
+    SELECT c.id, c.title
+    FROM topic_categories tc
+    JOIN categories c ON c.id = tc.category_id
+    WHERE tc.topic_id = ?
+    ORDER BY tc.rowid ASC
+    LIMIT 1
+  `).get(topic.id);
+} catch (_) { /* tabellen kan saknas */ }
+
+if (!category) {
   try {
-    cat = db.prepare(`
+    category = db.prepare(`
       SELECT c.id, c.title
-      FROM topic_categories tc
+      FROM topic_category tc
       JOIN categories c ON c.id = tc.category_id
       WHERE tc.topic_id = ?
       ORDER BY tc.rowid ASC
       LIMIT 1
     `).get(topic.id);
-  } catch (_) {
-    try {
-      cat = db.prepare(`
-        SELECT c.id, c.title
-        FROM topic_category tc
-        JOIN categories c ON c.id = tc.category_id
-        WHERE tc.topic_id = ?
-        ORDER BY tc.rowid ASC
-        LIMIT 1
-      `).get(topic.id);
-    } catch (_) {}
-  }
-  if (cat) {
-    topic.category_id = cat.id;
-    topic.category_title = cat.title;
-  }
-  // Fallback: om ämnet saknar egen kategori men är svar på en fråga → ärv frågans kategori
-if (!topic.category_id && topic.answer_for_question_id) {
+  } catch (_) { /* tabellen kan saknas */ }
+}
+
+// Fallback: om ämnet är ett svar och saknar egen kategori → ärv frågans kategori
+if (!category && topic.answer_for_question_id) {
   try {
-    const qcat = db.prepare(`
+    category = db.prepare(`
       SELECT c.id, c.title
       FROM question_category qc
       JOIN categories c ON c.id = qc.category_id
@@ -724,12 +723,13 @@ if (!topic.category_id && topic.answer_for_question_id) {
       ORDER BY qc.rowid ASC
       LIMIT 1
     `).get(topic.answer_for_question_id);
-
-    if (qcat) {
-      topic.category_id = qcat.id;
-      topic.category_title = qcat.title;
-    }
   } catch (_) { /* ignore */ }
+}
+
+// Sätt på topic-objektet så EJS kan visa
+if (category) {
+  topic.category_id = category.id;
+  topic.category_title = category.title;
 }
   // Räkna upp visningar
   db.prepare(`UPDATE topics_base SET views = COALESCE(views,0)+1 WHERE id = ?`).run(topic.id);
