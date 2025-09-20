@@ -90,40 +90,29 @@
   </div>
 
 <!-- Högerkolumn -->
-<aside class="lg:col-span-1 space-y-8 self-start">
-
+<aside class="space-y-8">
   <!-- Info-ruta -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
     <h2 class="text-lg font-semibold text-slate-900 mb-4">Information</h2>
     <dl class="space-y-2 text-sm">
-
       <div class="flex justify-between">
-        <dt class="text-slate-600">Författare</dt>
-        <dd class="font-medium text-slate-900"><%= topic.author_name || 'Okänd' %></dd>
+        <dt class="text-slate-600">Visningar</dt>
+        <dd class="font-medium text-slate-900"><%= topic.views || 0 %></dd>
       </div>
 
       <div class="flex justify-between">
         <dt class="text-slate-600">Kategori</dt>
         <dd class="font-medium">
-<% if (topic.category_id && topic.category_title) { %>
-  <a href="/explore?tab=all&cat=<%= encodeURIComponent(String(topic.category_id).toLowerCase()) %>" 
-     class="text-sky-600 hover:underline">
-    <%= topic.category_title %>
-  </a>
-<% } else { %>
-  <span class="text-slate-400 italic">Ingen kategori</span>
-<% } %>
+          <% if (topic.category_id && topic.category_title) { %>
+            <a href="/explore?tab=all&cat=<%= encodeURIComponent(String(topic.category_id).toLowerCase()) %>"
+               class="text-sky-600 hover:underline">
+              <%= topic.category_title %>
+            </a>
+          <% } else { %>
+            <span class="text-slate-400 italic">Ingen kategori</span>
+          <% } %>
         </dd>
       </div>
-
-      <% /* Visa visningar om du skickar med topic.views från servern */ %>
-      <% if (typeof topic.views !== 'undefined') { %>
-        <div class="flex justify-between">
-          <dt class="text-slate-600">Antal visningar</dt>
-          <dd class="font-medium text-slate-900"><%= topic.views || 0 %></dd>
-        </div>
-      <% } %>
-
     </dl>
   </div>
 

@@ -73,6 +73,9 @@ function addColumnIfMissing(table, col, ddl) {
     db.prepare(`UPDATE topics SET downloads = COALESCE(downloads, 0)`).run();
   }
 }
+try {
+  db.prepare(`ALTER TABLE topics_base ADD COLUMN views INTEGER DEFAULT 0`).run();
+} catch (e) { /* finns redan */ }
 
 function initSchemaAndSeed() {
   // Bas-schema
@@ -659,39 +662,39 @@ app.post('/register', (req, res) => {
 });
 
 
-// Visa ämne – men om det är en resurs, skicka till /resources/:id
 app.get('/topic/:id', (req, res) => {
   const topic = db.prepare(`
-    SELECT b.id, 
-           b.created_at, 
-           b.updated_at, 
+    SELECT b.id,
+           b.created_at,
+           b.updated_at,
            b.answer_for_question_id,
-           t.title, 
-           t.excerpt, 
-           t.body, 
-           t.tags, 
-           t.is_resource, 
+           b.views AS views,                 -- <-- NYTT
+           t.title,
+           t.excerpt,
+           t.body,
+           t.tags,
+           t.is_resource,
            t.download_url,
            u.name  AS author_name,
-           c.id    AS category_id,
-           c.title AS category_title
+           c.id    AS category_id,           -- <-- NYTT
+           c.title AS category_title         -- <-- NYTT
     FROM topics_base b
-    JOIN topics t ON t.id = b.id
-    LEFT JOIN users u ON u.id = b.created_by
+    JOIN topics t              ON t.id = b.id
+    LEFT JOIN users u          ON u.id = b.created_by
     LEFT JOIN topic_categories tc ON tc.topic_id = b.id
-    LEFT JOIN categories c        ON c.id = tc.category_id
+    LEFT JOIN categories c     ON c.id = tc.category_id
     WHERE b.id = ?
     LIMIT 1
   `).get(req.params.id);
 
-  if (!topic) {
-    return res.status(404).render('404', { title: 'Hittades inte' });
-  }
+  if (!topic) return res.status(404).render('404', { title: 'Hittades inte' });
 
-  // Resurs? Skicka till resurs-vyn.
-  if (topic.is_resource) {
-    return res.redirect(301, `/resources/${topic.id}`);
-  }
+  // Resurs? skicka vidare
+  if (topic.is_resource) return res.redirect(301, `/resources/${topic.id}`);
+
+  // Räkna upp visningar
+  db.prepare(`UPDATE topics_base SET views = COALESCE(views,0)+1 WHERE id = ?`).run(topic.id);
+  topic.views = (topic.views || 0) + 1;
 
   // Källfråga (om ämnet är ett svar)
   let sourceQuestion = null;
