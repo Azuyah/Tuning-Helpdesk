@@ -931,6 +931,18 @@ if (!relatedTopics.length && firstTagLower) {
     LIMIT 6
   `).all(topic.id, firstTagLower);
 }
+// Gör relatedTopics robust (sätt kind + url om de saknas)
+relatedTopics = (relatedTopics || []).map(it => {
+  const kind = it.kind
+    || (typeof it.is_resource !== 'undefined'
+        ? (Number(it.is_resource) === 1 ? 'resource' : 'topic')
+        : 'topic');
+  const url = it.url
+    || (kind === 'question' ? `/questions/${it.id}`
+        : kind === 'resource' ? `/resources/${it.id}`
+        : `/topic/${it.id}`);
+  return { ...it, kind, url };
+});
 
   res.locals.showHero = false;
   res.render('topic', {
