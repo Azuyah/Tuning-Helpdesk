@@ -3,9 +3,9 @@
   <div class="mb-6 flex items-center justify-between gap-3">
     <div>
       <h1 class="text-3xl font-bold text-slate-900 dark:text-white"><%= category.title %></h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400">
-        <%= topics.length %> ämne<%= topics.length===1 ? '' : 'n' %> i denna kategori.
-      </p>
+<p class="text-sm text-slate-500 dark:text-slate-400">
+  <%= topics.length %> poster i denna kategori.
+</p>
     </div>
 
     <a href="/admin"
@@ -16,80 +16,111 @@
 
   <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow">
     <table class="min-w-[820px] w-full text-left text-sm">
-      <thead class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
-        <tr>
-          <th class="p-3 font-semibold text-slate-600 dark:text-slate-300">Ämne</th>
-          <th class="p-3 font-semibold text-slate-600 dark:text-slate-300 w-40">Uppdaterad</th>
-          <th class="p-3 font-semibold text-slate-600 dark:text-slate-300 w-[380px]">Åtgärder</th>
-        </tr>
-      </thead>
+<thead class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800">
+  <tr>
+    <th class="p-3 font-semibold text-slate-600 dark:text-slate-300 w-28">Typ</th>
+    <th class="p-3 font-semibold text-slate-600 dark:text-slate-300">Titel</th>
+    <th class="p-3 font-semibold text-slate-600 dark:text-slate-300 w-40">Uppdaterad</th>
+    <th class="p-3 font-semibold text-slate-600 dark:text-slate-300 w-[420px]">Åtgärder</th>
+  </tr>
+</thead>
       <tbody class="[&>tr]:border-b border-slate-200 dark:border-slate-800">
         <% if (topics.length === 0) { %>
           <tr><td class="p-4 text-slate-500" colspan="3">Inga ämnen i denna kategori ännu.</td></tr>
         <% } %>
 
-        <% topics.forEach(t => { %>
-          <tr>
-            <td class="p-3">
-              <div class="font-medium text-slate-900 dark:text-white"><%= t.title %></div>
-              <% if (t.excerpt) { %>
-                <div class="text-slate-500 dark:text-slate-400 line-clamp-1"><%= t.excerpt %></div>
-              <% } %>
-            </td>
+<% topics.forEach(t => { 
+     // t.type är 'topic' | 'resource' | 'question'
+     const isQuestion = t.type === 'question';
+     const isResource = t.type === 'resource';
+     const openHref  = isQuestion ? `/questions/${t.id}` : (isResource ? `/resources/${t.id}` : `/topic/${t.id}`);
+     const editHref  = isQuestion ? `/admin/questions/${t.id}` : `/admin/edit-topic/${t.id}`;
 
-            <td class="p-3 text-slate-500 dark:text-slate-400">
-              <%= new Date(t.updated_at).toLocaleDateString('sv-SE') %>
-            </td>
+     // Flytta/ta bort endpoints skiljer sig för frågor vs ämnen/resurser
+     const moveAction   = isQuestion
+       ? `/admin/categories/${category.id}/questions/${t.id}/move`
+       : `/admin/categories/${category.id}/topics/${t.id}/move`;
 
-            <td class="p-3">
-              <div class="flex flex-wrap items-center gap-2 relative">
-                <a href="/topic/<%= t.id %>"
-                   class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 hover:bg-slate-50 dark:hover:bg-white/5">
-                  <i class="ti ti-eye"></i> Öppna
-                </a>
+     const removeAction = isQuestion
+       ? `/admin/categories/${category.id}/questions/${t.id}/remove`
+       : `/admin/categories/${category.id}/topics/${t.id}/remove`;
 
-                <a href="/admin/edit-topic/<%= t.id %>"
-                   class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 hover:bg-slate-50 dark:hover:bg-white/5">
-                  <i class="ti ti-edit"></i> Redigera
-                </a>
+     const typeBadge = isQuestion
+       ? '<span class="text-[11px] px-2 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>'
+       : (isResource
+          ? '<span class="text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>'
+          : '<span class="text-[11px] px-2 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>');
+%>
+  <tr>
+    <!-- Typ -->
+    <td class="p-3">
+      <%- typeBadge %>
+    </td>
 
-                <!-- Flytta: knappen visar först MENY -->
- <button type="button"
-          class="moveBtn inline-flex items-center gap-1.5 rounded-lg bg-sky-600 text-white px-3 py-2 hover:bg-sky-700">
-    <i class="ti ti-arrows-exchange"></i> Flytta
-  </button>
+    <!-- Titel + excerpt -->
+    <td class="p-3">
+      <div class="font-medium text-slate-900 dark:text-white"><%= t.title %></div>
+      <% if (t.excerpt) { %>
+        <div class="text-slate-500 dark:text-slate-400 line-clamp-1"><%= t.excerpt %></div>
+      <% } %>
+    </td>
 
-  <!-- MENYN: hög z-index, position nära knappen -->
-<div class="moveMenu hidden w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
-    <div class="px-3 py-2 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Flytta till…</div>
-    <div class="border-t border-slate-200 dark:border-slate-800"></div>
+    <!-- Datum -->
+    <td class="p-3 text-slate-500 dark:text-slate-400">
+      <%= new Date(t.updated_at).toLocaleDateString('sv-SE') %>
+    </td>
 
-    <% if (otherCats.length === 0) { %>
-      <div class="px-3 py-3 text-slate-500 dark:text-slate-400 text-sm">Inga andra kategorier.</div>
-    <% } else { %>
-      <% otherCats.forEach(c => { %>
-        <form method="POST" action="/admin/categories/<%= category.id %>/topics/<%= t.id %>/move">
-          <input type="hidden" name="newCategoryId" value="<%= c.id %>">
-          <button class="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-white/5">
-            <i class="ti ti-folder text-slate-500 mr-2"></i><%= c.title %>
+    <!-- Åtgärder -->
+    <td class="p-3">
+      <div class="flex flex-wrap items-center gap-2 relative">
+        <a href="<%= openHref %>"
+           class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 hover:bg-slate-50 dark:hover:bg-white/5">
+          <i class="ti ti-eye"></i> Öppna
+        </a>
+
+        <a href="<%= editHref %>"
+           class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 hover:bg-slate-50 dark:hover:bg-white/5">
+          <i class="ti ti-edit"></i> Redigera
+        </a>
+
+        <!-- Flytta: knapp + meny -->
+        <div class="relative">
+          <button type="button"
+                  class="moveBtn inline-flex items-center gap-1.5 rounded-lg bg-sky-600 text-white px-3 py-2 hover:bg-sky-700">
+            <i class="ti ti-arrows-exchange"></i> Flytta
           </button>
-        </form>
-      <% }) %>
-    <% } %>
-  </div>
 
-                <!-- Ta bort koppling -->
-                <form method="POST"
-                      action="/admin/categories/<%= category.id %>/topics/<%= t.id %>/remove"
-                      onsubmit="return confirm('Ta bort ämnet från kategorin?')">
-                  <button class="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 text-white px-3 py-2 hover:bg-rose-700">
-                    <i class="ti ti-unlink"></i> Ta bort från kategori
+          <div class="moveMenu hidden absolute z-20 mt-2 w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
+            <div class="px-3 py-2 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Flytta till…</div>
+            <div class="border-t border-slate-200 dark:border-slate-800"></div>
+
+            <% if (otherCats.length === 0) { %>
+              <div class="px-3 py-3 text-slate-500 dark:text-slate-400 text-sm">Inga andra kategorier.</div>
+            <% } else { %>
+              <% otherCats.forEach(c => { %>
+                <form method="POST" action="<%= moveAction %>">
+                  <input type="hidden" name="newCategoryId" value="<%= c.id %>">
+                  <button class="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-white/5">
+                    <i class="ti ti-folder text-slate-500 mr-2"></i><%= c.title %>
                   </button>
                 </form>
-              </div>
-            </td>
-          </tr>
-        <% }) %>
+              <% }) %>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Ta bort koppling -->
+        <form method="POST"
+              action="<%= removeAction %>"
+              onsubmit="return confirm('Ta bort posten från kategorin?')">
+          <button class="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 text-white px-3 py-2 hover:bg-rose-700">
+            <i class="ti ti-unlink"></i> Ta bort från kategori
+          </button>
+        </form>
+      </div>
+    </td>
+  </tr>
+<% }) %>
       </tbody>
     </table>
   </div>

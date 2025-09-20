@@ -1198,23 +1198,116 @@ app.post('/admin/categories/:id/delete', requireAdmin, (req, res) => {
   res.redirect('/admin/categories');
 });
 
-// Visa alla ämnen i en kategori
+// Visa allt innehåll i en kategori (ämnen + resurser + frågor)
 app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
-  const catId = req.params.id;
+  const catId = String(req.params.id);
 
   const category = db.prepare(`SELECT id, title FROM categories WHERE id=?`).get(catId);
   if (!category) return res.status(404).send('Kategori saknas');
 
-  const topics = db.prepare(`
-    SELECT b.id, t.title,
-           COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
-           b.updated_at
-    FROM topic_category tc
-    JOIN topics t      ON t.id = tc.topic_id
-    JOIN topics_base b ON b.id = tc.topic_id
-    WHERE tc.category_id=?
-    ORDER BY b.updated_at DESC
-  `).all(catId);
+  // Försök först med plural-tabellen "topic_categories", annars fall back till "topic_category"
+  const sqlPlural = `
+    SELECT kind, id, title, excerpt, ts, href FROM (
+      -- Ämnen (icke-resurser)
+      SELECT
+        'topic' AS kind,
+        b.id    AS id,
+        t.title AS title,
+        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
+        datetime(COALESCE(b.updated_at, b.created_at)) AS ts,
+        '/topic/' || b.id AS href
+      FROM topics_base b
+      JOIN topics t            ON t.id = b.id
+      JOIN topic_categories tc ON tc.topic_id = b.id
+      WHERE tc.category_id = ?
+        AND IFNULL(t.is_resource,0) = 0
+
+      UNION
+      -- Resurser
+      SELECT
+        'resource' AS kind,
+        b.id       AS id,
+        t.title    AS title,
+        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
+        datetime(COALESCE(b.updated_at, b.created_at)) AS ts,
+        '/resources/' || b.id AS href
+      FROM topics_base b
+      JOIN topics t            ON t.id = b.id
+      JOIN topic_categories tc ON tc.topic_id = b.id
+      WHERE tc.category_id = ?
+        AND IFNULL(t.is_resource,0) = 1
+
+      UNION
+      -- Frågor
+      SELECT
+        'question' AS kind,
+        q.id       AS id,
+        q.title    AS title,
+        substr(IFNULL(q.body,''),1,180) AS excerpt,
+        datetime(COALESCE(q.updated_at, q.created_at)) AS ts,
+        '/questions/' || q.id AS href
+      FROM questions q
+      JOIN question_category qc ON qc.question_id = q.id
+      WHERE qc.category_id = ?
+    )
+    ORDER BY datetime(ts) DESC
+    LIMIT 500
+  `;
+
+  const sqlSingular = `
+    SELECT kind, id, title, excerpt, ts, href FROM (
+      -- Ämnen (icke-resurser)
+      SELECT
+        'topic' AS kind,
+        b.id    AS id,
+        t.title AS title,
+        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
+        datetime(COALESCE(b.updated_at, b.created_at)) AS ts,
+        '/topic/' || b.id AS href
+      FROM topics_base b
+      JOIN topics t         ON t.id = b.id
+      JOIN topic_category tc ON tc.topic_id = b.id
+      WHERE tc.category_id = ?
+        AND IFNULL(t.is_resource,0) = 0
+
+      UNION
+      -- Resurser
+      SELECT
+        'resource' AS kind,
+        b.id       AS id,
+        t.title    AS title,
+        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
+        datetime(COALESCE(b.updated_at, b.created_at)) AS ts,
+        '/resources/' || b.id AS href
+      FROM topics_base b
+      JOIN topics t         ON t.id = b.id
+      JOIN topic_category tc ON tc.topic_id = b.id
+      WHERE tc.category_id = ?
+        AND IFNULL(t.is_resource,0) = 1
+
+      UNION
+      -- Frågor
+      SELECT
+        'question' AS kind,
+        q.id       AS id,
+        q.title    AS title,
+        substr(IFNULL(q.body,''),1,180) AS excerpt,
+        datetime(COALESCE(q.updated_at, q.created_at)) AS ts,
+        '/questions/' || q.id AS href
+      FROM questions q
+      JOIN question_category qc ON qc.question_id = q.id
+      WHERE qc.category_id = ?
+    )
+    ORDER BY datetime(ts) DESC
+    LIMIT 500
+  `;
+
+  let rows = [];
+  try {
+    rows = db.prepare(sqlPlural).all(catId, catId, catId);
+  } catch (_) {
+    rows = db.prepare(sqlSingular).all(catId, catId, catId);
+  }
 
   const otherCats = db.prepare(`
     SELECT id, title FROM categories
@@ -1222,10 +1315,11 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
     ORDER BY COALESCE(sort_order,9999), title
   `).all(catId);
 
+  // Behåll "topics" för att inte behöva ändra EJS – nu innehåller den alla typer med href/kind.
   res.render('category-topics', {
-    title: `Ämnen i ${category.title}`,
+    title: `Innehåll i ${category.title}`,
     category,
-    topics,
+    topics: rows,
     otherCats
   });
 });
@@ -1246,6 +1340,39 @@ app.post('/admin/categories/:id/topics/:topicId/move', requireAdmin, (req, res) 
     .run(topicId, newCategoryId);
 
   res.redirect(`/admin/categories/${id}/topics`);
+});
+
+// Flytta FRÅGA till annan kategori
+app.post('/admin/categories/:catId/questions/:id/move', requireAdmin, (req, res) => {
+  const { catId, id } = req.params;
+  const { newCategoryId } = req.body;
+
+  // säkerställ att frågan finns
+  const q = db.prepare(`SELECT 1 FROM questions WHERE id=?`).get(id);
+  if (!q) return res.status(404).send('Fråga saknas');
+
+  // säkerställ att mål-kategori finns
+  const cat = db.prepare(`SELECT 1 FROM categories WHERE id=?`).get(newCategoryId);
+  if (!cat) return res.status(400).send('Målkategori saknas');
+
+  const tx = db.transaction(() => {
+    // vi kör single-category för frågor → rensa och sätt ny
+    db.prepare(`DELETE FROM question_category WHERE question_id=?`).run(id);
+    db.prepare(`INSERT OR IGNORE INTO question_category (question_id, category_id) VALUES (?, ?)`)
+      .run(id, newCategoryId);
+    db.prepare(`UPDATE questions SET updated_at=datetime('now') WHERE id=?`).run(id);
+  });
+
+  tx();
+  res.redirect(`/admin/categories/${newCategoryId}/topics`);
+});
+
+// Ta bort FRÅGA från kategori (dvs avkoppla)
+app.post('/admin/categories/:catId/questions/:id/remove', requireAdmin, (req, res) => {
+  const { catId, id } = req.params;
+  db.prepare(`DELETE FROM question_category WHERE question_id=? AND category_id=?`).run(id, catId);
+  db.prepare(`UPDATE questions SET updated_at=datetime('now') WHERE id=?`).run(id);
+  res.redirect(`/admin/categories/${catId}/topics`);
 });
 
 // Ta bort koppling ämne<->kategori (inte radera ämnet)
