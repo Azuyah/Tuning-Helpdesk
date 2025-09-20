@@ -229,25 +229,30 @@
     });
   }
 
-  function renderSuggest(rows){
-    if (!rows || !rows.length){
-      box.classList.add('hidden');
-      box.innerHTML = '';
-      return;
-    }
-    var html = rows.map(function(r){
-      var t  = escapeHtml(r.title || '');
-      var sn = r.snippet ? '<div class="text-sm text-slate-600">' + escapeHtml(r.snippet) + '</div>' : '';
-      return (
-        '<button type="button" data-id="' + r.id + '" class="w-full text-left px-4 py-3 hover:bg-slate-50">' +
-          '<div class="font-medium text-slate-900">' + t + '</div>' +
-          sn +
-        '</button>'
-      );
-    }).join('');
-    box.innerHTML = html;
-    box.classList.remove('hidden');
+function renderSuggest(rows){
+  if (!rows || !rows.length){
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
   }
+  var html = rows.map(function(r){
+    var t  = escapeHtml(r.title || '');
+    var sn = r.snippet ? '<div class="text-sm text-slate-600">' + escapeHtml(r.snippet) + '</div>' : '';
+    var kind = r.kind || 'topic'; // 'topic' | 'resource' | 'question'
+    var badge = kind === 'question' ? 'Fråga' : (kind === 'resource' ? 'Resurs' : 'Ämne');
+    return (
+      '<button type="button" data-id="' + r.id + '" data-kind="' + kind + '" class="w-full text-left px-4 py-3 hover:bg-slate-50">' +
+        '<div class="flex items-center gap-2">' +
+          '<span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">' + badge + '</span>' +
+          '<div class="font-medium text-slate-900">' + t + '</div>' +
+        '</div>' +
+        sn +
+      '</button>'
+    );
+  }).join('');
+  box.innerHTML = html;
+  box.classList.remove('hidden');
+}
 
   function fetchSuggest(q){
     if (!q) { renderSuggest([]); return; }
@@ -269,25 +274,27 @@
   }
 
 if (box){
-  box.addEventListener('click', function(e){
-    var btn = e.target.closest('button[data-id]');
-    if (!btn) return;
-    var topicId = btn.getAttribute('data-id');
+    box.addEventListener('click', function(e){
+      var btn = e.target.closest('button[data-id]');
+      if (!btn) return;
 
-    fetch('/api/questions/' + qid + '/attach-topic', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: topicId, replace: true })
-    })
-    .then(res => res.json().then(d => ({ ok: res.ok, data: d })))
-    .then(resp => {
-      if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
-      toast('Koppling lyckades');
-      location.reload();
-    })
-    .catch(e => toast(e.message || 'Kunde inte koppla', false));
-  });
-}
+      var targetId   = btn.getAttribute('data-id');
+      var targetType = btn.getAttribute('data-kind') || 'topic'; // defaulta till topic/resource
+
+      fetch('/api/questions/' + qid + '/attach', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: targetId, type: targetType, replace: true })
+      })
+      .then(res => res.json().then(d => ({ ok: res.ok, data: d })))
+      .then(resp => {
+        if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
+        toast('Koppling lyckades');
+        location.reload();
+      })
+      .catch(e => toast(e.message || 'Kunde inte koppla', false));
+    });
+  }
 
   // Confirm delete
   var delForm = document.querySelector('[data-del-form]');

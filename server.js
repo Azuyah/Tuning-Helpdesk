@@ -1489,62 +1489,55 @@ app.get('/api/questions/:id', requireAuth, (req, res) => {
 });
 
 // PUT /api/questions/:id/attach
+// PUT /api/questions/:id/attach
 app.put('/api/questions/:id/attach', requireAdmin, express.json(), (req, res) => {
   const qid = Number(req.params.id);
   const { id, type, replace } = req.body || {};
-
-  if (!qid || !id || !type) {
-    return res.status(400).json({ error: 'question id, id (target) och type krävs' });
-  }
+  if (!qid || !id) return res.status(400).json({ error: 'question id och id krävs' });
 
   const q = db.prepare(`SELECT id FROM questions WHERE id=?`).get(qid);
   if (!q) return res.status(404).json({ error: 'fråga saknas' });
 
   const tx = db.transaction(() => {
-    if (type === 'topic' || type === 'resource') {
-      // Verifiera att målet är ett topic/resource
-      const topic = db.prepare(`
-        SELECT b.id, t.title
+    // 1) Om type är topic/resource ELLER om type saknas men id matchar topic/resource
+    let topic = null;
+    if (type === 'topic' || type === 'resource' || !type) {
+      topic = db.prepare(`
+        SELECT b.id, t.title, IFNULL(t.is_resource,0) AS is_resource
         FROM topics_base b
         JOIN topics t ON t.id=b.id
         WHERE b.id=?
       `).get(String(id));
-      if (!topic) throw new Error('topic_not_found');
-
-      if (replace) db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
-      db.prepare(`INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)`).run(qid, topic.id);
-
-      db.prepare(`UPDATE questions SET status='answered', updated_at=datetime('now'), linked_question_id=NULL WHERE id=?`).run(qid);
-      return { kind: 'topic', linked: { id: topic.id, title: topic.title } };
+      if (topic) {
+        if (replace) db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
+        db.prepare(`INSERT OR IGNORE INTO question_topic (question_id, topic_id) VALUES (?,?)`).run(qid, topic.id);
+        db.prepare(`UPDATE questions SET status='answered', updated_at=datetime('now'), linked_question_id=NULL WHERE id=?`).run(qid);
+        return { kind: topic.is_resource ? 'resource' : 'topic', linked: { id: topic.id, title: topic.title } };
+      }
     }
 
-    if (type === 'question') {
-      // Koppla fråga→fråga (duplikat/läs där)
+    // 2) Om type är question ELLER type saknas och id matchar en fråga
+    if (type === 'question' || !type) {
       const other = db.prepare(`SELECT id, title FROM questions WHERE id=?`).get(Number(id));
-      if (!other) throw new Error('question_not_found');
-
-      // Valfritt: rensa ev. gamla topic-kopplingar om replace är true
-      if (replace) db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
-
-      db.prepare(`
-        UPDATE questions
-        SET linked_question_id=?, status='answered', updated_at=datetime('now')
-        WHERE id=?
-      `).run(other.id, qid);
-
-      return { kind: 'question', linked: { id: other.id, title: other.title } };
+      if (other) {
+        if (replace) db.prepare(`DELETE FROM question_topic WHERE question_id=?`).run(qid);
+        db.prepare(`
+          UPDATE questions
+          SET linked_question_id=?, status='answered', updated_at=datetime('now')
+          WHERE id=?
+        `).run(other.id, qid);
+        return { kind: 'question', linked: { id: other.id, title: other.title } };
+      }
     }
 
-    throw new Error('bad_type');
+    throw new Error('not_found_any');
   });
 
   try {
     const result = tx();
     return res.json({ ok: true, ...result });
   } catch (e) {
-    if (e.message === 'topic_not_found')     return res.status(400).json({ error: 'hittade inget ämne/resurs med detta id' });
-    if (e.message === 'question_not_found')  return res.status(400).json({ error: 'hittade ingen fråga med detta id' });
-    if (e.message === 'bad_type')            return res.status(400).json({ error: 'type måste vara topic|resource|question' });
+    if (e.message === 'not_found_any') return res.status(400).json({ error: 'hittade varken ämne/resurs eller fråga för angivet id' });
     console.error('attach failed', e);
     return res.status(500).json({ error: 'serverfel vid attach' });
   }
