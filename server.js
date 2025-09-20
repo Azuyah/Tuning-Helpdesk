@@ -1198,116 +1198,57 @@ app.post('/admin/categories/:id/delete', requireAdmin, (req, res) => {
   res.redirect('/admin/categories');
 });
 
-// Visa allt innehåll i en kategori (ämnen + resurser + frågor)
+// Visa ALLA poster i en kategori (ämnen, resurser, frågor)
 app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
-  const catId = String(req.params.id);
+  const catId = req.params.id;
 
   const category = db.prepare(`SELECT id, title FROM categories WHERE id=?`).get(catId);
   if (!category) return res.status(404).send('Kategori saknas');
 
-  // Försök först med plural-tabellen "topic_categories", annars fall back till "topic_category"
-  const sqlPlural = `
-    SELECT kind, id, title, excerpt, ts, href FROM (
-      -- Ämnen (icke-resurser)
+  // UNION över ämnen (is_resource=0), resurser (is_resource=1) och frågor
+  const rows = db.prepare(`
+    SELECT * FROM (
+      -- ÄMNEN
       SELECT
-        'topic' AS kind,
+        'topic' AS type,
         b.id    AS id,
         t.title AS title,
-        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
-        datetime(COALESCE(b.updated_at, b.created_at)) AS ts,
-        '/topic/' || b.id AS href
-      FROM topics_base b
-      JOIN topics t            ON t.id = b.id
-      JOIN topic_categories tc ON tc.topic_id = b.id
-      WHERE tc.category_id = ?
-        AND IFNULL(t.is_resource,0) = 0
+        COALESCE(NULLIF(t.excerpt,''), substr(IFNULL(t.body,''),1,180)) AS excerpt,
+        COALESCE(b.updated_at, b.created_at) AS updated_at
+      FROM topic_category tc
+      JOIN topics t      ON t.id = tc.topic_id
+      JOIN topics_base b ON b.id = tc.topic_id
+      WHERE tc.category_id = ? AND IFNULL(t.is_resource,0) = 0
 
-      UNION
-      -- Resurser
-      SELECT
-        'resource' AS kind,
-        b.id       AS id,
-        t.title    AS title,
-        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
-        datetime(COALESCE(b.updated_at, b.created_at)) AS ts,
-        '/resources/' || b.id AS href
-      FROM topics_base b
-      JOIN topics t            ON t.id = b.id
-      JOIN topic_categories tc ON tc.topic_id = b.id
-      WHERE tc.category_id = ?
-        AND IFNULL(t.is_resource,0) = 1
+      UNION ALL
 
-      UNION
-      -- Frågor
+      -- RESURSER
       SELECT
-        'question' AS kind,
+        'resource' AS type,
+        b.id    AS id,
+        t.title AS title,
+        COALESCE(NULLIF(t.excerpt,''), substr(IFNULL(t.body,''),1,180)) AS excerpt,
+        COALESCE(b.updated_at, b.created_at) AS updated_at
+      FROM topic_category tc
+      JOIN topics t      ON t.id = tc.topic_id
+      JOIN topics_base b ON b.id = tc.topic_id
+      WHERE tc.category_id = ? AND IFNULL(t.is_resource,0) = 1
+
+      UNION ALL
+
+      -- FRÅGOR
+      SELECT
+        'question' AS type,
         q.id       AS id,
         q.title    AS title,
         substr(IFNULL(q.body,''),1,180) AS excerpt,
-        datetime(COALESCE(q.updated_at, q.created_at)) AS ts,
-        '/questions/' || q.id AS href
-      FROM questions q
-      JOIN question_category qc ON qc.question_id = q.id
+        COALESCE(q.updated_at, q.created_at) AS updated_at
+      FROM question_category qc
+      JOIN questions q ON q.id = qc.question_id
       WHERE qc.category_id = ?
     )
-    ORDER BY datetime(ts) DESC
-    LIMIT 500
-  `;
-
-  const sqlSingular = `
-    SELECT kind, id, title, excerpt, ts, href FROM (
-      -- Ämnen (icke-resurser)
-      SELECT
-        'topic' AS kind,
-        b.id    AS id,
-        t.title AS title,
-        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
-        datetime(COALESCE(b.updated_at, b.created_at)) AS ts,
-        '/topic/' || b.id AS href
-      FROM topics_base b
-      JOIN topics t         ON t.id = b.id
-      JOIN topic_category tc ON tc.topic_id = b.id
-      WHERE tc.category_id = ?
-        AND IFNULL(t.is_resource,0) = 0
-
-      UNION
-      -- Resurser
-      SELECT
-        'resource' AS kind,
-        b.id       AS id,
-        t.title    AS title,
-        COALESCE(NULLIF(t.excerpt,''), substr(t.body,1,180)) AS excerpt,
-        datetime(COALESCE(b.updated_at, b.created_at)) AS ts,
-        '/resources/' || b.id AS href
-      FROM topics_base b
-      JOIN topics t         ON t.id = b.id
-      JOIN topic_category tc ON tc.topic_id = b.id
-      WHERE tc.category_id = ?
-        AND IFNULL(t.is_resource,0) = 1
-
-      UNION
-      -- Frågor
-      SELECT
-        'question' AS kind,
-        q.id       AS id,
-        q.title    AS title,
-        substr(IFNULL(q.body,''),1,180) AS excerpt,
-        datetime(COALESCE(q.updated_at, q.created_at)) AS ts,
-        '/questions/' || q.id AS href
-      FROM questions q
-      JOIN question_category qc ON qc.question_id = q.id
-      WHERE qc.category_id = ?
-    )
-    ORDER BY datetime(ts) DESC
-    LIMIT 500
-  `;
-
-  let rows = [];
-  try {
-    rows = db.prepare(sqlPlural).all(catId, catId, catId);
-  } catch (_) {
-    rows = db.prepare(sqlSingular).all(catId, catId, catId);
-  }
+    ORDER BY datetime(updated_at) DESC
+  `).all(catId, catId, catId);
 
   const otherCats = db.prepare(`
     SELECT id, title FROM categories
@@ -1315,11 +1256,10 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
     ORDER BY COALESCE(sort_order,9999), title
   `).all(catId);
 
-  // Behåll "topics" för att inte behöva ändra EJS – nu innehåller den alla typer med href/kind.
   res.render('category-topics', {
-    title: `Innehåll i ${category.title}`,
+    title: `Poster i ${category.title}`,
     category,
-    topics: rows,
+    topics: rows,         // <- nu är det blandade "poster" med field "type"
     otherCats
   });
 });
