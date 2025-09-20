@@ -3133,15 +3133,24 @@ app.get('/admin-accounts', requireAdmin, (req, res) => {
   const qRaw     = (req.query.q || '').trim();
   const q        = qRaw;                   // skickas till vyn
   const source   = (req.query.source || '').trim();      // '' | 'nms' | 'dynex'
-  const perPage  = Math.max(1, Number(req.query.perPage || 15));
+  const perPage  = Math.max(1, Number(req.query.perPage || 10));
   const page     = Math.max(1, Number(req.query.page || 1));
 
-  // --- Users: hämta en rimlig mängd (utan filter här) ---
-  const users = db.prepare(`
-    SELECT id, email, name, role, created_at, updated_at
-    FROM users
-    ORDER BY datetime(created_at) DESC
-  `).all();
+// --- Users: hämta med pagination ---
+const usersPage    = Number(req.query.usersPage) || 1;
+const usersPerPage = 10;
+const usersOffset  = (usersPage - 1) * usersPerPage;
+
+const usersTotal = db.prepare(`SELECT COUNT(*) AS c FROM users`).get().c;
+
+const users = db.prepare(`
+  SELECT id, email, name, role, created_at, updated_at
+  FROM users
+  ORDER BY datetime(created_at) DESC
+  LIMIT ? OFFSET ?
+`).all(usersPerPage, usersOffset);
+
+const usersTotalPages = Math.ceil(usersTotal / usersPerPage);
 
   // --- Dealers: bygg WHERE dynamiskt för filter/sök ---
   const where = [];
