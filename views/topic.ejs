@@ -161,14 +161,14 @@
 <!-- Fler ämnen i denna kategori -->
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
   <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
-  <% if (relatedMixed && relatedMixed.length) { %>
+  <% if (relatedTopics && relatedTopics.length) { %>
     <ul class="space-y-3">
-      <% relatedMixed.forEach(function(it){ 
-           var kind = String(it.kind || 'topic').toLowerCase();
+      <% relatedTopics.forEach(function(it){ 
+           var kind  = String(it.kind || 'topic').toLowerCase();
            var isRes = (kind !== 'question') && Number(it.is_resource) === 1;
-           var href  = (kind === 'question')
+           var href  = it.url || (kind === 'question'
              ? ('/questions/' + it.id)
-             : (isRes ? ('/resources/' + it.id) : ('/topic/' + it.id));
+             : (isRes ? ('/resources/' + it.id) : ('/topic/' + it.id)));
 
            var badgeHtml =
              (kind === 'question')
