@@ -308,6 +308,25 @@ try {
 } catch (e) {
   // kolumnen finns redan – ignorera
 }
+// --- MIGRATION: questions.linked_question_id ---
+try {
+  // Lägg till kolumnen om den saknas
+  const hasLinkedCol = db.prepare(`PRAGMA table_info(questions)`)
+    .all()
+    .some(c => c.name === 'linked_question_id');
+
+  if (!hasLinkedCol) {
+    db.prepare(`ALTER TABLE questions ADD COLUMN linked_question_id INTEGER`).run();
+  }
+
+  // Index för snabbare kopplings-uppslag
+  db.prepare(`
+    CREATE INDEX IF NOT EXISTS idx_questions_linked_q
+    ON questions(linked_question_id)
+  `).run();
+} catch (e) {
+  // ignorera (kolumn/index kan redan finnas)
+}
 
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
