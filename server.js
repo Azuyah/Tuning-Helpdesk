@@ -2091,12 +2091,15 @@ app.get('/questions/:id', (req, res) => {
         .all(answerTopic.id).map(r => r.category_id);
     }
   } catch {}
-  if (!catIds.length) {
-    try {
-      catIds = db.prepare(`SELECT category_id FROM question_category WHERE question_id = ?`)
-        .all(q.id).map(r => r.category_id);
-    } catch {}
-  }
+if (!catIds.length) {
+  try {
+    catIds = db.prepare(`SELECT category_id FROM question_categories WHERE question_id = ?`)
+               .all(q.id).map(r => r.category_id);
+  } catch {}
+}
+if (!catIds.length && q.category_id) {
+  catIds = [q.category_id];
+}
 
   // --- SIDOKOLUMN: relaterade listor ---
   let relatedQuestions = [];
