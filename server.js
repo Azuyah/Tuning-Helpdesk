@@ -947,45 +947,53 @@ app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
 app.get('/admin/questions/:id', requireAdmin, (req, res) => {
   const id = Number(req.params.id);
 
-  const q = db.prepare(`
-    SELECT q.*, u.name AS user_name, u.email AS user_email
-    FROM questions q
-    LEFT JOIN users u ON u.id = q.user_id
-    WHERE q.id=?
-  `).get(id);
+  const q = db.prepare(`SELECT * FROM questions WHERE id=?`).get(id);
+  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
 
-  if (!q) return res.status(404).send('Not found');
-
-  // ev. redan kopplade ämnen (om du hade detta)
-  const linked = db.prepare(`
-    SELECT t.id, t.title
-    FROM question_topic qt
-    JOIN topics t ON t.id=qt.topic_id
-    WHERE qt.question_id=?
-    ORDER BY t.title
-  `).all(id);
-
-  // NYTT: alla kategorier + denna frågas kategorier
+  // Kategorilista (för dropdown)
   const categories = db.prepare(`
     SELECT id, title
     FROM categories
     ORDER BY COALESCE(sort_order,9999), title
   `).all();
 
-  const qCategoryIds = db.prepare(`
-    SELECT category_id AS id
-    FROM question_category
-    WHERE question_id=?
-  `).all(id).map(r => r.id);
+  // Frågans nuvarande kategori(er) – stöd för singular/plural tabellnamn
+  let qCategoryIds = [];
+  try {
+    qCategoryIds = db.prepare(`
+      SELECT category_id FROM question_category WHERE question_id=?
+    `).all(id).map(r => String(r.category_id));
+  } catch (_) {
+    try {
+      qCategoryIds = db.prepare(`
+        SELECT category_id FROM question_categories WHERE question_id=?
+      `).all(id).map(r => String(r.category_id));
+    } catch (_) { /* ignore */ }
+  }
 
+  // Ev. kopplat ämne/resurs (via question_topic)
+  const linkedTopic = db.prepare(`
+    SELECT t.id, t.title, t.is_resource
+    FROM question_topic qt
+    JOIN topics t ON t.id = qt.topic_id
+    WHERE qt.question_id = ?
+    ORDER BY qt.rowid DESC
+    LIMIT 1
+  `).get(id);
 
-res.render('admin-question', {
-  title: `Fråga #${q.id}`,
-  q,
-  linked: linkedTopic ? [linkedTopic] : [], 
-  linkedQuestion,           
-  categories,
-  qCategoryIds,
+  // Ev. kopplad fråga (via questions.linked_question_id)
+  const linkedQuestion = q.linked_question_id
+    ? db.prepare(`SELECT id, title FROM questions WHERE id=?`).get(q.linked_question_id)
+    : null;
+
+  res.render('admin-question', {
+    title: `Fråga #${q.id}`,
+    q,
+    // behåll din gamla "linked" för bakåtkompatibilitet i vyn
+    linked: linkedTopic ? [linkedTopic] : [],
+    linkedQuestion,
+    categories,
+    qCategoryIds
   });
 });
 
