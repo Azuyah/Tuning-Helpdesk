@@ -462,7 +462,7 @@ app.use((req, res, next) => {
   res.locals.notifications = []; // <-- viktigt
 
   try {
-    if (u && u.role === 'admin') {
+    if (u && (u.role === 'admin' || u.role === 'support')) {
       // Badge-count
       const row = db.prepare(`SELECT COUNT(*) AS n FROM questions WHERE status='open'`).get();
       res.locals.adminOpenCount = row?.n || 0;
@@ -552,6 +552,20 @@ function requireAdmin(req, res, next) {
   if (!u || u.role !== 'admin') return res.status(403).json({ error: 'forbidden' });
   req.user = u; next();
 }
+function requireSupportOrAdmin(req, res, next) {
+  const me = getUser(req);
+  if (!me || (me.role !== 'admin' && me.role !== 'support')) {
+    return res.status(403).send('Åtkomst nekad');
+  }
+  next();
+}
+function requireStaff(req, res, next) {
+  const u = getUser(req);
+  if (!u || !['admin', 'support'].includes(u.role)) {
+    return res.status(403).send('Forbidden');
+  }
+  next();
+}
 
 // ---------- AUTH API ----------
 
@@ -623,6 +637,64 @@ app.get('/admin/tools/backfill-dealer-roles', requireAdmin, (req, res) => {
   `;
   const info = db.prepare(sql).run();
   res.send(`Dealer-roller uppdaterade: ${info.changes} användare`);
+});
+
+// Tillåtna roller
+const ALLOWED_ROLES = ['admin', 'user', 'dealer', 'support'];
+
+// PUT /api/users/:id/role  -> uppdatera roll för user-id
+app.put('/api/users/:id/role', requireAdmin, express.json(), (req, res) => {
+  const uid = Number(req.params.id);
+  const role = String(req.body.role || '').toLowerCase();
+
+  if (!Number.isFinite(uid)) return res.status(400).json({ error: 'ogiltigt user-id' });
+  if (!ALLOWED_ROLES.includes(role)) return res.status(400).json({ error: 'ogiltig roll' });
+
+  const user = db.prepare(`SELECT id, email, role FROM users WHERE id=?`).get(uid);
+  if (!user) return res.status(404).json({ error: 'användare saknas' });
+
+  // skydda mot att avskaffa sin egen admin-rätt (valfritt men klokt)
+  if (req.user && req.user.id === uid && role !== 'admin') {
+    return res.status(400).json({ error: 'du kan inte ta bort din egen admin-roll' });
+  }
+
+  db.prepare(`UPDATE users SET role=?, updated_at=datetime('now') WHERE id=?`).run(role, uid);
+  return res.json({ ok: true, id: uid, role });
+});
+
+// PUT /api/dealers/:dealer_id/role  -> skapa/hitta user via dealer.email och sätt roll
+app.put('/api/dealers/:dealer_id/role', requireAdmin, express.json(), (req, res) => {
+  const dealerId = String(req.params.dealer_id);
+  const role = String(req.body.role || '').toLowerCase();
+
+  if (!ALLOWED_ROLES.includes(role)) return res.status(400).json({ error: 'ogiltig roll' });
+
+  const dealer = db.prepare(`SELECT * FROM dealers WHERE dealer_id=?`).get(dealerId);
+  if (!dealer) return res.status(404).json({ error: 'dealer saknas' });
+  if (!dealer.email) return res.status(422).json({ error: 'dealern saknar e-post' });
+
+  let user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(dealer.email);
+
+  if (!user) {
+    const displayName =
+      [dealer.firstname, dealer.lastname].filter(Boolean).join(' ') ||
+      dealer.username || dealer.company || dealer.email;
+
+    db.prepare(`
+      INSERT INTO users (email, name, role, password_hash, created_at, updated_at)
+      VALUES (?, ?, 'user', '', datetime('now'), datetime('now'))
+    `).run(dealer.email, displayName);
+
+    user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(dealer.email);
+  }
+
+  // skydda mot att avskaffa sin egen admin-rätt (om email matchar inloggad)
+  if (req.user && user.id === req.user.id && role !== 'admin') {
+    return res.status(400).json({ error: 'du kan inte ta bort din egen admin-roll' });
+  }
+
+  db.prepare(`UPDATE users SET role=?, updated_at=datetime('now') WHERE id=?`).run(role, user.id);
+  return res.json({ ok: true, dealer_id: dealerId, user_id: user.id, role });
 });
 
 app.post('/api/auth/register', (req, res) => {
@@ -1038,7 +1110,7 @@ app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
 });
 
 // Visa en fråga i admin
-app.get('/admin/questions/:id', requireAdmin, (req, res) => {
+app.get('/admin/questions/:id', requireStaff, (req, res) => {
   const id = Number(req.params.id);
 
   const q = db.prepare(`SELECT * FROM questions WHERE id=?`).get(id);
@@ -1158,7 +1230,7 @@ app.put('/api/questions/:id/categories', requireAdmin, express.json(), (req, res
 });
 
 // Admin: spara/redigera svar direkt på frågan
-app.post('/admin/questions/:id', requireAdmin, (req, res) => {
+app.post('/admin/questions/:id', requireStaff, (req, res) => {
   const id = Number(req.params.id);
   const q = db.prepare('SELECT * FROM questions WHERE id=?').get(id);
   if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
@@ -1183,6 +1255,78 @@ app.post('/admin/questions/:id', requireAdmin, (req, res) => {
   `).run(answer_title, answer_body, answer_tags, answered_by, answered_at, id);
 
   res.redirect('/questions/' + id);
+});
+
+app.get('/support-questions', requireSupportOrAdmin, (req, res) => {
+  const perPage = 10;
+  const page = Math.max(1, Number(req.query.page || 1));
+  const offset = (page - 1) * perPage;
+
+  const totalOpen = db.prepare(`
+    SELECT COUNT(*) AS n
+    FROM questions q
+    WHERE COALESCE(q.is_answered,0)=0
+      AND COALESCE(q.status,'open') <> 'closed'
+  `).get().n;
+
+  const rows = db.prepare(`
+    SELECT
+      q.id,
+      q.title,
+      q.user_id,
+      q.created_at,
+      q.status,
+      COALESCE(q.is_answered,0) AS is_answered,
+      u.name  AS user_name,
+      u.email AS user_email
+    FROM questions q
+    LEFT JOIN users u ON u.id = q.user_id
+    WHERE COALESCE(q.is_answered,0)=0
+      AND COALESCE(q.status,'open') <> 'closed'
+    ORDER BY datetime(q.created_at) DESC
+    LIMIT ? OFFSET ?
+  `).all(perPage, offset);
+
+  res.render('support-questions', {
+    title: 'Obesvarade frågor',
+    questions: rows,
+    page,
+    totalPages: Math.max(1, Math.ceil(totalOpen / perPage)),
+    totalOpen
+  });
+});
+
+// POST: svara på en fråga
+app.post('/support-questions/:id/answer', requireSupportOrAdmin, express.urlencoded({extended:true}), (req, res) => {
+  const qid = Number(req.params.id);
+  const me  = getUser(req);
+  const { answer } = req.body;
+
+  if (!answer || !answer.trim()) {
+    return res.status(400).send('Svar kan inte vara tomt');
+  }
+
+  // Spara svaret som ett topic och länka det till frågan
+  const now = new Date().toISOString();
+
+  const base = db.prepare(`
+    INSERT INTO topics_base (created_at, updated_at, created_by)
+    VALUES (?, ?, ?)
+  `).run(now, now, me.id);
+
+  db.prepare(`
+    INSERT INTO topics (id, title, excerpt, body, tags, is_resource)
+    VALUES (?, ?, ?, ?, '', 0)
+  `).run(base.lastInsertRowid, 'Svar på: ' + qid, answer.slice(0,120), answer);
+
+  // Länka till frågan
+  db.prepare(`INSERT INTO question_topic (question_id, topic_id) VALUES (?, ?)`)
+    .run(qid, base.lastInsertRowid);
+
+  // Markera frågan som besvarad
+  db.prepare(`UPDATE questions SET status='answered', updated_at=? WHERE id=?`).run(now, qid);
+
+  res.redirect('/support-questions');
 });
 
 // admin-only create/update/delete
@@ -3129,28 +3273,30 @@ app.get('/ask', (req, res) => {
 
 // /admin-accounts – lista users + dealers med sök, filter och paginering
 app.get('/admin-accounts', requireAdmin, (req, res) => {
-  // --- Query params (med defaults) ---
-  const qRaw     = (req.query.q || '').trim();
-  const q        = qRaw;                   // skickas till vyn
-  const source   = (req.query.source || '').trim();      // '' | 'nms' | 'dynex'
-  const perPage  = Math.max(1, Number(req.query.perPage || 10));
-  const page     = Math.max(1, Number(req.query.page || 1));
+  // --- Query params (dealers) ---
+  const qRaw    = (req.query.q || '').trim();
+  const q       = qRaw; // skickas till vyn
+  const source  = (req.query.source || '').trim();      // '' | 'nms' | 'dynex'
+  const perPage = Math.max(1, Number(req.query.perPage || 10)); // dealers per sida (default 10)
+  const page    = Math.max(1, Number(req.query.page || 1));
 
-// --- Users: hämta med pagination ---
-const usersPage    = Number(req.query.usersPage) || 1;
-const usersPerPage = 10;
-const usersOffset  = (usersPage - 1) * usersPerPage;
+  // --- Users: pagination (10 per sida) ---
+  const usersPerPageRaw = Number(req.query.usersPerPage || 10);
+  const usersPerPage    = 10; // lås till 10 oavsett vad som kommer in
+  let usersPage         = Math.max(1, Number(req.query.usersPage || 1));
 
-const usersTotal = db.prepare(`SELECT COUNT(*) AS c FROM users`).get().c;
+  const usersTotal = db.prepare(`SELECT COUNT(*) AS c FROM users`).get().c;
+  const usersTotalPages = Math.max(1, Math.ceil(usersTotal / usersPerPage));
+  if (usersPage > usersTotalPages) usersPage = usersTotalPages;
 
-const users = db.prepare(`
-  SELECT id, email, name, role, created_at, updated_at
-  FROM users
-  ORDER BY datetime(created_at) DESC
-  LIMIT ? OFFSET ?
-`).all(usersPerPage, usersOffset);
+  const usersOffset = (usersPage - 1) * usersPerPage;
 
-const usersTotalPages = Math.ceil(usersTotal / usersPerPage);
+  const users = db.prepare(`
+    SELECT id, email, name, role, created_at, updated_at
+    FROM users
+    ORDER BY datetime(created_at) DESC
+    LIMIT ? OFFSET ?
+  `).all(usersPerPage, usersOffset);
 
   // --- Dealers: bygg WHERE dynamiskt för filter/sök ---
   const where = [];
@@ -3162,11 +3308,10 @@ const usersTotalPages = Math.ceil(usersTotal / usersPerPage);
   }
 
   if (qRaw) {
-    // enkel fritext över flera fält (case-insensitive)
     const like = `%${qRaw.toLowerCase()}%`;
     where.push(`
       (
-        lower(IFNULL(email,''))     LIKE ?
+        lower(IFNULL(email,''))      LIKE ?
         OR lower(IFNULL(username,''))  LIKE ?
         OR lower(IFNULL(company,''))   LIKE ?
         OR lower(IFNULL(firstname,'')) LIKE ?
@@ -3179,48 +3324,56 @@ const usersTotalPages = Math.ceil(usersTotal / usersPerPage);
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-  // --- Totals ---
+  // --- Dealers totals ---
   const totalDealersAll = db.prepare(`SELECT COUNT(*) AS n FROM dealers`).get().n;
   const totalFiltered   = db.prepare(`SELECT COUNT(*) AS n FROM dealers ${whereSql}`).get(...params).n;
 
-  // --- Paginering ---
+  // --- Dealers paginering ---
   const totalPages = Math.max(1, Math.ceil(totalFiltered / perPage));
   const safePage   = Math.min(page, totalPages);
   const offset     = (safePage - 1) * perPage;
 
-// --- Hämta dealers för aktuell sida ---
-const dealers = db.prepare(`
-  SELECT
-    source,
-    dealer_id,
-    email,
-    username,
-    company,
-    firstname,
-    lastname,
-    telephone,
-    added,
-    updated_at,
-    md5_token               -- <-- ta med token
-  FROM dealers
-  ${whereSql}
-  ORDER BY datetime(updated_at) DESC
-  LIMIT ? OFFSET ?
-`).all(...params, perPage, offset);
+  // --- Hämta dealers för aktuell sida ---
+  const dealers = db.prepare(`
+    SELECT
+      source,
+      dealer_id,
+      email,
+      username,
+      company,
+      firstname,
+      lastname,
+      telephone,
+      added,
+      updated_at,
+      md5_token
+    FROM dealers
+    ${whereSql}
+    ORDER BY datetime(updated_at) DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, perPage, offset);
 
-// --- Render ---
-res.render('admin-accounts', {
-  title: 'Konton & dealers',
-  users,
-  dealers,
-  totalDealersAll,
-  totalFiltered,
-  totalPages,
-  page: safePage,
-  q,
-  source,
-  perPage
-});
+  // --- Render ---
+  res.render('admin-accounts', {
+    title: 'Konton & dealers',
+
+    // users (med paginerings-data till vyn)
+    users,
+    usersPage,
+    usersPerPage,      // om du vill visa ”10 per sida” i UI
+    usersTotal,
+    usersTotalPages,
+
+    // dealers
+    dealers,
+    totalDealersAll,
+    totalFiltered,
+    totalPages,
+    page: safePage,
+    q,
+    source,
+    perPage
+  });
 });
 
 app.get('/admin/dealers/token', requireAdmin, (req, res) => {
