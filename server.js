@@ -2084,33 +2084,30 @@ app.get('/questions/:id', (req, res) => {
   }
 
   // 3) Kategorier att utgå ifrån (topic_categories → fallback question_category)
-let catIds = [];
-try {
-  if (answerTopic) {
-    catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id = ?`)
-      .all(answerTopic.id).map(r => r.category_id);
+  let catIds = [];
+  try {
+    if (answerTopic) {
+      catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id = ?`)
+        .all(answerTopic.id).map(r => r.category_id);
+    }
+  } catch {}
+  if (!catIds.length) {
+    try {
+      catIds = db.prepare(`SELECT category_id FROM question_category WHERE question_id = ?`)
+        .all(q.id).map(r => r.category_id);
+    } catch {}
   }
-} catch {}
-
-if (!catIds.length) {
-  try {
-    catIds = db.prepare(`SELECT category_id FROM question_category WHERE question_id = ?`)
-      .all(q.id).map(r => r.category_id);
-  } catch {}
-}
-
-// ➜ NYTT: prova plural-tabellen också
-if (!catIds.length) {
-  try {
-    catIds = db.prepare(`SELECT category_id FROM question_categories WHERE question_id = ?`)
-      .all(q.id).map(r => r.category_id);
-  } catch {}
-}
-
-// sista fallbacken du redan har
-if (!catIds.length && q.category_id) {
-  catIds = [q.category_id];
-}
+  // prova plural-tabellen också
+  if (!catIds.length) {
+    try {
+      catIds = db.prepare(`SELECT category_id FROM question_categories WHERE question_id = ?`)
+        .all(q.id).map(r => r.category_id);
+    } catch {}
+  }
+  // sista fallbacken
+  if (!catIds.length && q.category_id) {
+    catIds = [q.category_id];
+  }
 
   // --- SIDOKOLUMN: relaterade listor ---
   let relatedQuestions = [];
@@ -2119,51 +2116,79 @@ if (!catIds.length && q.category_id) {
   if (catIds.length) {
     const ph = catIds.map(() => '?').join(',');
 
-const sameCatTopics = db.prepare(`
-  SELECT DISTINCT id, title, is_resource, ts FROM (
-    SELECT b.id AS id, t.title, IFNULL(t.is_resource,0) AS is_resource,
-           COALESCE(b.updated_at, b.created_at) AS ts
-    FROM topics_base b
-    JOIN topics t            ON t.id = b.id
-    JOIN topic_categories tc ON tc.topic_id = t.id
-    WHERE tc.category_id IN (${ph})
-      AND ( ? IS NULL OR b.id <> ? )
+    // Kolla vilka tabeller som finns (för att undvika "no such table")
+    const hasTopicCategories     = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='topic_categories'`).get();
+    const hasTopicCategory       = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='topic_category'`).get();
+    const hasQuestionCategories  = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='question_categories'`).get();
+    const hasQuestionCategory    = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='question_category'`).get();
 
-    UNION
+    // ----- Topics/Resurser i samma kategori -----
+    let partsT = [];
+    let paramsT = [];
+    if (hasTopicCategories) {
+      partsT.push(`
+        SELECT b.id AS id, t.title, IFNULL(t.is_resource,0) AS is_resource,
+               COALESCE(b.updated_at, b.created_at) AS ts,
+               'topic' AS kind
+        FROM topics_base b
+        JOIN topics t            ON t.id = b.id
+        JOIN topic_categories tc ON tc.topic_id = t.id
+        WHERE tc.category_id IN (${ph})
+          AND ( ? IS NULL OR b.id <> ? )
+      `);
+      paramsT.push(...catIds, (answerTopic ? answerTopic.id : null), (answerTopic ? answerTopic.id : null));
+    }
+    if (hasTopicCategory) {
+      partsT.push(`
+        SELECT b.id AS id, t.title, IFNULL(t.is_resource,0) AS is_resource,
+               COALESCE(b.updated_at, b.created_at) AS ts,
+               'topic' AS kind
+        FROM topics_base b
+        JOIN topics t           ON t.id = b.id
+        JOIN topic_category tc1 ON tc1.topic_id = t.id
+        WHERE tc1.category_id IN (${ph})
+          AND ( ? IS NULL OR b.id <> ? )
+      `);
+      paramsT.push(...catIds, (answerTopic ? answerTopic.id : null), (answerTopic ? answerTopic.id : null));
+    }
 
-    SELECT b.id AS id, t.title, IFNULL(t.is_resource,0) AS is_resource,
-           COALESCE(b.updated_at, b.created_at) AS ts
-    FROM topics_base b
-    JOIN topics t           ON t.id = b.id
-    JOIN topic_category tc1 ON tc1.topic_id = t.id
-    WHERE tc1.category_id IN (${ph})
-      AND ( ? IS NULL OR b.id <> ? )
-  )
-  ORDER BY ts DESC
-`).all(
-  ...catIds, (answerTopic ? answerTopic.id : null), (answerTopic ? answerTopic.id : null),
-  ...catIds, (answerTopic ? answerTopic.id : null), (answerTopic ? answerTopic.id : null)
-);
+    const sameCatTopics = partsT.length
+      ? db.prepare(`SELECT DISTINCT * FROM (${partsT.join(' UNION ALL ')}) ORDER BY ts DESC`).all(...paramsT)
+      : [];
 
-const sameCatQuestions = db.prepare(`
-  SELECT DISTINCT id, title, ts, 'question' AS kind FROM (
-    SELECT q2.id AS id, q2.title,
-           COALESCE(q2.updated_at, q2.created_at) AS ts
-    FROM questions q2
-    JOIN question_category qc2 ON qc2.question_id = q2.id
-    WHERE qc2.category_id IN (${ph}) AND q2.id <> ?
+    // ----- Frågor i samma kategori -----
+    let partsQ = [];
+    let paramsQ = [];
+    if (hasQuestionCategory) {
+      partsQ.push(`
+        SELECT q2.id AS id, q2.title,
+               COALESCE(q2.updated_at, q2.created_at) AS ts,
+               'question' AS kind,
+               0 AS is_resource
+        FROM questions q2
+        JOIN question_category qc2 ON qc2.question_id = q2.id
+        WHERE qc2.category_id IN (${ph}) AND q2.id <> ?
+      `);
+      paramsQ.push(...catIds, q.id);
+    }
+    if (hasQuestionCategories) {
+      partsQ.push(`
+        SELECT q3.id AS id, q3.title,
+               COALESCE(q3.updated_at, q3.created_at) AS ts,
+               'question' AS kind,
+               0 AS is_resource
+        FROM questions q3
+        JOIN question_categories qc3 ON qc3.question_id = q3.id
+        WHERE qc3.category_id IN (${ph}) AND q3.id <> ?
+      `);
+      paramsQ.push(...catIds, q.id);
+    }
 
-    UNION
+    const sameCatQuestions = partsQ.length
+      ? db.prepare(`SELECT DISTINCT * FROM (${partsQ.join(' UNION ALL ')}) ORDER BY ts DESC`).all(...paramsQ)
+      : [];
 
-    SELECT q3.id AS id, q3.title,
-           COALESCE(q3.updated_at, q3.created_at) AS ts
-    FROM questions q3
-    JOIN question_categories qc3 ON qc3.question_id = q3.id
-    WHERE qc3.category_id IN (${ph}) AND q3.id <> ?
-  )
-  ORDER BY ts DESC
-`).all(...catIds, q.id, ...catIds, q.id);
-
+    // Mixa & topp 10
     relatedTopics = [...sameCatTopics, ...sameCatQuestions]
       .sort((a,b) => new Date(b.ts) - new Date(a.ts))
       .slice(0, 10);
@@ -2247,8 +2272,6 @@ const sameCatQuestions = db.prepare(`
   }
 
   // 4) Data till vyn för den gröna infoboxen
-  //    - "linkedTopicsCurrent": topics kopplade direkt till denna fråga
-  //    - Om tomt men vi har inheritedTopic → skicka det istället, så infoboxen fortfarande visas
   let linked = db.prepare(`
     SELECT t.id, t.title
     FROM question_topic qt
