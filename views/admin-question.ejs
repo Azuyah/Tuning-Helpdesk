@@ -46,7 +46,7 @@
           <span class="text-xs text-slate-500">Senast besvarad: <%= new Date(q.answered_at).toLocaleString('sv-SE') %></span>
         <% } %>
       </div>
-      <form method="POST" action="/admin/questions/<%= q.id %>/answer">
+      <form method="POST" action="/admin/questions/<%= q.id %>">
 <div>
   <label class="block text-sm font-medium text-slate-700">Ditt svar</label>
   <textarea id="answerEditor" name="answer_body" rows="10"><%= q.answer_body || '' %></textarea>
