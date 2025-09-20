@@ -92,6 +92,28 @@
         </div>
       </div>
     </div>
+    <% } else if (linkedQuestion) { %>
+  <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-start gap-3">
+        <i class="ti ti-link text-lg mt-0.5 text-emerald-700"></i>
+        <div>
+          <div class="text-slate-800">Din fråga har besvarats tidigare här:</div>
+          <a href="/questions/<%= linkedQuestion.id %>" class="mt-1 inline-flex items-center gap-2 font-medium text-emerald-700 hover:underline">
+            <span class="truncate"><%= linkedQuestion.title %></span>
+          </a>
+        </div>
+      </div>
+      <div class="shrink-0">
+        <a href="/questions/<%= linkedQuestion.id %>" class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
+          <i class="ti ti-external-link"></i> Visa fråga
+        </a>
+      </div>
+    </div>
+  </div>
+<% } else if (q.is_answered && q.answer_body) { %>
+
+
   <% } else if (q.is_answered && q.answer_body) { %>
     <!-- Internt skrivet svar -->
     <div class="prose prose-slate max-w-none mb-6">
