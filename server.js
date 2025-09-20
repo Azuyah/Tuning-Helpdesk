@@ -713,6 +713,24 @@ app.get('/topic/:id', (req, res) => {
     topic.category_id = cat.id;
     topic.category_title = cat.title;
   }
+  // Fallback: om ämnet saknar egen kategori men är svar på en fråga → ärv frågans kategori
+if (!topic.category_id && topic.answer_for_question_id) {
+  try {
+    const qcat = db.prepare(`
+      SELECT c.id, c.title
+      FROM question_category qc
+      JOIN categories c ON c.id = qc.category_id
+      WHERE qc.question_id = ?
+      ORDER BY qc.rowid ASC
+      LIMIT 1
+    `).get(topic.answer_for_question_id);
+
+    if (qcat) {
+      topic.category_id = qcat.id;
+      topic.category_title = qcat.title;
+    }
+  } catch (_) { /* ignore */ }
+}
   // Räkna upp visningar
   db.prepare(`UPDATE topics_base SET views = COALESCE(views,0)+1 WHERE id = ?`).run(topic.id);
   topic.views = (topic.views || 0) + 1;
