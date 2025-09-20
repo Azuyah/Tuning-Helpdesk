@@ -1902,49 +1902,46 @@ app.get('/questions/:id', (req, res) => {
   const id = Number(req.params.id);
   const me = getUser(req);
 
-  // --- 0) Finns questions.answer_tags? ---
+  // Kolla om questions.answer_tags finns
   let hasAnswerTagsCol = false;
   try {
-    hasAnswerTagsCol = db.prepare(`PRAGMA table_info(questions)`)
-      .all()
-      .some(c => c.name === 'answer_tags');
-  } catch (_) { /* ignore */ }
+    hasAnswerTagsCol = db.prepare(`PRAGMA table_info(questions)`).all().some(c => c.name === 'answer_tags');
+  } catch {}
 
-  // --- 1) Frågan (robust mot saknad answer_tags-kolumn) ---
-const q = db.prepare(`
-  SELECT
-    q.*,
-    u.name  AS user_name,
-    u.email AS user_email,
-    c.id    AS category_id,
-    c.title AS category_title
-  FROM questions q
-  LEFT JOIN users u              ON u.id = q.user_id
-  LEFT JOIN question_category qc ON qc.question_id = q.id
-  LEFT JOIN categories c         ON c.id = qc.category_id
-  WHERE q.id = ?
-  LIMIT 1
-`).get(id);
+  // 1) Hämta fråga + ev. kategori
+  const q = db.prepare(`
+    SELECT
+      q.*,
+      u.name  AS user_name,
+      u.email AS user_email,
+      c.id    AS category_id,
+      c.title AS category_title
+    FROM questions q
+    LEFT JOIN users u              ON u.id = q.user_id
+    LEFT JOIN question_category qc ON qc.question_id = q.id
+    LEFT JOIN categories c         ON c.id = qc.category_id
+    WHERE q.id = ?
+    LIMIT 1
+  `).get(id);
 
-if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
+  if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
 
-// Räkna upp visningar (enkelt läge)
-db.prepare(`UPDATE questions SET views = COALESCE(views,0) + 1 WHERE id = ?`).run(id);
+  // Räknare (enkelt läge)
+  db.prepare(`UPDATE questions SET views = COALESCE(views,0) + 1 WHERE id = ?`).run(id);
+  q.views = (q.views || 0) + 1;
 
-// Uppdatera minnesobjektet så siffran syns direkt vid render
-q.views = (q.views || 0) + 1;
-
-  // --- 2) Kopplat svar-ämne (om något) ---
-  const link = db.prepare(`
+  // 2) Kopplingar
+  // 2a) ev. direkt kopplat topic/resource till DENNA fråga
+  const directLink = db.prepare(`
     SELECT qt.topic_id
     FROM question_topic qt
     WHERE qt.question_id = ?
-    ORDER BY rowid DESC
+    ORDER BY qt.rowid DESC
     LIMIT 1
   `).get(id);
 
   let answerTopic = null;
-  if (link && link.topic_id) {
+  if (directLink?.topic_id) {
     answerTopic = db.prepare(`
       SELECT b.id, b.created_at, b.updated_at,
              t.title, t.excerpt, t.body, t.tags, t.is_resource,
@@ -1953,40 +1950,67 @@ q.views = (q.views || 0) + 1;
       JOIN topics t ON t.id = b.id
       LEFT JOIN users u ON u.id = b.created_by
       WHERE b.id = ?
-    `).get(link.topic_id);
+    `).get(directLink.topic_id);
+  }
 
-    // Markera sedd för ägaren vid besvarad fråga
-    if (me && me.id === q.user_id && q.status === 'answered') {
-      db.prepare(`UPDATE questions SET user_seen_answer_at = datetime('now') WHERE id=?`).run(q.id);
+  // 2b) ev. kopplad FRÅGA (duplikat/”läs där”)
+  const linkedQuestion = q.linked_question_id
+    ? db.prepare(`SELECT id, title FROM questions WHERE id=?`).get(q.linked_question_id)
+    : null;
+
+  // Om vi saknar direkt topic på denna fråga men den länkade frågan har ett → använd det
+  let inheritedTopic = null;
+  if (!answerTopic && linkedQuestion) {
+    const lqLink = db.prepare(`
+      SELECT qt.topic_id
+      FROM question_topic qt
+      WHERE qt.question_id = ?
+      ORDER BY qt.rowid DESC
+      LIMIT 1
+    `).get(linkedQuestion.id);
+
+    if (lqLink?.topic_id) {
+      inheritedTopic = db.prepare(`
+        SELECT b.id, b.created_at, b.updated_at,
+               t.title, t.excerpt, t.body, t.tags, t.is_resource,
+               u.name AS author_name
+        FROM topics_base b
+        JOIN topics t ON t.id = b.id
+        LEFT JOIN users u ON u.id = b.created_by
+        WHERE b.id = ?
+      `).get(lqLink.topic_id);
+      // Behandla som "svar" för visningslogik nedan
+      answerTopic = inheritedTopic;
     }
   }
 
-  // --- 3) Kategorier att utgå ifrån (topic_categories -> fallback question_category) ---
+  // Markera sedd för ägaren om besvarad
+  if (me && me.id === q.user_id && q.status === 'answered') {
+    db.prepare(`UPDATE questions SET user_seen_answer_at = datetime('now') WHERE id=?`).run(q.id);
+  }
+
+  // 3) Kategorier att utgå ifrån (topic_categories → fallback question_category)
   let catIds = [];
   try {
     if (answerTopic) {
-      catIds = db.prepare(`
-        SELECT category_id FROM topic_categories WHERE topic_id = ?
-      `).all(answerTopic.id).map(r => r.category_id);
+      catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id = ?`)
+        .all(answerTopic.id).map(r => r.category_id);
     }
-  } catch (_) { /* ignore */ }
+  } catch {}
   if (!catIds.length) {
     try {
-      catIds = db.prepare(`
-        SELECT category_id FROM question_category WHERE question_id = ?
-      `).all(q.id).map(r => r.category_id);
-    } catch (_) { /* ignore */ }
+      catIds = db.prepare(`SELECT category_id FROM question_category WHERE question_id = ?`)
+        .all(q.id).map(r => r.category_id);
+    } catch {}
   }
 
-  // --- SIDOKOLUMN START ---
+  // --- SIDOKOLUMN: relaterade listor ---
   let relatedQuestions = [];
   let relatedTopics    = [];
 
-  // 1) ALLT i samma kategori (ämnen + resurser + frågor)
   if (catIds.length) {
     const ph = catIds.map(() => '?').join(',');
 
-    // a) Topics (inkl resurser), exkludera ev. pågående answerTopic
     const sameCatTopics = db.prepare(`
       SELECT DISTINCT 
         b.id   AS id,
@@ -2001,7 +2025,6 @@ q.views = (q.views || 0) + 1;
         AND ( ? IS NULL OR b.id <> ? )
     `).all(...catIds, answerTopic ? answerTopic.id : null, answerTopic ? answerTopic.id : null);
 
-    // b) Frågor i samma kategori
     const sameCatQuestions = db.prepare(`
       SELECT DISTINCT
         q2.id   AS id,
@@ -2020,28 +2043,20 @@ q.views = (q.views || 0) + 1;
       .slice(0, 10);
   }
 
-  // 2) Relaterat på TAGGAR (frågor + ämnen + resurser)
+  // Taggdrivna (blandat)
   {
     const baseTags  = (answerTopic?.tags || '');
     const extraTags = hasAnswerTagsCol ? (q.answer_tags || '') : '';
-    const tagSet = new Set(
-      (baseTags + ',' + extraTags)
-        .split(',')
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean)
-    );
-    const tags = Array.from(tagSet).slice(0, 8);
-
-    relatedQuestions = []; // nu blandad lista: question/topic(resource)
+    const tags = Array.from(
+      new Set((baseTags + ',' + extraTags).split(',').map(s => s.trim().toLowerCase()).filter(Boolean))
+    ).slice(0, 8);
 
     if (tags.length) {
       const likeTopicTags = tags.map(() => `lower(IFNULL(t.tags,'')) LIKE ?`).join(' OR ');
       const likeValsTopic  = tags.map(t => `%${t}%`);
 
-      // Bas: frågor (via kopplade topic-tags) + topics (ämnen+resurser) via sina tags
       let sql = `
         SELECT kind, id, title, is_resource FROM (
-          -- Frågor via kopplade ämnens taggar
           SELECT 'question' AS kind, q2.id AS id, q2.title AS title, 0 AS is_resource,
                  datetime(q2.created_at) AS ts
           FROM questions q2
@@ -2052,7 +2067,6 @@ q.views = (q.views || 0) + 1;
 
           UNION
 
-          -- Ämnen + Resurser via topic.tags
           SELECT 'topic' AS kind, b.id AS id, t2.title AS title, IFNULL(t2.is_resource,0) AS is_resource,
                  datetime(COALESCE(b.updated_at, b.created_at)) AS ts
           FROM topics_base b
@@ -2060,21 +2074,13 @@ q.views = (q.views || 0) + 1;
           WHERE ( ${likeTopicTags.replace(/t\./g, 't2.')} )
             AND b.id <> IFNULL(?, -1)
       `;
+      const params = [ q.id, ...likeValsTopic, answerTopic ? answerTopic.id : null, ...likeValsTopic ];
 
-      const params = [
-        q.id,
-        ...likeValsTopic,
-        answerTopic ? answerTopic.id : null,
-        ...likeValsTopic
-      ];
-
-      // Extra UNION om questions.answer_tags finns
       if (hasAnswerTagsCol) {
         const likeQTags = tags.map(() => `lower(IFNULL(q3.answer_tags,'')) LIKE ?`).join(' OR ');
         const likeValsQ = tags.map(t => `%${t}%`);
         sql += `
           UNION
-          -- Frågor via egna answer_tags
           SELECT 'question' AS kind, q3.id AS id, q3.title AS title, 0 AS is_resource,
                  datetime(q3.created_at) AS ts
           FROM questions q3
@@ -2084,16 +2090,11 @@ q.views = (q.views || 0) + 1;
         params.push(q.id, ...likeValsQ);
       }
 
-      sql += `
-        )
-        ORDER BY ts DESC
-        LIMIT 10
-      `;
+      sql += `) ORDER BY ts DESC LIMIT 10`;
 
       try {
         relatedQuestions = db.prepare(sql).all(...params);
-      } catch (e) {
-        // Fallback: bara topic-tags (frågor+topics)
+      } catch {
         relatedQuestions = db.prepare(`
           SELECT kind, id, title, is_resource FROM (
             SELECT 'question' AS kind, q2.id AS id, q2.title AS title, 0 AS is_resource,
@@ -2105,7 +2106,6 @@ q.views = (q.views || 0) + 1;
               AND ( ${likeTopicTags} )
 
             UNION
-
             SELECT 'topic' AS kind, b.id AS id, t2.title AS title, IFNULL(t2.is_resource,0) AS is_resource,
                    datetime(COALESCE(b.updated_at, b.created_at)) AS ts
             FROM topics_base b
@@ -2119,25 +2119,31 @@ q.views = (q.views || 0) + 1;
       }
     }
   }
-  // --- SIDOKOLUMN SLUT ---
 
-  const linked = db.prepare(`
-  SELECT t.id, t.title
-  FROM question_topic qt
-  JOIN topics t ON t.id = qt.topic_id
-  WHERE qt.question_id = ?
-  ORDER BY t.title
-`).all(id);
+  // 4) Data till vyn för den gröna infoboxen
+  //    - "linkedTopicsCurrent": topics kopplade direkt till denna fråga
+  //    - Om tomt men vi har inheritedTopic → skicka det istället, så infoboxen fortfarande visas
+  let linked = db.prepare(`
+    SELECT t.id, t.title
+    FROM question_topic qt
+    JOIN topics t ON t.id = qt.topic_id
+    WHERE qt.question_id = ?
+    ORDER BY qt.rowid DESC
+  `).all(id);
 
+  if ((!linked || !linked.length) && inheritedTopic) {
+    linked = [{ id: inheritedTopic.id, title: inheritedTopic.title }];
+  }
 
   res.locals.showHero = false;
   res.render('question', {
     title: `Fråga: ${q.title}`,
     q,
-    answerTopic,
-    linked,
-    relatedQuestions, // blandat (fråga/ämne/resurs) på taggar
-    relatedTopics,    // allt i samma kategori (ämnen + resurser + frågor)
+    answerTopic,          // kan komma från denna fråga ELLER från länkad fråga
+    linked,               // används för den gröna rutan
+    linkedQuestion,       // så du kan visa blå länk till frågan om du vill
+    relatedQuestions,     // blandat (fråga/ämne/resurs) på taggar
+    relatedTopics,        // allt i samma kategori (ämnen + resurser + frågor)
     user: me
   });
 });

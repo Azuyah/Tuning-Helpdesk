@@ -30,6 +30,37 @@
       <% } %>
     </div>
 
+    <!-- FRÅGA (eget kort) -->
+    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+      <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Fråga</div>
+
+      <h1 class="text-2xl font-bold text-slate-900 mb-2">
+        Fråga: <%= q.title %>
+      </h1>
+
+      <% if (q.body) { %>
+        <p class="text-slate-700 whitespace-pre-line"><%= q.body %></p>
+      <% } else { %>
+        <p class="text-slate-500 italic">Ingen beskrivning bifogad.</p>
+      <% } %>
+
+        <% if (q.image_url) { %>
+    <div class="mt-4">
+      <img src="<%= q.image_url %>"
+           alt="Bilagd bild"
+           class="max-h-96 rounded-xl border border-slate-200 object-contain bg-white" />
+    </div>
+  <% } %>
+
+      <div class="mt-4 text-sm text-slate-500">
+        Från: <span class="font-medium"><%= q.user_name || 'Anonym' %></span>
+        • Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>
+        <% if (q.updated_at && q.updated_at !== q.created_at) { %>
+          • Uppdaterad: <%= new Date(q.updated_at).toLocaleString('sv-SE') %>
+        <% } %>
+      </div>
+    </article>
+
 <!-- SVAR (kort under frågan) -->
 <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
   <div class="mb-4">
@@ -38,50 +69,31 @@
   </div>
 
   <% if (linked && linked.length) { 
-       const t = linked[0];
-       const isRes = Number(t.is_resource) === 1;
-       const href  = isRes ? ('/resources/' + t.id) : ('/topic/' + t.id);
-  %>
+       const t = linked[0]; %>
+    <!-- Info-ruta: tidigare besvarat -->
     <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-start gap-3">
           <i class="ti ti-link text-lg mt-0.5 text-emerald-700"></i>
           <div>
-            <div class="text-slate-800">Din fråga har besvarats tidigare i följande inlägg:</div>
-            <a href="<%= href %>" class="mt-1 inline-flex items-center gap-2 font-medium text-sky-700 hover:underline">
+            <div class="text-slate-800">
+              Din fråga har besvarats tidigare i följande inlägg:
+            </div>
+            <a href="/topic/<%= t.id %>" class="mt-1 inline-flex items-center gap-2 font-medium text-emerald-700 hover:underline">
               <span class="truncate"><%= t.title %></span>
             </a>
           </div>
         </div>
         <div class="shrink-0">
-          <a href="<%= href %>" class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
+          <a href="/topic/<%= t.id %>"
+             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
             <i class="ti ti-external-link"></i> Visa inlägg
           </a>
         </div>
       </div>
     </div>
-
-  <% } else if (linkedQuestion) { %>
-    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div class="flex items-start gap-3">
-          <i class="ti ti-link text-lg mt-0.5 text-emerald-700"></i>
-          <div>
-            <div class="text-slate-800">Din fråga har besvarats tidigare i följande inlägg:</div>
-            <a href="/questions/<%= linkedQuestion.id %>" class="mt-1 inline-flex items-center gap-2 font-medium text-sky-700 hover:underline">
-              <span class="truncate"><%= linkedQuestion.title %></span>
-            </a>
-          </div>
-        </div>
-        <div class="shrink-0">
-          <a href="/questions/<%= linkedQuestion.id %>" class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
-            <i class="ti ti-external-link"></i> Visa inlägg
-          </a>
-        </div>
-      </div>
-    </div>
-
   <% } else if (q.is_answered && q.answer_body) { %>
+    <!-- Internt skrivet svar -->
     <div class="prose prose-slate max-w-none mb-6">
       <%- include('partials/richtext', { id: 'answer-' + q.id, html: q.answer_body }) %>
     </div>
@@ -91,6 +103,7 @@
       <% if (q.answer_tags) { %> • Taggar: <%= q.answer_tags %><% } %>
     </div>
   <% } else { %>
+    <!-- Ej besvarad -->
     <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700">
       Frågan har ej blivit besvarad än.
     </div>
@@ -122,24 +135,17 @@
       <dd class="font-medium text-slate-900"><%= q.views || 0 %></dd>
     </div>
 
-<!-- Koppling -->
+<!-- Kopplat ämne -->
 <div class="flex items-center justify-between gap-3">
-  <dt class="text-slate-600">Koppling</dt>
+  <dt class="text-slate-600">Kopplat ämne</dt>
   <dd class="flex items-center gap-3 font-medium text-slate-900">
     <% if (linked && linked.length) { 
-         const t = linked[0];
-         const isRes = Number(t.is_resource) === 1;
-         const href  = isRes ? ('/resources/' + t.id) : ('/topic/' + t.id);
-    %>
-      <a href="<%= href %>" class="text-sky-600 hover:underline truncate max-w-[14rem]"><%= t.title %></a>
-      <span class="text-xs text-slate-500 shrink-0"><%= isRes ? 'Resurs' : 'Ämne' %></span>
-
-    <% } else if (linkedQuestion) { %>
-      <a href="/questions/<%= linkedQuestion.id %>" class="text-sky-600 hover:underline truncate max-w-[14rem]"><%= linkedQuestion.title %></a>
-      <span class="text-xs text-slate-500 shrink-0">Fråga</span>
-
+         const t = linked[0]; %>
+      <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline truncate max-w-[14rem]">
+        <%= t.title %>
+      </a>
     <% } else { %>
-      <span class="text-slate-400 italic">Ingen koppling</span>
+      <span class="text-slate-400 italic">Inget kopplat ämne</span>
     <% } %>
   </dd>
 </div>
