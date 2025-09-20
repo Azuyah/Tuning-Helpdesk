@@ -255,30 +255,31 @@
   </div>
 </section>
 
-<!-- Dropdown-hantering: USERS -->
 <script>
 (function(){
-  // Öppna/stäng users dropdown
+  // Öppna/stäng + välj roll för USERS
   document.addEventListener('click', function(e){
     const btn = e.target.closest('.btn-role');
     const opt = e.target.closest('.role-option');
 
-    // Klick på “Ändra roll”-knapp
+    // Klick på "Ändra roll"
     if (btn) {
       e.stopPropagation();
+      // stäng alla andra dropdowns
       document.querySelectorAll('.role-menu').forEach(m => m.classList.add('hidden'));
+      // öppna den som hör till denna rad
       const menu = btn.parentElement.querySelector('.role-menu');
       if (menu) menu.classList.toggle('hidden');
       return;
     }
 
-    // Välj roll
+    // Val i dropdownen
     if (opt) {
       e.stopPropagation();
       const userId = opt.getAttribute('data-user-id');
       const role   = opt.getAttribute('data-role');
 
-      fetch('/api/users/' + userId + '/role', {
+      fetch('/api/users/' + encodeURIComponent(userId) + '/role', {
         method: 'PUT',
         headers: { 'Content-Type':'application/json' },
         body: JSON.stringify({ role })
@@ -292,7 +293,7 @@
       return;
     }
 
-    // Klick utanför stänger alla
+    // Klick utanför => stäng alla
     document.querySelectorAll('.role-menu').forEach(m => m.classList.add('hidden'));
   });
 })();
