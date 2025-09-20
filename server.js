@@ -2119,32 +2119,50 @@ if (!catIds.length && q.category_id) {
   if (catIds.length) {
     const ph = catIds.map(() => '?').join(',');
 
-    const sameCatTopics = db.prepare(`
-      SELECT DISTINCT 
-        b.id   AS id,
-        t.title,
-        IFNULL(t.is_resource,0) AS is_resource,
-        COALESCE(b.updated_at, b.created_at) AS ts,
-        'topic' AS kind
-      FROM topics_base b
-      JOIN topics t            ON t.id = b.id
-      JOIN topic_categories tc ON tc.topic_id = t.id
-      WHERE tc.category_id IN (${ph})
-        AND ( ? IS NULL OR b.id <> ? )
-    `).all(...catIds, answerTopic ? answerTopic.id : null, answerTopic ? answerTopic.id : null);
+const sameCatTopics = db.prepare(`
+  SELECT DISTINCT id, title, is_resource, ts FROM (
+    SELECT b.id AS id, t.title, IFNULL(t.is_resource,0) AS is_resource,
+           COALESCE(b.updated_at, b.created_at) AS ts
+    FROM topics_base b
+    JOIN topics t            ON t.id = b.id
+    JOIN topic_categories tc ON tc.topic_id = t.id
+    WHERE tc.category_id IN (${ph})
+      AND ( ? IS NULL OR b.id <> ? )
 
-    const sameCatQuestions = db.prepare(`
-      SELECT DISTINCT
-        q2.id   AS id,
-        q2.title,
-        0       AS is_resource,
-        COALESCE(q2.updated_at, q2.created_at) AS ts,
-        'question' AS kind
-      FROM questions q2
-      JOIN question_category qc2 ON qc2.question_id = q2.id
-      WHERE qc2.category_id IN (${ph})
-        AND q2.id <> ?
-    `).all(...catIds, q.id);
+    UNION
+
+    SELECT b.id AS id, t.title, IFNULL(t.is_resource,0) AS is_resource,
+           COALESCE(b.updated_at, b.created_at) AS ts
+    FROM topics_base b
+    JOIN topics t           ON t.id = b.id
+    JOIN topic_category tc1 ON tc1.topic_id = t.id
+    WHERE tc1.category_id IN (${ph})
+      AND ( ? IS NULL OR b.id <> ? )
+  )
+  ORDER BY ts DESC
+`).all(
+  ...catIds, (answerTopic ? answerTopic.id : null), (answerTopic ? answerTopic.id : null),
+  ...catIds, (answerTopic ? answerTopic.id : null), (answerTopic ? answerTopic.id : null)
+);
+
+const sameCatQuestions = db.prepare(`
+  SELECT DISTINCT id, title, ts, 'question' AS kind FROM (
+    SELECT q2.id AS id, q2.title,
+           COALESCE(q2.updated_at, q2.created_at) AS ts
+    FROM questions q2
+    JOIN question_category qc2 ON qc2.question_id = q2.id
+    WHERE qc2.category_id IN (${ph}) AND q2.id <> ?
+
+    UNION
+
+    SELECT q3.id AS id, q3.title,
+           COALESCE(q3.updated_at, q3.created_at) AS ts
+    FROM questions q3
+    JOIN question_categories qc3 ON qc3.question_id = q3.id
+    WHERE qc3.category_id IN (${ph}) AND q3.id <> ?
+  )
+  ORDER BY ts DESC
+`).all(...catIds, q.id, ...catIds, q.id);
 
     relatedTopics = [...sameCatTopics, ...sameCatQuestions]
       .sort((a,b) => new Date(b.ts) - new Date(a.ts))
