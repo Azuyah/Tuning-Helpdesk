@@ -1103,16 +1103,31 @@ if (categoryId) {
 
 // Lista + skapa kategorier
 app.get('/admin/categories', requireAdmin, (req, res) => {
-  // Kategorier + antal ämnen
+  // Kategorier + TOTALT antal poster (ämnen/resurser + frågor)
   const cats = db.prepare(`
-    SELECT c.id, c.title, c.icon, c.sort_order, COUNT(tc.topic_id) AS topic_count
+    SELECT
+      c.id,
+      c.title,
+      c.icon,
+      c.sort_order,
+      COALESCE(t.topic_cnt, 0)    AS topic_count,    -- ämnen/resurser
+      COALESCE(q.q_cnt, 0)        AS question_count, -- frågor
+      COALESCE(t.topic_cnt, 0) + COALESCE(q.q_cnt, 0) AS total_count
     FROM categories c
-    LEFT JOIN topic_category tc ON tc.category_id = c.id
-    GROUP BY c.id
+    LEFT JOIN (
+      SELECT category_id, COUNT(*) AS topic_cnt
+      FROM topic_category
+      GROUP BY category_id
+    ) t ON t.category_id = c.id
+    LEFT JOIN (
+      SELECT category_id, COUNT(*) AS q_cnt
+      FROM question_category
+      GROUP BY category_id
+    ) q ON q.category_id = c.id
     ORDER BY COALESCE(c.sort_order, 9999), c.title
   `).all();
 
-  // Alla ämnen per kategori (för expandern)
+  // ---- behåll "rows" som namn (används nedan) ----
   const rows = db.prepare(`
     SELECT tc.category_id AS cid, b.id, t.title, b.updated_at
     FROM topic_category tc
@@ -1126,8 +1141,11 @@ app.get('/admin/categories', requireAdmin, (req, res) => {
     (topicsByCat[r.cid] ||= []).push(r);
   }
 
-  // Alternativ för dropdowns (alla kategorier)
-  const catOptions = db.prepare(`SELECT id, title FROM categories ORDER BY COALESCE(sort_order,9999), title`).all();
+  const catOptions = db.prepare(`
+    SELECT id, title
+    FROM categories
+    ORDER BY COALESCE(sort_order,9999), title
+  `).all();
 
   res.render('categories', {
     title: 'Kategorier',
