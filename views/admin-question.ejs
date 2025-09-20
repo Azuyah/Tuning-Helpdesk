@@ -268,25 +268,26 @@
     });
   }
 
-  if (box){
-    box.addEventListener('click', function(e){
-      var btn = e.target.closest('button[data-id]');
-      if (!btn) return;
-      var topicId = btn.getAttribute('data-id');
-fetch('/api/questions/' + qid + '/attach', {
-  method: 'PUT',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ id: chosenId, type: chosenKind, replace: true })
-})
-.then(res => res.json().then(d => ({ ok: res.ok, data: d })))
-.then(resp => {
-  if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
-  toast('Koppling lyckades');
-  location.reload();
-})
-.catch(e => toast(e.message || 'Kunde inte koppla', false));
-    });
-  }
+if (box){
+  box.addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-id]');
+    if (!btn) return;
+    var topicId = btn.getAttribute('data-id');
+
+    fetch('/api/questions/' + qid + '/attach-topic', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: topicId, replace: true })
+    })
+    .then(res => res.json().then(d => ({ ok: res.ok, data: d })))
+    .then(resp => {
+      if (!resp.ok) throw new Error(resp.data && resp.data.error || 'Fel');
+      toast('Koppling lyckades');
+      location.reload();
+    })
+    .catch(e => toast(e.message || 'Kunde inte koppla', false));
+  });
+}
 
   // Confirm delete
   var delForm = document.querySelector('[data-del-form]');
