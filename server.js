@@ -855,31 +855,60 @@ if (tags.length) {
   }
 }
 
-// --- Relaterade ämnen ---
-
+// --- Relaterat via kategori: ämnen + resurser + frågor ---
 let relatedTopics = [];
 
-// (ev. kategori-baserade träffar – din kod oförändrad)
 try {
-  const catIds = db.prepare(`
-    SELECT category_id FROM topic_categories WHERE topic_id = ?
-  `).all(topic.id).map(r => r.category_id);
+  // Hämta alla kategori-id för detta topic (fallback: använd ev. 'category' du redan hämtat ovan)
+  let catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id=?`)
+                 .all(topic.id).map(r => r.category_id);
+  if (!catIds.length && category?.id) catIds = [category.id];
 
   if (catIds.length) {
-    const placeholders = catIds.map(() => '?').join(',');
-    relatedTopics = db.prepare(`
-      SELECT DISTINCT b.id, t.title
+    const ph = catIds.map(() => '?').join(',');
+
+    // 1) Ämnen + resurser i samma kategori (exkludera aktuell post)
+    const sameCatTopics = db.prepare(`
+      SELECT b.id, t.title, IFNULL(t.is_resource,0) AS is_resource,
+             COALESCE(b.updated_at, b.created_at) AS ts
       FROM topics_base b
-      JOIN topics t ON t.id = b.id
+      JOIN topics t            ON t.id = b.id
       JOIN topic_categories tc ON tc.topic_id = t.id
-      WHERE tc.category_id IN (${placeholders})
+      WHERE tc.category_id IN (${ph})
         AND b.id <> ?
-        AND IFNULL(t.is_resource, 0) = 0
-      ORDER BY COALESCE(b.updated_at, b.created_at) DESC
-      LIMIT 6
     `).all(...catIds, topic.id);
+
+    // 2) Frågor i samma kategori
+    const sameCatQuestions = db.prepare(`
+      SELECT q.id, q.title,
+             COALESCE(q.updated_at, q.created_at) AS ts
+      FROM questions q
+      JOIN question_category qc ON qc.question_id = q.id
+      WHERE qc.category_id IN (${ph})
+    `).all(...catIds);
+
+    // 3) Mixa, sortera och forma till {url,title}
+    const mixed = [
+      ...sameCatTopics.map(r => ({
+        url: r.is_resource ? `/resources/${r.id}` : `/topic/${r.id}`,
+        title: r.title,
+        ts: r.ts
+      })),
+      ...sameCatQuestions.map(r => ({
+        url: `/questions/${r.id}`,
+        title: r.title,
+        ts: r.ts
+      }))
+    ]
+    .sort((a,b) => new Date(b.ts) - new Date(a.ts))
+    .slice(0, 10)
+    .map(({url, title}) => ({ url, title }));
+
+    relatedTopics = mixed;
   }
-} catch (e) { /* ignore */ }
+} catch (_) {
+  // ignore
+}
 
 // Fallback via första taggen (om inga kategori-träffar)
 const firstTagLower = (topic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
