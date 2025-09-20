@@ -105,31 +105,51 @@
       </div>
     </div>
 
-<!-- Koppla ämne (max 1 kopplat) -->
+<!-- Koppling (ämne/resurs eller fråga) -->
 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-  <h3 class="font-semibold text-slate-900 mb-3">Koppla ämne</h3>
+  <h3 class="font-semibold text-slate-900 mb-3">Koppling</h3>
 
-  <div class="relative">
-    <input id="topicSearch" type="search" placeholder="Sök ämne…"
+  <div class="text-sm text-slate-600 mb-2">Nuvarande koppling:</div>
+
+  <% if (linked && linked.length) { 
+       const t = linked[0]; 
+       const isRes = Number(t.is_resource) === 1;
+       const href  = isRes ? ('/resources/' + t.id) : ('/topic/' + t.id);
+  %>
+    <!-- Visar kopplat ämne/resurs -->
+    <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+      <a href="<%= href %>" class="hover:underline">
+        <span class="<%= isRes ? 'text-amber-700' : 'text-sky-700' %>">
+          <%= t.title %>
+        </span>
+        <span class="ml-1 text-xs text-slate-500">(<%= isRes ? 'Resurs' : 'Ämne' %>)</span>
+      </a>
+      <button type="button" id="btnChangeTopic"
+              class="text-xs rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-50">Byt</button>
+    </div>
+
+  <% } else if (linkedQuestion) { %>
+    <!-- Visar kopplad fråga -->
+    <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+      <a href="/questions/<%= linkedQuestion.id %>" class="text-violet-700 hover:underline">
+        <%= linkedQuestion.title %> <span class="ml-1 text-xs text-slate-500">(Fråga)</span>
+      </a>
+      <button type="button" id="btnChangeTopic"
+              class="text-xs rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-50">Byt</button>
+    </div>
+
+  <% } else { %>
+    <div class="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500">
+      Ingen koppling ännu.
+    </div>
+  <% } %>
+
+  <!-- Sök/koppla om (stöder ämne/resurs/fråga) -->
+  <div class="relative mt-4">
+    <input id="topicSearch" type="search" placeholder="Sök ämne / resurs / fråga…"
            class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500"/>
     <div id="suggestBox"
          class="absolute z-10 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-lg hidden overflow-hidden"></div>
-  </div>
-
-  <div class="mt-4">
-    <div class="text-sm text-slate-600 mb-2">Kopplat ämne:</div>
-    <% if (linked && linked.length) { 
-         const t = linked[0]; %>
-      <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
-        <a href="/topic/<%= t.id %>" class="text-sky-600 hover:underline"><%= t.title %></a>
-        <button type="button" id="btnChangeTopic"
-                class="text-xs rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-50">Byt</button>
-      </div>
-    <% } else { %>
-      <div class="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500">
-        Inget ämne kopplat ännu.
-      </div>
-    <% } %>
   </div>
 </div>
 
