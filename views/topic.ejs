@@ -89,36 +89,81 @@
     </article>
   </div>
 
-  <!-- Högerkolumn -->
-  <aside class="space-y-8">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-      <h2 class="text-lg font-semibold text-slate-900 mb-4">Relaterade frågor</h2>
-      <% if (relatedQuestions && relatedQuestions.length) { %>
-        <ul class="space-y-3">
-          <% relatedQuestions.forEach(function(q){ %>
-            <li><a href="/questions/<%= q.id %>" class="text-sky-600 hover:underline"><%= q.title %></a></li>
-          <% }) %>
-        </ul>
-      <% } else { %>
-        <p class="text-sm text-slate-500">Inga frågor kopplade än.</p>
-      <% } %>
-    </div>
+<!-- Högerkolumn -->
+<aside class="lg:col-span-1 space-y-8 self-start">
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-  <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
-  <% if (relatedTopics && relatedTopics.length) { %>
-    <ul class="space-y-3">
-      <% relatedTopics.forEach(function(rt){ %>
-        <li>
-          <a href="<%= rt.url %>" class="text-slate-700 hover:text-sky-700"><%= rt.title %></a>
-        </li>
-      <% }) %>
-    </ul>
-  <% } else { %>
-    <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
-  <% } %>
-</div>
-  </aside>
+  <!-- Info-ruta -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">Information</h2>
+    <dl class="space-y-2 text-sm">
+
+      <div class="flex justify-between">
+        <dt class="text-slate-600">Författare</dt>
+        <dd class="font-medium text-slate-900"><%= topic.author_name || 'Okänd' %></dd>
+      </div>
+
+      <div class="flex justify-between">
+        <dt class="text-slate-600">Kategori</dt>
+        <dd class="font-medium">
+<% if (topic.category_id && topic.category_title) { %>
+  <a href="/explore?tab=all&cat=<%= encodeURIComponent(String(topic.category_id).toLowerCase()) %>" 
+     class="text-sky-600 hover:underline">
+    <%= topic.category_title %>
+  </a>
+<% } else { %>
+  <span class="text-slate-400 italic">Ingen kategori</span>
+<% } %>
+        </dd>
+      </div>
+
+      <% /* Visa visningar om du skickar med topic.views från servern */ %>
+      <% if (typeof topic.views !== 'undefined') { %>
+        <div class="flex justify-between">
+          <dt class="text-slate-600">Antal visningar</dt>
+          <dd class="font-medium text-slate-900"><%= topic.views || 0 %></dd>
+        </div>
+      <% } %>
+
+    </dl>
+  </div>
+
+  <!-- Relaterade frågor -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">Relaterade frågor</h2>
+    <% if (relatedQuestions && relatedQuestions.length) { %>
+      <ul class="space-y-3">
+        <% relatedQuestions.forEach(function(rq){ %>
+          <li>
+            <a href="/questions/<%= rq.id %>" class="text-sky-600 hover:underline">
+              <%= rq.title %>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="text-sm text-slate-500">Inga frågor kopplade än.</p>
+    <% } %>
+  </div>
+
+  <!-- Fler ämnen i denna kategori -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
+    <% if (relatedTopics && relatedTopics.length) { %>
+      <ul class="space-y-3">
+        <% relatedTopics.forEach(function(rt){ %>
+          <li>
+            <a href="<%= rt.url %>" class="text-slate-700 hover:text-sky-700">
+              <%= rt.title %>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p class="text-sm text-slate-500">Inga fler ämnen ännu.</p>
+    <% } %>
+  </div>
+
+</aside>
 </section>
 
 <script>

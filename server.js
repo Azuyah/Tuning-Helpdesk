@@ -662,13 +662,26 @@ app.post('/register', (req, res) => {
 // Visa ämne – men om det är en resurs, skicka till /resources/:id
 app.get('/topic/:id', (req, res) => {
   const topic = db.prepare(`
-    SELECT b.id, b.created_at, b.updated_at, b.answer_for_question_id,
-           t.title, t.excerpt, t.body, t.tags, t.is_resource, t.download_url,
-           u.name AS author_name
+    SELECT b.id, 
+           b.created_at, 
+           b.updated_at, 
+           b.answer_for_question_id,
+           t.title, 
+           t.excerpt, 
+           t.body, 
+           t.tags, 
+           t.is_resource, 
+           t.download_url,
+           u.name  AS author_name,
+           c.id    AS category_id,
+           c.title AS category_title
     FROM topics_base b
     JOIN topics t ON t.id = b.id
     LEFT JOIN users u ON u.id = b.created_by
+    LEFT JOIN topic_categories tc ON tc.topic_id = b.id
+    LEFT JOIN categories c        ON c.id = tc.category_id
     WHERE b.id = ?
+    LIMIT 1
   `).get(req.params.id);
 
   if (!topic) {
