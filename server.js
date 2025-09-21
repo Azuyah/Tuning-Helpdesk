@@ -578,13 +578,14 @@ app.get('/sso/md5-login', async (req, res) => {
     const redirectTo = (req.query.redirect && String(req.query.redirect)) || '/';
     if (!token) return res.status(400).send('Missing token');
 
-    // Jämför mot pre-beräknad md5_token (SQLite har inte MD5-funktion som MySQL)
+    // 1) Hitta dealer via md5-token
     const dealer = db.prepare(`SELECT * FROM dealers WHERE md5_token = ?`).get(token);
     if (!dealer) return res.status(403).send('Invalid token');
 
     const email = dealer.email || '';
     if (!email) return res.status(422).send('Dealer has no email');
 
+    // 2) Hitta/skap användare på e-post
     let user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(email);
 
     if (!user) {
@@ -600,17 +601,18 @@ app.get('/sso/md5-login', async (req, res) => {
       user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(email);
     }
 
-    // 🔹 Här stoppar du in dealer-roll-logiken
-    const isDealerEmail = db.prepare(`
+    // 3) AUTO-roll: sätt ENDAST 'dealer' om nuvarande roll är tom eller 'user'.
+    //    Rör aldrig admin/support/dealer.
+    const isDealerEmail = !!db.prepare(`
       SELECT 1 FROM dealers WHERE lower(email) = lower(?) LIMIT 1
     `).get(user.email);
 
-    if (isDealerEmail && user.role !== 'admin' && user.role !== 'dealer') {
+    if (isDealerEmail && (!user.role || user.role === 'user')) {
       db.prepare(`UPDATE users SET role='dealer', updated_at=datetime('now') WHERE id=?`).run(user.id);
-      user.role = 'dealer'; // uppdatera lokalt objekt också
+      user.role = 'dealer';
     }
 
-    // Sätt JWT-cookie (din befintliga helper)
+    // 4) Cookie/JWT & bump updated_at
     res.cookie('auth', signUser(user), {
       httpOnly: true, sameSite: 'lax', secure: false, maxAge: 14 * 24 * 3600 * 1000
     });
@@ -622,9 +624,6 @@ app.get('/sso/md5-login', async (req, res) => {
   }
 });
 
-app.get('/editor-test', (req, res) => {
-  res.render('text-editor'); // matchar views/text-editor.ejs
-});
 
 // Kör: GET /admin/tools/backfill-dealer-roles
 app.get('/admin/tools/backfill-dealer-roles', requireAdmin, (req, res) => {
@@ -632,8 +631,13 @@ app.get('/admin/tools/backfill-dealer-roles', requireAdmin, (req, res) => {
     UPDATE users
        SET role = 'dealer',
            updated_at = datetime('now')
-     WHERE role <> 'admin'
-       AND lower(email) IN (SELECT lower(email) FROM dealers WHERE email IS NOT NULL AND email <> '')
+     WHERE (role IS NULL OR trim(lower(role)) IN ('', 'user'))
+       AND lower(email) IN (
+         SELECT lower(email)
+         FROM dealers
+         WHERE email IS NOT NULL
+           AND email <> ''
+       )
   `;
   const info = db.prepare(sql).run();
   res.send(`Dealer-roller uppdaterade: ${info.changes} användare`);
