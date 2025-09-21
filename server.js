@@ -3453,7 +3453,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     FROM dealers
     WHERE created_local IS NOT NULL
     ORDER BY datetime(created_local) DESC
-    LIMIT 4
+    LIMIT 6
   `).all();
 
   res.render('admin', {
