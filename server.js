@@ -557,6 +557,7 @@ function requireSupportOrAdmin(req, res, next) {
   if (!me || (me.role !== 'admin' && me.role !== 'support')) {
     return res.status(403).send('Åtkomst nekad');
   }
+  req.user = me;
   next();
 }
 function requireStaff(req, res, next) {
@@ -564,6 +565,7 @@ function requireStaff(req, res, next) {
   if (!u || !['admin', 'support'].includes(u.role)) {
     return res.status(403).send('Forbidden');
   }
+  req.user = me;
   next();
 }
 
@@ -607,10 +609,11 @@ app.get('/sso/md5-login', async (req, res) => {
       SELECT 1 FROM dealers WHERE lower(email) = lower(?) LIMIT 1
     `).get(user.email);
 
-    if (isDealerEmail && (!user.role || user.role === 'user')) {
-      db.prepare(`UPDATE users SET role='dealer', updated_at=datetime('now') WHERE id=?`).run(user.id);
-      user.role = 'dealer';
-    }
+// Rör inte admin/support/dealer; konvertera bara tom/user -> dealer
+if (isDealerEmail && !['admin','dealer','support'].includes(user.role)) {
+  db.prepare(`UPDATE users SET role='dealer', updated_at=datetime('now') WHERE id=?`).run(user.id);
+  user.role = 'dealer';
+}
 
     // 4) Cookie/JWT & bump updated_at
     res.cookie('auth', signUser(user), {

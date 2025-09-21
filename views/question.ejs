@@ -10,7 +10,8 @@
         <i class="ti ti-arrow-left"></i> Tillbaka
       </button>
 
-      <% if (user && user.role === 'admin') { %>
+      <% if (user && (user.role === 'admin' || user.role === 'support')) { %>
+
         <div class="flex items-center gap-2">
           <!-- Redigera/Ta bort fråga (alltid) -->
           <a href="/admin/questions/<%= q.id %>"
