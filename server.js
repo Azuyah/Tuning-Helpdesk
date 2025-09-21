@@ -565,7 +565,7 @@ function requireStaff(req, res, next) {
   if (!u || !['admin', 'support'].includes(u.role)) {
     return res.status(403).send('Forbidden');
   }
-  req.user = me;
+  req.user = u;
   next();
 }
 
