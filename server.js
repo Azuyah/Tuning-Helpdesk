@@ -1185,7 +1185,7 @@ app.put('/api/questions/:id/category', express.json(), (req, res) => {
   res.json({ ok: true });
 });
 
-app.put('/api/questions/:id/categories', requireAdmin, express.json(), (req, res) => {
+app.put('/api/questions/:id/categories', requireStaff, express.json(), (req, res) => {
   const qid = Number(req.params.id);
   const ids = Array.isArray(req.body.category_ids) ? req.body.category_ids.filter(Boolean) : [];
 
@@ -1763,7 +1763,7 @@ app.get('/api/questions/:id', requireAuth, (req, res) => {
 });
 
 // PUT /api/questions/:id/attach
-app.put('/api/questions/:id/attach', requireAdmin, express.json(), (req, res) => {
+app.put('/api/questions/:id/attach', requireStaff, express.json(), (req, res) => {
   const qid = Number(req.params.id);
   const raw = req.body || {};
   const type = String(raw.type || '').toLowerCase();
@@ -1836,7 +1836,7 @@ app.put('/api/questions/:id/attach', requireAdmin, express.json(), (req, res) =>
   }
 });
 
-app.put('/api/questions/:id/status', requireAdmin, (req, res) => {
+app.put('/api/questions/:id/status', requireStaff, (req, res) => {
   const { status } = req.body;
   if (!['open', 'answered', 'closed'].includes(status)) return res.status(400).json({ error: 'bad status' });
   db.prepare('UPDATE questions SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
