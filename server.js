@@ -433,42 +433,42 @@ async function fetchDealersFrom(source, url, apiKey) {
 function upsertDealers(source, list) {
   const tx = db.transaction(() => {
     for (const rec of list) {
-      // behåll original-casing för token, men lagra email i lowercase
       const rawEmail = (rec.email || '').trim();
-      const email    = rawEmail.toLowerCase();
+      const emailLc  = rawEmail.toLowerCase();
       const dealerId = rec.ID || '';
 
-      const d = {
-        dealer_id: dealerId,
-        email,
-        username:  rec.username  || '',
-        company:   rec.company   || '',
-        firstname: rec.firstname || '',
-        lastname:  rec.lastname  || '',
-        telephone: rec.telephone || null,
-        added:     rec.added     || null,
-      };
-
-      // TOKEN = md5(id + RAW email) — matchar partnerns MySQL-exempel
       const token = md5(dealerId + rawEmail);
 
+      // Upsert i dealers
       upsertDealerStmt.run(
-        source, d.dealer_id, d.email, d.username, d.company,
-        d.firstname, d.lastname, d.telephone, d.added, token
+        source,
+        dealerId,
+        emailLc,
+        rec.username  || '',
+        rec.company   || '',
+        rec.firstname || '',
+        rec.lastname  || '',
+        rec.telephone || null,
+        rec.added     || null,
+        token
       );
 
-      // Promo till dealer-roll om email finns, inte admin, och inte redan dealer
-      if (d.email) {
+      if (rawEmail) {
+        const displayName =
+          [rec.firstname, rec.lastname].filter(Boolean).join(' ') ||
+          rec.username || rec.company || rawEmail;
+
         db.prepare(`
-          UPDATE users
-             SET role='dealer', updated_at=datetime('now')
-           WHERE lower(email)=lower(?)
-             AND role <> 'admin'
-             AND role <> 'dealer'
-        `).run(d.email);
+          INSERT INTO users (email, name, role, password_hash, created_at, updated_at)
+          SELECT ?, ?, 'dealer', '', datetime('now'), datetime('now')
+          WHERE NOT EXISTS (
+            SELECT 1 FROM users WHERE lower(email) = lower(?)
+          )
+        `).run(rawEmail, displayName, rawEmail);
       }
     }
   });
+
   tx();
 }
 
