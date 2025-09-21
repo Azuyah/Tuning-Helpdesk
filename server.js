@@ -1603,7 +1603,7 @@ app.post('/admin/categories/:catId/questions/:id/move', requireAdmin, (req, res)
 });
 
 // Ta bort FRÅGA från kategori (dvs avkoppla)
-app.post('/admin/categories/:catId/questions/:id/remove', requireAdmin, (req, res) => {
+app.post('/admin/categories/:catId/questions/:id/remove', requireStaff, (req, res) => {
   const { catId, id } = req.params;
   db.prepare(`DELETE FROM question_category WHERE question_id=? AND category_id=?`).run(id, catId);
   db.prepare(`UPDATE questions SET updated_at=datetime('now') WHERE id=?`).run(id);
@@ -1611,7 +1611,7 @@ app.post('/admin/categories/:catId/questions/:id/remove', requireAdmin, (req, re
 });
 
 // Ta bort koppling ämne<->kategori (inte radera ämnet)
-app.post('/admin/categories/:id/topics/:topicId/remove', requireAdmin, (req, res) => {
+app.post('/admin/categories/:id/topics/:topicId/remove', requireStaff, (req, res) => {
   const { id, topicId } = req.params;
   db.prepare(`DELETE FROM topic_category WHERE topic_id=? AND category_id=?`).run(topicId, id);
   res.redirect(`/admin/categories/${id}/topics`);
@@ -3255,7 +3255,7 @@ app.get('/category/:id', (req, res) => {
 });
 
 // Ta bort en fråga (admin)
-app.post('/admin/questions/:id/delete', requireAdmin, (req, res) => {
+app.post('/admin/questions/:id/delete', requireStaff, (req, res) => {
   const id = Number(req.params.id);
 
   // ta bort kopplingar först (om några)
