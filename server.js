@@ -274,6 +274,32 @@ try {
   // (Index skapas idempotent i CREATE INDEX ovan)
 } catch (e) {
 }
+
+// Körs vid appstart – lägg strax efter att db initierats
+try {
+  db.exec(`
+    -- Hindra support/admin -> dealer
+    CREATE TRIGGER IF NOT EXISTS trg_prevent_downgrade_to_dealer
+    BEFORE UPDATE OF role ON users
+    FOR EACH ROW
+    WHEN NEW.role = 'dealer' AND OLD.role IN ('support','admin')
+    BEGIN
+      SELECT RAISE(ABORT, 'protected role: cannot downgrade support/admin to dealer');
+    END;
+
+    -- (valfritt) Hindra support/admin -> user
+    CREATE TRIGGER IF NOT EXISTS trg_prevent_downgrade_to_user
+    BEFORE UPDATE OF role ON users
+    FOR EACH ROW
+    WHEN NEW.role = 'user' AND OLD.role IN ('support','admin')
+    BEGIN
+      SELECT RAISE(ABORT, 'protected role: cannot downgrade support/admin to user');
+    END;
+  `);
+  console.log('✅ SQLite triggers skapade/redo');
+} catch (e) {
+  console.error('⚠️ Kunde inte skapa SQLite-triggers:', e.message);
+}
 // Frågekategorier (junction)
 db.exec(`
   CREATE TABLE IF NOT EXISTS question_category (
