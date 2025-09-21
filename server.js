@@ -3448,12 +3448,13 @@ app.get('/admin', requireAdmin, (req, res) => {
     LIMIT 8
   `).all();
 
-const latestDealers = db.prepare(`
-  SELECT source, email, company, firstname, lastname, updated_at
-  FROM dealers
-  ORDER BY datetime(updated_at) DESC
-  LIMIT 4
-`).all();
+  const latestDealers = db.prepare(`
+    SELECT dealer_id, source, email, company, firstname, lastname, created_local
+    FROM dealers
+    WHERE created_local IS NOT NULL
+    ORDER BY datetime(created_local) DESC
+    LIMIT 4
+  `).all();
 
   res.render('admin', {
     title: 'Adminpanel',

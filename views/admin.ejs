@@ -141,7 +141,7 @@
   <% } %>
 </div>
 
-<!-- Senaste dealers -->
+<!-- Senaste dealers (ny-tillagda) -->
 <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
   <div class="px-5 py-4 border-b">
     <h3 class="text-base font-semibold text-slate-900 flex items-center gap-2">
@@ -153,15 +153,24 @@
     <div class="p-5 text-sm text-slate-500">Inga dealers synkade ännu.</div>
   <% } else { %>
     <ul class="divide-y divide-slate-200">
-      <% _latestDealers.forEach(d => { %>
+      <% _latestDealers.forEach(d => { 
+           const hasName = (d.firstname || d.lastname);
+           const primaryName = hasName 
+             ? (`${d.firstname||''} ${d.lastname||''}`).trim()
+             : (d.company || d.email || '-');
+      %>
         <li class="px-5 py-3 flex items-center justify-between hover:bg-slate-50">
           <div class="min-w-0">
-            <div class="font-medium text-slate-900 truncate"><%= (d.firstname||'') + ' ' + (d.lastname||'') || d.company || d.email %></div>
+            <div class="font-medium text-slate-900 truncate"><%= primaryName %></div>
             <div class="text-xs text-slate-500 mt-0.5">
-              <span class="mr-2 rounded px-1.5 py-0.5 border text-[10px] <%= d.source==='nms' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-indigo-300 bg-indigo-50 text-indigo-700' %>">
+              <span class="mr-2 rounded px-1.5 py-0.5 border text-[10px]
+                <%= d.source==='nms' 
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700' 
+                      : 'border-indigo-300 bg-indigo-50 text-indigo-700' %>">
                 <%= (d.source||'').toUpperCase() %>
               </span>
-              <%= d.email || '-' %> • Synkad: <%= new Date(d.updated_at).toLocaleString('sv-SE') %>
+              <%= d.email || '-' %> • Tillagd: 
+              <%= d.created_local ? new Date(d.created_local).toLocaleString('sv-SE') : '-' %>
             </div>
           </div>
         </li>
