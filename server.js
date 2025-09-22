@@ -64,21 +64,34 @@ db.pragma('foreign_keys = ON');
 
 /* Hjälpare för migrationer – definiera EN gång */
 function hasColumn(table, col) {
-  const row = db.prepare(`PRAGMA table_info(${table})`).all().find(r => r.name === col);
-  return !!row;
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  return cols.some(c => c.name === col);
 }
 function addColumnIfMissing(table, col, ddl) {
   if (!hasColumn(table, col)) {
     db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run();
-    db.prepare(`UPDATE topics SET downloads = COALESCE(downloads, 0)`).run();
   }
 }
+
+// --- Migrationer ---
+// topics_base.views
 try {
-  db.prepare(`ALTER TABLE topics_base ADD COLUMN views INTEGER DEFAULT 0`).run();
-} catch (e) { /* finns redan */ }
+  addColumnIfMissing('topics_base', 'views', 'INTEGER DEFAULT 0');
+} catch (_) { /* ignore */ }
+
+// questions.answered_role (och answered_by om den saknas i äldre DB)
+try { addColumnIfMissing('questions', 'answered_role', 'TEXT'); } catch (_) {}
+try { addColumnIfMissing('questions', 'answered_by',   'TEXT'); } catch (_) {}
+
+// Backfill: sätt default-värden där svar redan finns men fält saknas
 try {
-  db.prepare(`ALTER TABLE topics_base ADD COLUMN views INTEGER DEFAULT 0`).run();
-} catch (_) {}
+  db.prepare(`
+    UPDATE questions
+       SET answered_by   = COALESCE(NULLIF(TRIM(answered_by), ''), 'Admin'),
+           answered_role = COALESCE(NULLIF(TRIM(answered_role), ''), 'support')
+     WHERE is_answered = 1
+  `).run();
+} catch (_) { /* ignore */ }
 
 function initSchemaAndSeed() {
   // Bas-schema
