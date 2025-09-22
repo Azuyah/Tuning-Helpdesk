@@ -1146,7 +1146,17 @@ app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
 app.get('/admin/questions/:id', requireStaff, (req, res) => {
   const id = Number(req.params.id);
 
-  const q = db.prepare(`SELECT * FROM questions WHERE id=?`).get(id);
+  // HÄMTA FRÅGAN + AVSÄNDARENS NAMN/MEJL
+  const q = db.prepare(`
+    SELECT
+      q.*,
+      COALESCE(q.user_name, u.name, '')  AS user_name,
+      COALESCE(q.user_email, u.email, '') AS user_email
+    FROM questions q
+    LEFT JOIN users u ON u.id = q.user_id
+    WHERE q.id = ?
+  `).get(id);
+
   if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
 
   // Kategorilista (för dropdown)
