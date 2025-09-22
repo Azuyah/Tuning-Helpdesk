@@ -22,7 +22,7 @@ function renderSuggest(rows = []) {
       r.type === 'question' ? `/questions/${encodeURIComponent(r.id)}` :
                               `/topic/${encodeURIComponent(r.id)}`;
 
-    // Badgen – din version funkar redan fint
+    // Badge
     const badge =
       r.type === 'question'
         ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>'
