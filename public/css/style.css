@@ -2347,3 +2347,52 @@
 .\[\&\>tr\]\:border-b>tr {
   border-bottom-width: 1px;
 }
+
+/* Darkmode /*
+
+/* === Badge (global) === */
+.badge{
+  display:inline-flex; align-items:center; gap:.25rem;
+  padding:.125rem .375rem;           /* 0.5 / 1.5 (≈ Tailwind) */
+  border:1px solid #e5e7eb;          /* slate-200 */
+  border-radius:.375rem;              /* rounded */
+  font-size:10px; line-height:1; font-weight:600;
+  background:#f8fafc;                 /* slate-50 */
+  color:#334155;                      /* slate-700 */
+}
+
+/* Varianter (ljus) */
+.badge--topic   { background:#e0f2fe; border-color:#bae6fd; color:#0369a1; } /* sky-200/300/700 */
+.badge--resource{ background:#fef3c7; border-color:#fde68a; color:#92400e; } /* amber-100/200/700 */
+.badge--question{ background:#ede9fe; border-color:#ddd6fe; color:#6d28d9; } /* violet-100/200/700 */
+
+.badge--success { background:#dcfce7; border-color:#bbf7d0; color:#166534; } /* green */
+.badge--danger  { background:#fee2e2; border-color:#fecaca; color:#991b1b; } /* red */
+.badge--info    { background:#eef2ff; border-color:#e0e7ff; color:#3730a3; } /* indigo */
+.badge--muted   { background:#f1f5f9; border-color:#e2e8f0; color:#475569; } /* slate */
+
+/* Roller (om ni visar svarat av: Admin/Support) */
+.badge--role-admin   { background:#fee2e2; border-color:#fecaca; color:#b91c1c; } /* red */
+.badge--role-support { background:#f3e8ff; border-color:#e9d5ff; color:#7e22ce; } /* purple */
+.badge--role-default { background:#e2e8f0; border-color:#cbd5e1; color:#334155; } /* slate */
+
+/* === Dark mode overrides === */
+html.dark .badge{
+  background:rgba(148,163,184,.10);  /* slate-400 @ ~10% */
+  border-color:#334155;              /* slate-700 */
+  color:#e5e7eb;                     /* slate-200 */
+}
+
+/* Varianter (mörk) – låg opacitet bg, tydlig text/border */
+html.dark .badge--topic   { background:rgba(96,165,250,.12);  border-color:#1e3a8a; color:#93c5fd; }  /* sky-400/900/300 */
+html.dark .badge--resource{ background:rgba(251,191,36,.14);  border-color:#78350f; color:#fcd34d; }  /* amber-400/900/300 */
+html.dark .badge--question{ background:rgba(167,139,250,.14); border-color:#4c1d95; color:#c4b5fd; }  /* violet-400/900/300 */
+
+html.dark .badge--success { background:rgba(74,222,128,.12);  border-color:#14532d; color:#86efac; }  /* green */
+html.dark .badge--danger  { background:rgba(248,113,113,.12); border-color:#7f1d1d; color:#fca5a5; }  /* red */
+html.dark .badge--info    { background:rgba(99,102,241,.12);  border-color:#312e81; color:#a5b4fc; }  /* indigo */
+html.dark .badge--muted   { background:rgba(148,163,184,.12); border-color:#334155; color:#cbd5e1; }  /* slate */
+
+html.dark .badge--role-admin   { background:rgba(248,113,113,.12); border-color:#7f1d1d; color:#fecaca; }
+html.dark .badge--role-support { background:rgba(147,51,234,.14);  border-color:#581c87; color:#e9d5ff; }
+html.dark .badge--role-default { background:rgba(148,163,184,.12); border-color:#334155; color:#e5e7eb; }

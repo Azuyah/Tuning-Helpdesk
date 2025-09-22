@@ -1,181 +1,214 @@
 <section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-4 gap-8">
   <!-- Sidebar -->
   <aside class="lg:col-span-1 space-y-6">
-    <form method="get" action="/explore" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <form method="get" action="/explore" class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm
+                                              dark:bg-slate-900 dark:border-slate-700">
       <input type="hidden" name="tab" value="<%= tab %>">
-      <label class="block text-sm font-medium text-slate-700">Sök</label>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Sök</label>
       <input name="q" value="<%= q %>"
        placeholder="Sök i <%= tab==='topics' ? 'ämnen' : tab==='questions' ? 'frågor' : tab==='resources' ? 'resurser' : 'alla' %>…"
-       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500">
+       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+              focus:border-sky-500 focus:ring-sky-500
+              dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500">
       <div class="mt-3 flex items-center gap-2">
         <button class="rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">Sök</button>
-        <a href="/explore?tab=<%= tab %>" class="text-sm text-slate-500 hover:underline">Rensa</a>
+        <a href="/explore?tab=<%= tab %>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">Rensa</a>
       </div>
     </form>
 
-  <!-- Tabbyte (flyttad hit, under sökrutan) -->
-  <% const currentTab = (typeof tab === 'string' && tab) ? tab : 'all'; %>
-  <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-    <div class="text-sm font-medium text-slate-700 mb-2">Filter</div>
-    <div class="flex flex-wrap gap-2">
-      <a href="/explore"
-         class="px-3 py-1.5 rounded-lg border <%= currentTab==='all' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-        Alla
-      </a>
+    <!-- Tabbyte -->
+    <% const currentTab = (typeof tab === 'string' && tab) ? tab : 'all'; %>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm
+                dark:bg-slate-900 dark:border-slate-700">
+      <div class="text-sm font-medium text-slate-700 mb-2 dark:text-slate-300">Filter</div>
+      <div class="flex flex-wrap gap-2">
+        <a href="/explore"
+           class="px-3 py-1.5 rounded-lg border
+                  <%= currentTab==='all'
+                     ? 'bg-sky-600 text-white border-sky-600 hover:bg-sky-700'
+                     : 'border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800' %>">
+          Alla
+        </a>
 
-      <a href="/explore?tab=topics"
-         class="px-3 py-1.5 rounded-lg border <%= currentTab==='topics' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-        Ämnen
-      </a>
+        <a href="/explore?tab=topics"
+           class="px-3 py-1.5 rounded-lg border
+                  <%= currentTab==='topics'
+                     ? 'bg-sky-600 text-white border-sky-600 hover:bg-sky-700'
+                     : 'border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800' %>">
+          Ämnen
+        </a>
 
-      <a href="/explore?tab=questions"
-         class="px-3 py-1.5 rounded-lg border <%= currentTab==='questions' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-        Frågor
-      </a>
+        <a href="/explore?tab=questions"
+           class="px-3 py-1.5 rounded-lg border
+                  <%= currentTab==='questions'
+                     ? 'bg-sky-600 text-white border-sky-600 hover:bg-sky-700'
+                     : 'border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800' %>">
+          Frågor
+        </a>
 
-      <a href="/explore?tab=resources"
-         class="px-3 py-1.5 rounded-lg border <%= currentTab==='resources' ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-300 hover:bg-slate-50' %>">
-        Resurser
-      </a>
+        <a href="/explore?tab=resources"
+           class="px-3 py-1.5 rounded-lg border
+                  <%= currentTab==='resources'
+                     ? 'bg-sky-600 text-white border-sky-600 hover:bg-sky-700'
+                     : 'border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800' %>">
+          Resurser
+        </a>
+      </div>
     </div>
-  </div>
-
 
     <!-- Kategorier -->
-    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-      <div class="text-sm font-medium text-slate-700 mb-2">Kategorier</div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm
+                dark:bg-slate-900 dark:border-slate-700">
+      <div class="text-sm font-medium text-slate-700 mb-2 dark:text-slate-300">Kategorier</div>
       <ul class="space-y-1">
         <% categories.forEach(c => { %>
-        <a class="block rounded px-2 py-1 hover:bg-slate-50 
-                  <%= String(cat)===String(c.id) 
-                      ? 'bg-sky-100 text-sky-700 font-semibold' 
-                      : 'text-slate-700' %>"
-           href="/explore?tab=<%= tab %>&cat=<%= encodeURIComponent(c.id) %><%= q?`&q=${encodeURIComponent(q)}`:'' %><%= tag?`&tag=${encodeURIComponent(tag)}`:'' %>">
-          <%= c.title %>
-            </a>
-          </li>
+          <a class="block rounded px-2 py-1 hover:bg-slate-50
+                    <%= String(cat)===String(c.id)
+                        ? 'bg-sky-100 text-sky-700 font-semibold'
+                        : 'text-slate-700' %>
+                    dark:text-slate-200 dark:hover:bg-slate-800
+                    <%= String(cat)===String(c.id) ? ' dark:bg-sky-900/30 dark:text-sky-300' : '' %>"
+             href="/explore?tab=<%= tab %>&cat=<%= encodeURIComponent(c.id) %><%= q?`&q=${encodeURIComponent(q)}`:'' %><%= tag?`&tag=${encodeURIComponent(tag)}`:'' %>">
+            <%= c.title %>
+          </a>
         <% }) %>
       </ul>
     </div>
 
     <!-- Taggar -->
-    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-      <div class="text-sm font-medium text-slate-700 mb-2">Populära taggar</div>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm
+                dark:bg-slate-900 dark:border-slate-700">
+      <div class="text-sm font-medium text-slate-700 mb-2 dark:text-slate-300">Populära taggar</div>
       <div class="flex flex-wrap gap-2">
         <% tags.forEach(t => { %>
-<a href="/explore?tab=<%= tab %>&tag=<%= encodeURIComponent(t.name) %><%= q?`&q=${encodeURIComponent(q)}`:'' %><%= cat?`&cat=${encodeURIComponent(cat)}`:'' %>"
-   class="text-xs rounded-full px-3 py-1 border border-slate-300 hover:border-sky-400 hover:text-sky-700 <%= (tag||'').toLowerCase()===t.name.toLowerCase() ? 'bg-slate-100 font-medium' : '' %>">
-  <%= t.name %>
-</a>
+          <a href="/explore?tab=<%= tab %>&tag=<%= encodeURIComponent(t.name) %><%= q?`&q=${encodeURIComponent(q)}`:'' %><%= cat?`&cat=${encodeURIComponent(cat)}`:'' %>"
+             class="text-xs rounded-full px-3 py-1 border border-slate-300 hover:border-sky-400 hover:text-sky-700
+                    <%= (tag||'').toLowerCase()===t.name.toLowerCase() ? 'bg-slate-100 font-medium' : '' %>
+                    dark:border-slate-700 dark:text-slate-300 dark:hover:text-sky-300 dark:hover:border-sky-700
+                    <%= (tag||'').toLowerCase()===t.name.toLowerCase() ? ' dark:bg-slate-800 dark:text-slate-100' : '' %>">
+            <%= t.name %>
+          </a>
         <% }) %>
       </div>
     </div>
   </aside>
 
-<!-- Lista -->
-<div class="lg:col-span-3 min-w-0">
-<%
-const qs = (patch = {}) => {
-  const _tab = ('tab' in patch) ? patch.tab : tab;
-  const _q   = ('q'   in patch) ? patch.q   : q;
-  const _cat = ('cat' in patch) ? patch.cat : cat;
-  const _tag = ('tag' in patch) ? patch.tag : tag;
+  <!-- Lista -->
+  <div class="lg:col-span-3 min-w-0">
+  <%
+  const qs = (patch = {}) => {
+    const _tab = ('tab' in patch) ? patch.tab : tab;
+    const _q   = ('q'   in patch) ? patch.q   : q;
+    const _cat = ('cat' in patch) ? patch.cat : cat;
+    const _tag = ('tag' in patch) ? patch.tag : tag;
 
-  const parts = [];
-  if (_tab) parts.push('tab=' + encodeURIComponent(_tab));
-  if (_q)   parts.push('q='   + encodeURIComponent(_q));
-  if (_cat) parts.push('cat=' + encodeURIComponent(_cat));
-  if (_tag) parts.push('tag=' + encodeURIComponent(_tag));
-  return parts.length ? ('?' + parts.join('&')) : '';
-};
+    const parts = [];
+    if (_tab) parts.push('tab=' + encodeURIComponent(_tab));
+    if (_q)   parts.push('q='   + encodeURIComponent(_q));
+    if (_cat) parts.push('cat=' + encodeURIComponent(_cat));
+    if (_tag) parts.push('tag=' + encodeURIComponent(_tag));
+    return parts.length ? ('?' + parts.join('&')) : '';
+  };
 
-let catTitle = '';
-if (cat && Array.isArray(categories)) {
-  for (let i=0; i<categories.length; i++) {
-    if (String(categories[i].id) === String(cat)) { catTitle = categories[i].title; break; }
+  let catTitle = '';
+  if (cat && Array.isArray(categories)) {
+    for (let i=0; i<categories.length; i++) {
+      if (String(categories[i].id) === String(cat)) { catTitle = categories[i].title; break; }
+    }
   }
-}
-const hasAnyFilter = Boolean(q || cat || tag);
-%>
+  const hasAnyFilter = Boolean(q || cat || tag);
+  %>
 
-  <div class="flex items-center justify-between gap-3 mb-4">
-    <h1 class="text-2xl font-bold text-slate-900">
-      <%= tab==='topics' ? 'Ämnen' : tab==='questions' ? 'Frågor' : tab==='resources' ? 'Resurser' : 'Alla' %>
-    </h1>
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
+        <%= tab==='topics' ? 'Ämnen' : tab==='questions' ? 'Frågor' : tab==='resources' ? 'Resurser' : 'Alla' %>
+      </h1>
 
-    <div class="flex items-center gap-2 flex-wrap justify-end">
-      <% if (q) { %>
-        <a href="/explore<%= qs({ q: '' }) %>"
-           class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-sm text-slate-700 hover:bg-slate-50">
-          <span class="text-slate-500">Sök:</span> "<%= q %>"
-          <i class="ti ti-x text-slate-500"></i>
-        </a>
-      <% } %>
+      <div class="flex items-center gap-2 flex-wrap justify-end">
+        <% if (q) { %>
+          <a href="/explore<%= qs({ q: '' }) %>"
+             class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-sm text-slate-700 hover:bg-slate-50
+                    dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <span class="text-slate-500 dark:text-slate-400">Sök:</span> "<%= q %>"
+            <i class="ti ti-x text-slate-500 dark:text-slate-400"></i>
+          </a>
+        <% } %>
 
-      <% if (cat) { %>
-        <a href="/explore<%= qs({ cat: '' }) %>"
-           class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-sm text-slate-700 hover:bg-slate-50">
-          <span class="text-slate-500">Kategori:</span> <%= catTitle || cat %>
-          <i class="ti ti-x text-slate-500"></i>
-        </a>
-      <% } %>
+        <% if (cat) { %>
+          <a href="/explore<%= qs({ cat: '' }) %>"
+             class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-sm text-slate-700 hover:bg-slate-50
+                    dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <span class="text-slate-500 dark:text-slate-400">Kategori:</span> <%= catTitle || cat %>
+            <i class="ti ti-x text-slate-500 dark:text-slate-400"></i>
+          </a>
+        <% } %>
 
-      <% if (tag) { %>
-        <a href="/explore<%= qs({ tag: '' }) %>"
-           class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-sm text-slate-700 hover:bg-slate-50">
-          <span class="text-slate-500">Tagg:</span> <%= tag %>
-          <i class="ti ti-x text-slate-500"></i>
-        </a>
-      <% } %>
+        <% if (tag) { %>
+          <a href="/explore<%= qs({ tag: '' }) %>"
+             class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-sm text-slate-700 hover:bg-slate-50
+                    dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <span class="text-slate-500 dark:text-slate-400">Tagg:</span> <%= tag %>
+            <i class="ti ti-x text-slate-500 dark:text-slate-400"></i>
+          </a>
+        <% } %>
 
-      <% if (hasAnyFilter) { %>
-        <a href="/explore<%= qs({ q:'', cat:'', tag:'' }) %>"
-           class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 text-slate-700 px-3 py-1.5 text-sm hover:bg-slate-200">
-          Rensa alla
-          <i class="ti ti-trash"></i>
-        </a>
-      <% } %>
+        <% if (hasAnyFilter) { %>
+          <a href="/explore<%= qs({ q:'', cat:'', tag:'' }) %>"
+             class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 text-slate-700 px-3 py-1.5 text-sm hover:bg-slate-200
+                    dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+            Rensa alla
+            <i class="ti ti-trash"></i>
+          </a>
+        <% } %>
+      </div>
     </div>
-  </div>
 
-  <% if (!items || items.length === 0) { %>
-    <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600">
-      Inga resultat hittades.
-    </div>
-  <% } else { %>
-    <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm">
-      <% items.forEach(function(it){ %>
-        <li class="px-5 py-4 flex justify-between items-center hover:bg-slate-50 transition">
-          <div class="min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <% if (it.type === 'resource') { %>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>
-              <% } else if (it.type === 'question') { %>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>
-              <% } else { %>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>
+    <% if (!items || items.length === 0) { %>
+      <div class="rounded-xl border border-slate-200 bg-white p-8 text-slate-600
+                  dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+        Inga resultat hittades.
+      </div>
+    <% } else { %>
+      <ul class="divide-y divide-slate-200 border border-slate-200 rounded-xl bg-white shadow-sm
+                 dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-900">
+        <% items.forEach(function(it){ %>
+          <li class="px-5 py-4 flex justify-between items-center transition
+                     hover:bg-slate-50 dark:hover:bg-slate-800">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <% if (it.type === 'resource') { %>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200
+                               dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">Resurs</span>
+                <% } else if (it.type === 'question') { %>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200
+                               dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800">Fråga</span>
+                <% } else { %>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200
+                               dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800">Ämne</span>
+                <% } %>
+
+                <a href="<%= it.href %>" class="font-medium text-slate-800 hover:underline truncate max-w-[60ch]
+                                               dark:text-slate-100">
+                  <%= it.title %>
+                </a>
+              </div>
+
+              <% if (it.excerpt) { %>
+                <div class="text-xs text-slate-500 line-clamp-2 dark:text-slate-400"><%= it.excerpt %></div>
               <% } %>
 
-              <a href="<%= it.href %>" class="font-medium text-slate-800 hover:underline truncate max-w-[60ch]">
-                <%= it.title %>
-              </a>
+              <div class="text-xs text-slate-500 mt-1 dark:text-slate-400">
+                <%= new Date(it.ts || Date.now()).toLocaleDateString('sv-SE') %>
+              </div>
             </div>
 
-            <% if (it.excerpt) { %>
-              <div class="text-xs text-slate-500 line-clamp-2"><%= it.excerpt %></div>
-            <% } %>
-
-            <div class="text-xs text-slate-500 mt-1">
-              <%= new Date(it.ts || Date.now()).toLocaleDateString('sv-SE') %>
-            </div>
-          </div>
-
-          <a href="<%= it.href %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
-            Visa <i class="ti ti-arrow-right"></i>
-          </a>
-        </li>
-      <% }) %>
-    </ul>
-  <% } %>
-</div>
+            <a href="<%= it.href %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline
+                                           dark:text-sky-400">
+              Visa <i class="ti ti-arrow-right"></i>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
 </section>

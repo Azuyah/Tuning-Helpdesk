@@ -67,10 +67,9 @@
   <% } %>
 </div>
 
-      <div class="prose prose-slate max-w-none mb-6">
-        <%- include('partials/richtext', { id: 'topic-' + topic.id, html: topic.body }) %>
-      </div>
-
+<div class="prose prose-slate dark:prose-invert max-w-none mb-6">
+  <%- include('partials/richtext', { id: 'topic-' + topic.id, html: topic.body }) %>
+</div>
       <div class="text-sm text-slate-500">
         <% if (sourceQuestion) { %>
           Svarat av:
