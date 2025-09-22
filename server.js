@@ -2452,7 +2452,7 @@ app.get('/questions/:id', (req, res) => {
 
   // Taggdrivna (blandat)
   {
-    const baseTags  = (answerTopic?.tags || '');
+    const baseTags  = '';
     const extraTags = hasAnswerTagsCol ? (q.answer_tags || '') : '';
     const tags = Array.from(
       new Set((baseTags + ',' + extraTags).split(',').map(s => s.trim().toLowerCase()).filter(Boolean))
@@ -2497,33 +2497,42 @@ app.get('/questions/:id', (req, res) => {
         params.push(q.id, ...likeValsQ);
       }
 
-      sql += `) ORDER BY ts DESC LIMIT 10`;
+// Visa inte dolda frågor för vanliga användare
+const hideClause = (isStaff || isAuthor) ? '' : ' AND IFNULL(q3.hidden,0)=0 ';
 
-      try {
-        relatedQuestions = db.prepare(sql).all(...params);
-      } catch {
-        relatedQuestions = db.prepare(`
-          SELECT kind, id, title, is_resource FROM (
-            SELECT 'question' AS kind, q2.id AS id, q2.title AS title, 0 AS is_resource,
-                   datetime(q2.created_at) AS ts
-            FROM questions q2
-            JOIN question_topic qt2 ON qt2.question_id = q2.id
-            JOIN topics t           ON t.id = qt2.topic_id
-            WHERE q2.id <> ?
-              AND ( ${likeTopicTags} )
+// Endast egna answer_tags (om kolumn finns) + topic-tags
+try {
+  relatedQuestions = db.prepare(`
+    SELECT kind, id, title, is_resource, ts FROM (
+      -- Relaterade ämnen/resurser via sina egna tags
+      SELECT 'topic' AS kind, b.id AS id, t2.title, IFNULL(t2.is_resource,0) AS is_resource,
+             datetime(COALESCE(b.updated_at, b.created_at)) AS ts
+      FROM topics_base b
+      JOIN topics t2 ON t2.id = b.id
+      WHERE ( ${tags.map(() => "lower(IFNULL(t2.tags,'')) LIKE ?").join(' OR ')} )
+        AND b.id <> IFNULL(?, -1)
 
-            UNION
-            SELECT 'topic' AS kind, b.id AS id, t2.title AS title, IFNULL(t2.is_resource,0) AS is_resource,
-                   datetime(COALESCE(b.updated_at, b.created_at)) AS ts
-            FROM topics_base b
-            JOIN topics t2 ON t2.id = b.id
-            WHERE ( ${likeTopicTags.replace(/t\./g, 't2.')} )
-              AND b.id <> IFNULL(?, -1)
-          )
-          ORDER BY ts DESC
-          LIMIT 10
-        `).all(q.id, ...likeValsTopic, answerTopic ? answerTopic.id : null, ...likeValsTopic);
-      }
+      UNION
+
+      -- Relaterade frågor via deras egna answer_tags
+      SELECT 'question' AS kind, q3.id, q3.title, 0 AS is_resource,
+             datetime(COALESCE(q3.updated_at, q3.created_at)) AS ts
+      FROM questions q3
+      WHERE q3.id <> ?
+        ${hideClause}
+        AND ( ${tags.map(() => "lower(IFNULL(q3.answer_tags,'')) LIKE ?").join(' OR ')} )
+    )
+    ORDER BY ts DESC
+    LIMIT 10
+  `).all(
+    ...tags.map(t => `%${t}%`),           // för topic.tags
+    answerTopic ? answerTopic.id : null,  // exkludera aktuell topic
+    q.id,                                 // exkludera denna fråga
+    ...tags.map(t => `%${t}%`)            // för q3.answer_tags
+  );
+} catch {
+  relatedQuestions = [];
+}
     }
   }
 
