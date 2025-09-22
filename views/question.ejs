@@ -1,3 +1,7 @@
+<%
+  const isStaff  = user && (user.role === 'admin' || user.role === 'support');
+  const showHiddenBanner = Number(q.hidden) === 1 && isStaff;
+%>
 <section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-10">
   <!-- Vänsterkolumn -->
   <div class="lg:col-span-2 space-y-8">
@@ -30,9 +34,22 @@
         </div>
       <% } %>
     </div>
+    <div class="relative">
+  <% if (showHiddenBanner) { %>
+    <!-- Dim overlay -->
+    <div class="pointer-events-none absolute inset-0 rounded-2xl bg-slate-300/25 backdrop-blur-[0.5px] z-10"></div>
+
+    <!-- Banner över kortet -->
+    <div class="absolute z-20 left-1/2 -translate-x-1/2 -top-3">
+      <span class="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 shadow-sm">
+        <i class="ti ti-eye-off"></i>
+        Denna frågan är dold och syns inte för andra användare
+      </span>
+    </div>
+  <% } %>
 
     <!-- FRÅGA (eget kort) -->
-    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+      <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 <%= showHiddenBanner ? 'opacity-60' : '' %>">
       <div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Fråga</div>
 
       <h1 class="text-2xl font-bold text-slate-900 mb-2">
@@ -61,6 +78,8 @@
         <% } %>
       </div>
     </article>
+    </div>
+  
 
 <!-- SVAR (kort under frågan) -->
 <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">

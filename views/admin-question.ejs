@@ -52,7 +52,6 @@
       </div>
       <form method="POST" action="/admin/questions/<%= q.id %>">
 <div>
-  <label class="block text-sm font-medium text-slate-700">Ditt svar</label>
   <textarea id="answerEditor" name="answer_body" rows="10"><%= q.answer_body || '' %></textarea>
   <p class="text-xs text-slate-500 mt-1">
     HTML tillåts och saneras server-side (t.ex. <code>&lt;p&gt;</code>, listor, länkar).
@@ -94,18 +93,35 @@
 
   <!-- Högerkolumn -->
   <aside class="space-y-6">
-    <!-- Ändra status -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 class="font-semibold text-slate-900 mb-3">Ändra status</h3>
-      <div class="flex flex-wrap gap-2">
-        <button type="button" data-status="open"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Öppen</button>
-        <button type="button" data-status="answered"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Besvarad</button>
-        <button type="button" data-status="closed"
-          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Stängd</button>
-      </div>
+<!-- Ändra status -->
+<div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+  <h3 class="font-semibold text-slate-900 mb-3">Ändra status</h3>
+
+  <form method="POST" action="/admin/questions/<%= q.id %>/status" class="space-y-3">
+    <div class="relative">
+      <select name="status"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm sm:text-sm
+                     focus:border-sky-500 focus:ring-sky-500 appearance-none">
+        <option value="open"     <%= q.status === 'open'     ? 'selected' : '' %>>Öppen</option>
+        <option value="answered" <%= q.status === 'answered' ? 'selected' : '' %>>Besvarad</option>
+        <option value="closed"   <%= q.status === 'closed'   ? 'selected' : '' %>>Stängd</option>
+      </select>
+      <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
     </div>
+
+    <!-- NYTT: Dölj fråga -->
+    <label class="flex items-center gap-2 text-sm text-slate-700">
+      <input type="checkbox" name="hide" <%= Number(q.hidden) === 1 ? 'checked' : '' %>
+             class="rounded border-slate-300 text-sky-600 focus:ring-sky-500">
+      Dölj fråga
+    </label>
+
+    <button type="submit"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
+      <i class="ti ti-device-floppy"></i> Spara status
+    </button>
+  </form>
+</div>
 
 <!-- Koppling (ämne/resurs eller fråga) -->
 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">

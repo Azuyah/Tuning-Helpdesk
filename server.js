@@ -92,6 +92,9 @@ try {
      WHERE is_answered = 1
   `).run();
 } catch (_) { /* ignore */ }
+try {
+  db.prepare(`ALTER TABLE questions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0`).run();
+} catch (_) {}
 
 function initSchemaAndSeed() {
   // Bas-schema
@@ -1784,13 +1787,14 @@ app.get('/api/suggest', (req, res) => {
     const like = `%${esc(q)}%`;
     const left = 8 - results.length;
 
-    const qs = db.prepare(`
-      SELECT id, title, substr(COALESCE(body,''), 1, 120) AS snippet
-      FROM questions
-      WHERE title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\'
-      ORDER BY datetime(created_at) DESC
-      LIMIT ?
-    `).all(like, like, Math.min(left, 3));
+const qs = db.prepare(`
+  SELECT id, title, substr(COALESCE(body,''), 1, 120) AS snippet
+  FROM questions
+  WHERE (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')
+    AND hidden = 0
+  ORDER BY datetime(created_at) DESC
+  LIMIT ?
+`).all(like, like, Math.min(left, 3));
 
 
     for (const r of qs) {
@@ -2030,6 +2034,27 @@ function buildCategories() {
   }));
 }
 
+app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extended:false}), (req, res) => {
+  const id     = Number(req.params.id);
+  const status = String(req.body.status || '').toLowerCase();
+  const hide   = req.body.hide === 'on' ? 1 : 0;
+
+  if (!['open','answered','closed'].includes(status)) {
+    return res.status(400).send('Ogiltig status');
+  }
+
+  db.prepare(`
+    UPDATE questions
+       SET status = ?,
+           hidden = ?,
+           is_answered = CASE WHEN ?='answered' THEN 1 ELSE is_answered END,
+           updated_at = datetime('now')
+     WHERE id = ?
+  `).run(status, hide, status, id);
+
+  return res.redirect('/admin/questions/' + id);
+});
+
 app.post('/admin/categories/bulk', requireAdmin, (req, res) => {
   const { title = {}, icon = {}, sort = {} } = req.body;
   const ids = new Set([...Object.keys(title), ...Object.keys(icon), ...Object.keys(sort)]);
@@ -2197,13 +2222,13 @@ app.get('/questions/:id', (req, res) => {
   const id = Number(req.params.id);
   const me = getUser(req);
 
-  // Kolla om questions.answer_tags finns
+  // Finns kolumnen answer_tags?
   let hasAnswerTagsCol = false;
   try {
     hasAnswerTagsCol = db.prepare(`PRAGMA table_info(questions)`).all().some(c => c.name === 'answer_tags');
   } catch {}
 
-  // 1) Hämta fråga + ev. kategori
+  // Hämta fråga + ev. kategori
   const q = db.prepare(`
     SELECT
       q.*,
@@ -2219,13 +2244,19 @@ app.get('/questions/:id', (req, res) => {
     LIMIT 1
   `).get(id);
 
-  if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
+  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
 
-  // Räknare (enkelt läge)
+  // --- Viktigt: släpp igenom admin/support OCH författaren ---
+  const isStaff  = me && (me.role === 'admin' || me.role === 'support');
+  const isAuthor = me && q.user_id && Number(me.id) === Number(q.user_id);
+
+  if (Number(q.hidden) === 1 && !isStaff && !isAuthor) {
+    return res.status(404).render('404', { title: 'Fråga saknas' });
+  }
+
+  // Räkna upp visningar
   db.prepare(`UPDATE questions SET views = COALESCE(views,0) + 1 WHERE id = ?`).run(id);
   q.views = (q.views || 0) + 1;
-
-  // 2) Kopplingar
   // 2a) ev. direkt kopplat topic/resource till DENNA fråga
   const directLink = db.prepare(`
     SELECT qt.topic_id
@@ -2501,6 +2532,7 @@ app.get('/questions/:id', (req, res) => {
 // Explore
 app.get('/explore', (req, res) => {
   const me       = getUser(req);
+  const isStaff = me && (me.role === 'admin' || me.role === 'support');
   const tabParam = String(req.query.tab || '').toLowerCase();
   const tab      = ['topics','questions','resources','all'].includes(tabParam) ? tabParam : 'all';
 
@@ -2596,6 +2628,9 @@ if (tag) {
       WHERE 1=1
     `;
     const params = [];
+    if (!isStaff) {
+  sql += ` AND IFNULL(q.hidden,0) = 0 `;
+}
 
     if (q) {
       sql += ` AND (lower(q.title) LIKE ? OR lower(IFNULL(q.body,'')) LIKE ?) `;
@@ -2817,7 +2852,6 @@ app.get('/api/search', (req, res) => {
   res.json(rows);
 });
 
-// --- PROFIL ---
 // --- PROFIL ---
 app.get('/profile', requireAuth, (req, res) => {
   const me = db.prepare('SELECT id,email,name,role FROM users WHERE id=?').get(req.user.id);
