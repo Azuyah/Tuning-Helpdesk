@@ -1,9 +1,50 @@
-<section class="mx-auto max-w-6xl px-4 py-10 space-y-8">
-  <h1 class="text-2xl font-bold text-slate-900">Obesvarade frågor</h1>
+<section class="mx-auto max-w-6xl px-4 py-10">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    
+    <!-- Obesvarade frågor -->
+    <div>
+      <h2 class="text-xl font-bold text-slate-900 mb-4">Obesvarade frågor</h2>
+      <% if (!unanswered || unanswered.length === 0) { %>
+        <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">
+          Inga obesvarade frågor just nu.
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-50 text-slate-700 text-left font-semibold">
+              <tr>
+                <th class="px-4 py-2">Titel</th>
+                <th class="px-4 py-2">Frågeställare</th>
+                <th class="px-4 py-2">Skapad</th>
+                <th class="px-4 py-2">Visa</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              <% unanswered.forEach(q => { %>
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-2"><%= q.title %></td>
+                  <td class="px-4 py-2"><%= q.user_name || '-' %> (<%= q.user_email || '-' %>)</td>
+                  <td class="px-4 py-2 text-slate-500"><%= new Date(q.created_at).toLocaleString('sv-SE') %></td>
+                  <td class="px-4 py-2">
+                    <a href="/admin/questions/<%= q.id %>"
+                       class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
+                      Visa
+                    </a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
 
-  <% if (!questions || questions.length === 0) { %>
+<!-- Senaste frågor -->
+<div>
+  <h2 class="text-xl font-bold text-slate-900 mb-4">Senaste frågor</h2>
+  <% if (!latest || latest.length === 0) { %>
     <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">
-      Inga obesvarade frågor just nu.
+      Inga frågor hittades.
     </div>
   <% } else { %>
     <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -11,27 +52,32 @@
         <thead class="bg-slate-50 text-slate-700 text-left font-semibold">
           <tr>
             <th class="px-4 py-2">Titel</th>
-            <th class="px-4 py-2">Frågeställare</th>
-            <th class="px-4 py-2">Skapad</th>
-            <th class="px-4 py-2">Visa</th>
+            <th class="px-4 py-2"></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200">
-          <% questions.forEach(q => { %>
-            <tr class="hover:bg-slate-50">
-              <td class="px-4 py-2"><%= q.title %></td>
-              <td class="px-4 py-2"><%= q.user_name || '-' %> (<%= q.user_email || '-' %>)</td>
-              <td class="px-4 py-2 text-slate-500"><%= new Date(q.created_at).toLocaleString('sv-SE') %></td>
-<td class="px-4 py-2">
-  <a href="/admin/questions/<%= q.id %>"
-     class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
-    Visa
-  </a>
-</td>
+          <% latest.forEach(q => { %>
+            <tr class="hover:bg-slate-50 align-top">
+              <td class="px-4 py-2">
+                <div class="font-medium text-slate-900"><%= q.title %></div>
+                <div class="text-xs text-slate-500 mt-0.5">
+                  <%= q.user_name || 'Anonym' %> • 
+                  <%= new Date(q.created_at).toLocaleString('sv-SE') %>
+                </div>
+              </td>
+              <td class="px-4 py-2">
+                <a href="/questions/<%= q.id %>"
+                   class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-white font-medium shadow-sm hover:bg-sky-700">
+                  Visa
+                </a>
+              </td>
             </tr>
           <% }) %>
         </tbody>
       </table>
     </div>
   <% } %>
+</div>
+
+  </div>
 </section>

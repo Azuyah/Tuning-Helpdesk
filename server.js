@@ -1332,6 +1332,7 @@ app.get('/support-questions', requireSupportOrAdmin, (req, res) => {
   const page = Math.max(1, Number(req.query.page || 1));
   const offset = (page - 1) * perPage;
 
+  // Totalt antal obesvarade (för pagination)
   const totalOpen = db.prepare(`
     SELECT COUNT(*) AS n
     FROM questions q
@@ -1339,28 +1340,48 @@ app.get('/support-questions', requireSupportOrAdmin, (req, res) => {
       AND COALESCE(q.status,'open') <> 'closed'
   `).get().n;
 
-  const rows = db.prepare(`
-    SELECT
-      q.id,
-      q.title,
-      q.user_id,
-      q.created_at,
-      q.status,
-      COALESCE(q.is_answered,0) AS is_answered,
-      u.name  AS user_name,
-      u.email AS user_email
-    FROM questions q
-    LEFT JOIN users u ON u.id = q.user_id
-    WHERE COALESCE(q.is_answered,0)=0
-      AND COALESCE(q.status,'open') <> 'closed'
-    ORDER BY datetime(q.created_at) DESC
-    LIMIT ? OFFSET ?
-  `).all(perPage, offset);
+// Obesvarade (paginerad kolumn)
+const unanswered = db.prepare(`
+  SELECT
+    q.id,
+    q.title,
+    q.user_id,
+    q.created_at,
+    q.status,
+    COALESCE(q.is_answered,0) AS is_answered,
+    COALESCE(u.name, '')  AS user_name,
+    COALESCE(u.email, '') AS user_email
+  FROM questions q
+  LEFT JOIN users u ON u.id = q.user_id
+  WHERE COALESCE(q.is_answered,0)=0
+    AND COALESCE(q.status,'open') <> 'closed'
+  ORDER BY datetime(q.created_at) DESC
+  LIMIT ? OFFSET ?
+`).all(perPage, offset);
+
+// Senaste frågor (högerkolumn)
+const latest = db.prepare(`
+  SELECT
+    q.id,
+    q.title,
+    q.user_id,
+    q.created_at,
+    q.status,
+    COALESCE(q.is_answered,0) AS is_answered,
+    COALESCE(u.name, '')  AS user_name,
+    COALESCE(u.email, '') AS user_email
+  FROM questions q
+  LEFT JOIN users u ON u.id = q.user_id
+  ORDER BY datetime(q.created_at) DESC
+  LIMIT 20
+`).all();
 
   res.render('support-questions', {
-    title: 'Obesvarade frågor',
-    questions: rows,
+    title: 'Support – Frågor',
+    unanswered,
+    latest,
     page,
+    perPage,
     totalPages: Math.max(1, Math.ceil(totalOpen / perPage)),
     totalOpen
   });
