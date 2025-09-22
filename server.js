@@ -735,7 +735,6 @@ app.put('/api/dealers/:dealer_id/role', requireAdmin, express.json(), (req, res)
     user = db.prepare(`SELECT id, email, role, name FROM users WHERE lower(email)=lower(?)`).get(dealer.email);
   }
 
-  // skydda mot att avskaffa sin egen admin-rätt (om email matchar inloggad)
   if (req.user && user.id === req.user.id && role !== 'admin') {
     return res.status(400).json({ error: 'du kan inte ta bort din egen admin-roll' });
   }
@@ -1198,7 +1197,7 @@ app.get('/admin/questions/:id', requireStaff, (req, res) => {
   res.render('admin-question', {
     title: `Fråga #${q.id}`,
     q,
-    // behåll din gamla "linked" för bakåtkompatibilitet i vyn
+
     linked: linkedTopic ? [linkedTopic] : [],
     linkedQuestion,
     categories,
@@ -2726,7 +2725,7 @@ app.get('/resources/:id', (req, res) => {
     LIMIT 1
   `).get(req.params.id);
 
-  // Fallback om din DB råkar heta "topic_category" (singular)
+  // Fallback
   let resource = row;
   if (resource && !resource.category_id && !resource.category_title) {
     try {
@@ -2845,8 +2844,7 @@ function renderProfile(res, userId, { ok = null, err = null } = {}) {
 }
 
 // --- Uppdatera profil (namn/e-post) ---
-// (Den här matchar ditt "Profilinställningar"-formulär om du vill peka det hit.
-//  Men vi låter även /profile/update nedan hantera samma sak så din vy funkar nu.)
+
 app.post('/profile', requireAuth, (req, res) => {
   const userId          = req.user.id;
   const name            = (req.body.name || '').trim();
@@ -2874,7 +2872,7 @@ db.prepare("UPDATE users SET name=?, email=?, updated_at=datetime('now') WHERE i
   return res.redirect('/profile?ok=' + encodeURIComponent('Profil uppdaterad'));
 });
 
-// --- Uppdatera profil (kompatibel med din nuvarande vy) ---
+// --- Uppdatera profil ---
 app.post('/profile/update', requireAuth, (req, res) => {
   const userId          = req.user.id;
   const name            = (req.body.name || '').trim();
