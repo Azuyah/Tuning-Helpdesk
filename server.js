@@ -100,6 +100,11 @@ try {
 try {
   db.prepare(`ALTER TABLE questions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0`).run();
 } catch (_) {}
+try {
+  db.prepare(`ALTER TABLE questions ADD COLUMN internal_comment TEXT`).run();
+} catch (e) {
+  // kolumnen finns redan
+}
 
 function initSchemaAndSeed() {
   // Bas-schema
@@ -2058,6 +2063,20 @@ app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extend
   `).run(status, hide, status, id);
 
   return res.redirect('/admin/questions/' + id);
+});
+
+app.post('/admin/questions/:id/comment', requireStaff, express.urlencoded({ extended: false }), (req, res) => {
+  const id = Number(req.params.id);
+  const comment = (req.body.internal_comment || '').trim();
+
+  db.prepare(`
+    UPDATE questions
+       SET internal_comment = ?,
+           updated_at = datetime('now')
+     WHERE id = ?
+  `).run(comment, id);
+
+  res.redirect('/admin/questions/' + id);
 });
 
 app.post('/admin/categories/bulk', requireAdmin, (req, res) => {
