@@ -489,16 +489,23 @@ app.use((req, res, next) => {
 
   try {
     if (u && (u.role === 'admin' || u.role === 'support')) {
-      // Badge-count
-      const row = db.prepare(`SELECT COUNT(*) AS n FROM questions WHERE status='open'`).get();
-      res.locals.adminOpenCount = row?.n || 0;
+      // Räkna öppna frågor (tolka NULL som 'open')
+      const row = db.prepare(`
+        SELECT COUNT(*) AS n
+        FROM questions
+        WHERE COALESCE(status,'open') = 'open'
+      `).get();
+
+      const count = row?.n || 0;
+      res.locals.adminOpenCount = count;
+      res.locals.notifCount     = count; // <-- viktigt för headern
 
       // Lista till popupen (senaste öppna)
       const rows = db.prepare(`
         SELECT id, title, created_at
         FROM questions
-        WHERE status = 'open'
-        ORDER BY created_at DESC
+        WHERE COALESCE(status,'open') = 'open'
+        ORDER BY datetime(created_at) DESC
         LIMIT 10
       `).all();
 
@@ -510,7 +517,7 @@ app.use((req, res, next) => {
       }));
 
     } else if (u && u.role === 'user') {
-      // Badge-count
+      // Räkna obesedda svar för användaren
       const row = db.prepare(`
         SELECT COUNT(*) AS n
         FROM questions
@@ -518,16 +525,17 @@ app.use((req, res, next) => {
           AND status = 'answered'
           AND (user_seen_answer_at IS NULL OR user_seen_answer_at < answered_at)
       `).get(u.id);
+
       res.locals.notifCount = row?.n || 0;
 
-      // Lista till popupen (obesedda svar)
+      // Lista obesedda svar
       const rows = db.prepare(`
         SELECT id, title, answered_at
         FROM questions
         WHERE user_id = ?
           AND status = 'answered'
           AND (user_seen_answer_at IS NULL OR user_seen_answer_at < answered_at)
-        ORDER BY answered_at DESC
+        ORDER BY datetime(answered_at) DESC
         LIMIT 10
       `).all(u.id);
 
@@ -542,6 +550,7 @@ app.use((req, res, next) => {
     res.locals.notifCount = 0;
     res.locals.adminOpenCount = 0;
   }
+
   next();
 });
 
@@ -3453,7 +3462,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     FROM dealers
     WHERE created_local IS NOT NULL
     ORDER BY datetime(created_local) DESC
-    LIMIT 6
+    LIMIT 7
   `).all();
 
   res.render('admin', {
