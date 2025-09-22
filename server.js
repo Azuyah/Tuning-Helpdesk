@@ -853,20 +853,6 @@ app.get('/topic/:id', (req, res) => {
     } catch (_) {}
   }
 
-  // Fallback: om ämnet är ett svar och saknar egen kategori → ärv frågans kategori
-  if (!category && topic.answer_for_question_id) {
-    try {
-      category = db.prepare(`
-        SELECT c.id, c.title
-        FROM question_category qc
-        JOIN categories c ON c.id = qc.category_id
-        WHERE qc.question_id = ?
-        ORDER BY qc.rowid ASC
-        LIMIT 1
-      `).get(topic.answer_for_question_id);
-    } catch (_) {}
-  }
-
   // Sätt på topic-objektet så EJS kan visa
   if (category) {
     topic.category_id = category.id;
