@@ -74,9 +74,19 @@
             <i class="ti ti-device-floppy"></i> Spara svar
           </button>
 
-          <% if (q.is_answered) { %>
-            <span class="text-sm text-slate-500">Besvarad av <%= q.answered_by || 'Okänd' %></span>
-          <% } %>
+<% if (q.is_answered) { %>
+  <% 
+    const role = (q.answered_role || '').toLowerCase();
+    const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Okänd';
+    const cls = role === 'admin'
+      ? 'bg-red-100 text-red-700 border border-red-200'
+      : role === 'support'
+        ? 'bg-violet-100 text-violet-700 border border-violet-200'
+        : 'bg-slate-100 text-slate-700 border border-slate-200';
+  %>
+  <span class="text-sm text-slate-500">Besvarad av</span>
+  <span class="ml-1 text-[11px] px-2 py-0.5 rounded-full align-middle <%= cls %>"><%= roleLabel %></span>
+<% } %>
         </div>
       </form>
     </article>
