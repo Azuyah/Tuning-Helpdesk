@@ -87,11 +87,16 @@ try { addColumnIfMissing('questions', 'answered_by',   'TEXT'); } catch (_) {}
 try {
   db.prepare(`
     UPDATE questions
-       SET answered_by   = COALESCE(NULLIF(TRIM(answered_by), ''), 'Admin'),
-           answered_role = COALESCE(NULLIF(TRIM(answered_role), ''), 'support')
+       SET answered_role = COALESCE((
+         SELECT u.role
+         FROM users u
+         WHERE lower(u.email) = lower(questions.answered_by)
+            OR u.name = questions.answered_by
+         LIMIT 1
+       ), answered_role)
      WHERE is_answered = 1
   `).run();
-} catch (_) { /* ignore */ }
+} catch (e) { /* ignore */ }
 try {
   db.prepare(`ALTER TABLE questions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0`).run();
 } catch (_) {}
