@@ -3477,6 +3477,28 @@ app.get('/admin', requireAdmin, (req, res) => {
   });
 });
 
+// Ta bort alla kopplingar (ämne/resurs via question_topic + ev. länkad fråga)
+app.delete('/api/questions/:id/attach', requireStaff, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'ogiltigt id' });
+
+  const q = db.prepare('SELECT id FROM questions WHERE id=?').get(id);
+  if (!q) return res.status(404).json({ error: 'fråga saknas' });
+
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM question_topic WHERE question_id=?').run(id);
+    db.prepare(`
+      UPDATE questions
+      SET linked_question_id = NULL,
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(id);
+  });
+  tx();
+
+  res.json({ ok: true });
+});
+
 // Kör en initial sync när servern startar
 (async () => {
   try { await syncAllDealers(); }

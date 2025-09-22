@@ -31,11 +31,15 @@
         <p class="mt-3 text-slate-700 whitespace-pre-line"><%= q.body %></p>
       <% } %>
 
-      <div class="mt-4 text-sm text-slate-600">
-        Från:
-        <span class="font-medium"><%= q.user_name || '' %></span>
-        <% if (q.user_email) { %>&lt;<%= q.user_email %>&gt;<% } %>
-      </div>
+<% 
+  const fromName  = q.author_name || q.user_name || 'Anonym';
+  const fromEmail = q.author_email || q.user_email || '';
+%>
+<div class="mt-4 text-sm text-slate-600">
+  Från:
+  <span class="font-medium"><%= fromName %></span>
+  <% if (fromEmail) { %>&lt;<%= fromEmail %>&gt;<% } %>
+</div>
     </article>
 
     <!-- Svara på frågan -->
@@ -107,32 +111,44 @@
 
   <div class="text-sm text-slate-600 mb-2">Nuvarande koppling:</div>
 
-  <% if (linked && linked.length) { 
-       const t = linked[0]; 
-       const isRes = Number(t.is_resource) === 1;
-       const href  = isRes ? ('/resources/' + t.id) : ('/topic/' + t.id);
-  %>
-    <!-- Visar kopplat ämne/resurs (blå länk) -->
-    <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
-      <a href="<%= href %>" class="text-sky-600 hover:underline truncate"><%= t.title %></a>
-      <span class="text-xs text-slate-500 shrink-0"><%= isRes ? 'Resurs' : 'Ämne' %></span>
+<% if (linked && linked.length) { 
+     const t = linked[0]; 
+     const isRes = Number(t.is_resource) === 1;
+     const href  = isRes ? ('/resources/' + t.id) : ('/topic/' + t.id);
+%>
+  <!-- Kopplat ämne/resurs -->
+  <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+    <a href="<%= href %>" class="text-sky-600 hover:underline truncate"><%= t.title %></a>
+    <div class="flex items-center gap-2 shrink-0">
+      <span class="text-xs text-slate-500"><%= isRes ? 'Resurs' : 'Ämne' %></span>
+      <button type="button" id="btnDetach"
+              class="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50">
+        Ta bort
+      </button>
     </div>
+  </div>
 
-  <% } else if (linkedQuestion) { %>
-    <!-- Visar kopplad fråga (blå länk) -->
-    <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
-      <a href="/questions/<%= linkedQuestion.id %>" class="text-sky-600 hover:underline truncate">
-        <%= linkedQuestion.title %>
-      </a>
-      <span class="text-xs text-slate-500 shrink-0">Fråga</span>
+<% } else if (linkedQuestion) { %>
+  <!-- Kopplad fråga -->
+  <div class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+    <a href="/questions/<%= linkedQuestion.id %>" class="text-sky-600 hover:underline truncate">
+      <%= linkedQuestion.title %>
+    </a>
+    <div class="flex items-center gap-2 shrink-0">
+      <span class="text-xs text-slate-500">Fråga</span>
+      <button type="button" id="btnDetach"
+              class="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50">
+        Ta bort
+      </button>
     </div>
+  </div>
 
-  <% } else { %>
-    <div class="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500">
-      Ingen koppling ännu.
-    </div>
-  <% } %>
-</div>
+<% } else { %>
+  <!-- Ingen koppling -->
+  <div class="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-500">
+    Ingen koppling ännu.
+  </div>
+<% } %>
 
     <!-- Kategorier för frågan -->
 <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -362,4 +378,26 @@ document.addEventListener('DOMContentLoaded', function () {
     content_style: 'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;font-size:16px;line-height:1.65}'
   });
 });
+</script>
+
+<script>
+  (function(){
+    var root = document.getElementById('qView');
+    var qid  = Number(root && root.dataset.qid);
+
+    var btn = document.getElementById('btnDetach');
+    if (btn) {
+      btn.addEventListener('click', async function(){
+        if (!confirm('Ta bort koppling?')) return;
+        try {
+          const res = await fetch('/api/questions/' + qid + '/attach', { method:'DELETE' });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data && data.error || 'Fel vid borttagning');
+          location.reload();
+        } catch (e) {
+          alert(e.message || 'Kunde inte ta bort koppling');
+        }
+      });
+    }
+  })();
 </script>
