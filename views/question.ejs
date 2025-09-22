@@ -119,11 +119,17 @@
     <div class="prose prose-slate max-w-none mb-6">
       <%- include('partials/richtext', { id: 'answer-' + q.id, html: q.answer_body }) %>
     </div>
-    <div class="text-sm text-slate-500">
-      Svarat av: <span class="font-medium"><%= q.answered_by || 'Okänd' %></span>
-      • <%= new Date(q.answered_at || q.updated_at || Date.now()).toLocaleString('sv-SE') %>
-      <% if (q.answer_tags) { %> • Taggar: <%= q.answer_tags %><% } %>
-    </div>
+<div class="text-sm text-slate-500">
+  Svarat av:
+  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
+    <%= q.answered_role === 'admin' ? 'bg-red-100 text-red-700' :
+        q.answered_role === 'support' ? 'bg-violet-100 text-violet-700' :
+        'bg-slate-100 text-slate-700' %>">
+    <%= (q.answered_role || 'Okänd').charAt(0).toUpperCase() + (q.answered_role || 'Okänd').slice(1) %>
+  </span>
+  • <%= new Date(q.answered_at || q.updated_at || Date.now()).toLocaleString('sv-SE') %>
+  <% if (q.answer_tags) { %> • Taggar: <%= q.answer_tags %><% } %>
+</div>
   <% } else { %>
     <!-- Ej besvarad -->
     <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700">

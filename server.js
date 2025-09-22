@@ -334,6 +334,11 @@ try {
 } catch (e) {
   // kolumnen finns redan – ignorera
 }
+try {
+  db.prepare(`ALTER TABLE questions ADD COLUMN answered_role TEXT`).run();
+} catch (e) {
+  // kolumnen finns redan – ignorera
+}
 // --- MIGRATION: questions.linked_question_id ---
 try {
   // Lägg till kolumnen om den saknas
@@ -1281,6 +1286,7 @@ app.post('/admin/questions/:id', requireStaff, (req, res) => {
   const answer_body  = (req.body.answer_body || '').trim();  
   const answer_tags  = (req.body.answer_tags || '').trim();
   const answered_by  = req.user?.name || req.user?.email || 'Admin';
+  const answered_role = req.user?.role || 'user';
   const answered_at  = new Date().toISOString();
 
   db.prepare(`
@@ -1289,12 +1295,13 @@ app.post('/admin/questions/:id', requireStaff, (req, res) => {
            answer_body=?,
            answer_tags=?,
            answered_by=?,
+           answered_role=?,
            answered_at=?,
            is_answered=1,
            status='answered',
            updated_at=datetime('now')
      WHERE id=?
-  `).run(answer_title, answer_body, answer_tags, answered_by, answered_at, id);
+  `).run(answer_title, answer_body, answer_tags, answered_by, answered_role, answered_at, id);
 
   res.redirect('/questions/' + id);
 });
