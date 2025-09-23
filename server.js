@@ -391,6 +391,19 @@ try {
 } catch (e) {
   // ignorera (kolumn/index kan redan finnas)
 }
+// Skapa tabell för feedback (om den inte finns)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS feedbacks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    category TEXT NOT NULL,                 -- 'wish' | 'suggestion' | 'bug'
+    message TEXT NOT NULL,
+    is_handled INTEGER DEFAULT 0,           -- 0 = ny/öppen, 1 = hanterad
+    created_at TEXT DEFAULT (datetime('now')),
+    handled_at TEXT,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  )
+`).run();
 
 // ---------- EJS + Layouts ----------
 app.set('view engine', 'ejs');
@@ -523,86 +536,127 @@ app.use((req, res, next) => {
   res.locals.me = u || null;
   res.locals.notifCount = 0;
   res.locals.adminOpenCount = 0;
-  res.locals.notifications = []; // <-- viktigt
+  res.locals.notifications = [];
 
   try {
+    // ----- STAFF: admin/support -----
     if (u && (u.role === 'admin' || u.role === 'support')) {
-      // Räkna öppna frågor (tolka NULL som 'open')
-      const row = db.prepare(`
+      // 1) Öppna frågor
+      const openQCountRow = db.prepare(`
         SELECT COUNT(*) AS n
         FROM questions
         WHERE COALESCE(status,'open') = 'open'
       `).get();
+      const openQCount = openQCountRow?.n || 0;
 
-      const count = row?.n || 0;
-      res.locals.adminOpenCount = count;
-      res.locals.notifCount     = count; // <-- viktigt för headern
-
-      // Lista till popupen (senaste öppna)
-      const rows = db.prepare(`
+      const openQRows = db.prepare(`
         SELECT id, title, created_at
         FROM questions
         WHERE COALESCE(status,'open') = 'open'
         ORDER BY datetime(created_at) DESC
-        LIMIT 10
+        LIMIT 5
       `).all();
 
-      res.locals.notifications = rows.map(q => ({
-        id: q.id,
-        title: q.title || 'Ny fråga',
-        message: 'Ny obesvarad fråga',
-        href: `/questions/${q.id}`
+      // 2) Ohanterad feedback
+      const openFCountRow = db.prepare(`
+        SELECT COUNT(*) AS n
+        FROM feedbacks
+        WHERE is_handled = 0
+      `).get();
+      const openFCount = openFCountRow?.n || 0;
+
+      const openFRows = db.prepare(`
+        SELECT id, category, created_at
+        FROM feedbacks
+        WHERE is_handled = 0
+        ORDER BY datetime(created_at) DESC
+        LIMIT 5
+      `).all();
+
+      // Sätt räknare
+      res.locals.adminOpenCount = openQCount;
+      res.locals.notifCount = openQCount + openFCount;
+
+      // Bygg notislistan (feedback först)
+      const staffNotifications = [];
+
+      openFRows.forEach(f => {
+        const label =
+          f.category === 'bug' ? 'Problem' :
+          f.category === 'suggestion' ? 'Förslag' : 'Önskemål';
+        staffNotifications.push({
+          id: `f-${f.id}`,
+          title: `Ny feedback: ${label}`,
+          message: 'Ny feedback',
+          href: `/admin/feedback`
+        });
+      });
+
+      openQRows.forEach(q => {
+        staffNotifications.push({
+          id: `q-${q.id}`,
+          title: q.title || 'Ny fråga',
+          message: 'Ny obesvarad fråga',
+          href: `/questions/${q.id}`
+        });
+      });
+
+      res.locals.notifications = staffNotifications;
+    }
+
+    // ----- INLOGGADE ICKE-STAFF: user/dealer/kund -----
+    else if (u) {
+      // Räkna obesedda svar för användarens egna frågor
+      const unseenCountRow = db.prepare(`
+        SELECT COUNT(*) AS n
+        FROM questions
+        WHERE user_id = ?
+          AND (
+            COALESCE(status,'') = 'answered' OR COALESCE(is_answered,0) = 1
+          )
+          AND (
+            user_seen_answer_at IS NULL
+            OR datetime(user_seen_answer_at) < datetime(COALESCE(answered_at, updated_at, created_at))
+          )
+      `).get(u.id);
+
+      res.locals.notifCount = unseenCountRow?.n || 0;
+
+      const unseenRows = db.prepare(`
+        SELECT id, title, COALESCE(answered_at, updated_at, created_at) AS ts
+        FROM questions
+        WHERE user_id = ?
+          AND (
+            COALESCE(status,'') = 'answered' OR COALESCE(is_answered,0) = 1
+          )
+          AND (
+            user_seen_answer_at IS NULL
+            OR datetime(user_seen_answer_at) < datetime(COALESCE(answered_at, updated_at, created_at))
+          )
+        ORDER BY datetime(ts) DESC
+        LIMIT 10
+      `).all(u.id);
+
+      res.locals.notifications = unseenRows.map(row => ({
+        id: `q-${row.id}`,
+        title: row.title || 'Ditt svar är klart',
+        message: 'Nytt svar på din fråga',
+        href: `/questions/${row.id}`
       }));
+    }
 
-} else if (u) {
-  // Alla inloggade som INTE är staff (user, dealer, kund m.fl.)
-  const isStaff = (u.role === 'admin' || u.role === 'support');
-  if (!isStaff) {
-    // Räkna obesedda svar
-    const row = db.prepare(`
-      SELECT COUNT(*) AS n
-      FROM questions
-      WHERE user_id = ?
-        AND (
-          COALESCE(status,'') = 'answered'
-          OR COALESCE(is_answered,0) = 1
-        )
-        AND (
-          user_seen_answer_at IS NULL
-          OR datetime(user_seen_answer_at) < datetime(COALESCE(answered_at, updated_at, created_at))
-        )
-    `).get(u.id);
-
-    res.locals.notifCount = row?.n || 0;
-
-    // Lista obesedda svar (senaste först)
-    const rows = db.prepare(`
-      SELECT id, title, COALESCE(answered_at, updated_at, created_at) AS ts
-      FROM questions
-      WHERE user_id = ?
-        AND (
-          COALESCE(status,'') = 'answered'
-          OR COALESCE(is_answered,0) = 1
-        )
-        AND (
-          user_seen_answer_at IS NULL
-          OR datetime(user_seen_answer_at) < datetime(COALESCE(answered_at, updated_at, created_at))
-        )
-      ORDER BY datetime(ts) DESC
-      LIMIT 10
-    `).all(u.id);
-
-    res.locals.notifications = rows.map(q => ({
-      id: q.id,
-      title: q.title || 'Ditt svar är klart',
-      message: 'Nytt svar på din fråga',
-      href: `/questions/${q.id}`
-    }));
-  }
-}
+    // ----- Gäst: inga notiser -----
+    else {
+      res.locals.notifCount = 0;
+      res.locals.adminOpenCount = 0;
+      res.locals.notifications = [];
+    }
   } catch (e) {
+    // Felsäkert fallback
     res.locals.notifCount = 0;
     res.locals.adminOpenCount = 0;
+    res.locals.notifications = [];
+    // valfritt: console.error(e);
   }
 
   next();
@@ -2838,6 +2892,77 @@ if (tag) {
     tags,
     items
   });
+});
+
+// Visa formulär
+app.get('/feedback', (req, res) => {
+  res.render('feedback', { title: 'Feedback', flash: null });
+});
+
+// Ta emot formulär
+app.post('/feedback', express.urlencoded({ extended: false }), (req, res) => {
+  const me = getUser(req);
+  const category = String(req.body.category || '').toLowerCase();
+  const message  = (req.body.message || '').trim();
+
+  const allowed = ['wish','suggestion','bug'];
+  if (!allowed.includes(category) || !message) {
+    return res.status(400).render('feedback', {
+      title: 'Feedback',
+      flash: 'Något saknas. Välj kategori och skriv ett meddelande.'
+    });
+  }
+
+  db.prepare(`
+    INSERT INTO feedbacks (user_id, category, message)
+    VALUES (?, ?, ?)
+  `).run(me?.id || null, category, message);
+
+  res.render('feedback', { title: 'Feedback', flash: 'Tack! Din feedback har skickats.' });
+});
+
+app.get('/admin/feedback', requireStaff, (req, res) => {
+  const filter = String(req.query.filter || 'open'); // open | handled | all
+  let where = '1=1';
+  const params = [];
+
+  if (filter === 'open') {
+    where = 'is_handled = 0';
+  } else if (filter === 'handled') {
+    where = 'is_handled = 1';
+  }
+
+  const rows = db.prepare(`
+    SELECT f.*, u.name AS user_name, u.email AS user_email
+    FROM feedbacks f
+    LEFT JOIN users u ON u.id = f.user_id
+    WHERE ${where}
+    ORDER BY datetime(f.created_at) DESC
+    LIMIT 100
+  `).all(...params);
+
+  res.render('admin-feedback', {
+    title: 'Feedback',
+    items: rows,
+    filter
+  });
+});
+
+// Markera som hanterad/öppen
+app.post('/admin/feedback/:id/toggle', requireStaff, (req, res) => {
+  const id = Number(req.params.id);
+  const f = db.prepare(`SELECT is_handled FROM feedbacks WHERE id=?`).get(id);
+  if (!f) return res.status(404).send('Feedback saknas');
+
+  const nextVal = f.is_handled ? 0 : 1;
+  db.prepare(`
+    UPDATE feedbacks
+       SET is_handled = ?,
+           handled_at = CASE WHEN ?=1 THEN datetime('now') ELSE handled_at END
+     WHERE id = ?
+  `).run(nextVal, nextVal, id);
+
+  res.redirect('/admin/feedback');
 });
 
 // Visa en specifik resurs (separat layout från vanliga topics)

@@ -44,6 +44,16 @@
                   dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
                   after:transition">Utforska</a>
 
+                  <a href="/feedback" 
+   class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 
+          dark:text-slate-200 dark:hover:bg-white/5 
+          relative after:pointer-events-none after:absolute after:inset-x-3 
+          after:-bottom-0.5 after:h-0.5 after:rounded after:bg-sky-600 
+          dark:after:bg-red-500/80 after:scale-x-0 hover:after:scale-x-100 
+          after:transition">
+  Feedback
+</a>
+
         <% const me = (typeof user !== 'undefined' && user) ? user : null; %>
         <% if (me && me.role === 'admin') { %>
           <a href="/admin" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-amber-500 after:scale-x-0 hover:after:scale-x-100 after:transition">
@@ -70,13 +80,9 @@
     <button id="notifBtn"
             class="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100 focus:outline-none">
       <i class="ti ti-bell text-xl"></i>
-      <% if (me.role === 'admin' && Number(adminOpenCount||0) > 0) { %>
+
+      <% if (Number(notifCount || 0) > 0) { %>
         <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-red-600 text-white text-xs flex items-center justify-center">
-          <%= adminOpenCount %>
-        </span>
-      <% } %>
-      <% if (me.role !== 'admin' && Number(notifCount||0) > 0) { %>
-        <span class="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">
           <%= notifCount %>
         </span>
       <% } %>
@@ -88,20 +94,20 @@
       <div class="p-4 border-b border-slate-100 font-semibold text-slate-700">
         Notiser
       </div>
-<ul class="max-h-64 overflow-y-auto divide-y divide-slate-100" id="notifList">
-  <% if (Array.isArray(notifications) && notifications.length) { %>
-    <% notifications.forEach(n => { %>
-      <li class="p-3 hover:bg-slate-50">
-        <a href="<%= n.href || '#' %>" class="block">
-          <div class="text-sm font-medium text-slate-900"><%= n.title %></div>
-          <div class="text-xs text-slate-500"><%= n.message || '' %></div>
-        </a>
-      </li>
-    <% }) %>
-  <% } else { %>
-    <li class="p-3 text-sm text-slate-500">Inga nya notiser</li>
-  <% } %>
-</ul>
+      <ul class="max-h-64 overflow-y-auto divide-y divide-slate-100" id="notifList">
+        <% if (Array.isArray(notifications) && notifications.length) { %>
+          <% notifications.forEach(n => { %>
+            <li class="p-3 hover:bg-slate-50">
+              <a href="<%= n.href || '#' %>" class="block">
+                <div class="text-sm font-medium text-slate-900"><%= n.title %></div>
+                <div class="text-xs text-slate-500"><%= n.message || '' %></div>
+              </a>
+            </li>
+          <% }) %>
+        <% } else { %>
+          <li class="p-3 text-sm text-slate-500">Inga nya notiser</li>
+        <% } %>
+      </ul>
     </div>
   </div>
 <% } %>
