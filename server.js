@@ -547,36 +547,52 @@ app.use((req, res, next) => {
         href: `/questions/${q.id}`
       }));
 
-    } else if (u && u.role === 'user') {
-      // Räkna obesedda svar för användaren
-      const row = db.prepare(`
-        SELECT COUNT(*) AS n
-        FROM questions
-        WHERE user_id = ?
-          AND status = 'answered'
-          AND (user_seen_answer_at IS NULL OR user_seen_answer_at < answered_at)
-      `).get(u.id);
+} else if (u) {
+  // Alla inloggade som INTE är staff (user, dealer, kund m.fl.)
+  const isStaff = (u.role === 'admin' || u.role === 'support');
+  if (!isStaff) {
+    // Räkna obesedda svar
+    const row = db.prepare(`
+      SELECT COUNT(*) AS n
+      FROM questions
+      WHERE user_id = ?
+        AND (
+          COALESCE(status,'') = 'answered'
+          OR COALESCE(is_answered,0) = 1
+        )
+        AND (
+          user_seen_answer_at IS NULL
+          OR datetime(user_seen_answer_at) < datetime(COALESCE(answered_at, updated_at, created_at))
+        )
+    `).get(u.id);
 
-      res.locals.notifCount = row?.n || 0;
+    res.locals.notifCount = row?.n || 0;
 
-      // Lista obesedda svar
-      const rows = db.prepare(`
-        SELECT id, title, answered_at
-        FROM questions
-        WHERE user_id = ?
-          AND status = 'answered'
-          AND (user_seen_answer_at IS NULL OR user_seen_answer_at < answered_at)
-        ORDER BY datetime(answered_at) DESC
-        LIMIT 10
-      `).all(u.id);
+    // Lista obesedda svar (senaste först)
+    const rows = db.prepare(`
+      SELECT id, title, COALESCE(answered_at, updated_at, created_at) AS ts
+      FROM questions
+      WHERE user_id = ?
+        AND (
+          COALESCE(status,'') = 'answered'
+          OR COALESCE(is_answered,0) = 1
+        )
+        AND (
+          user_seen_answer_at IS NULL
+          OR datetime(user_seen_answer_at) < datetime(COALESCE(answered_at, updated_at, created_at))
+        )
+      ORDER BY datetime(ts) DESC
+      LIMIT 10
+    `).all(u.id);
 
-      res.locals.notifications = rows.map(q => ({
-        id: q.id,
-        title: q.title || 'Ditt svar är klart',
-        message: 'Nytt svar på din fråga',
-        href: `/questions/${q.id}`
-      }));
-    }
+    res.locals.notifications = rows.map(q => ({
+      id: q.id,
+      title: q.title || 'Ditt svar är klart',
+      message: 'Nytt svar på din fråga',
+      href: `/questions/${q.id}`
+    }));
+  }
+}
   } catch (e) {
     res.locals.notifCount = 0;
     res.locals.adminOpenCount = 0;
