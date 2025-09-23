@@ -3652,6 +3652,15 @@ app.delete('/api/questions/:id/attach', requireStaff, (req, res) => {
   res.json({ ok: true });
 });
 
+app.use((req, res) => {
+  const me = getUser(req);
+  res.status(404).render('404', {
+    title: 'Sidan kunde inte hittas',
+    user: me || null,
+    path: req.originalUrl || '/'
+  });
+});
+
 // Kör en initial sync när servern startar
 (async () => {
   try { await syncAllDealers(); }
