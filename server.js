@@ -1243,10 +1243,15 @@ app.get('/admin/questions/:id', requireStaff, (req, res) => {
     ? db.prepare(`SELECT id, title FROM questions WHERE id=?`).get(q.linked_question_id)
     : null;
 
+    const machinesRows = db.prepare(
+  'SELECT machine FROM question_machines WHERE question_id = ?'
+).all(id);
+const machines = machinesRows.map(r => r.machine);
+
   res.render('admin-question', {
     title: `Fråga #${q.id}`,
     q,
-
+    machines,
     linked: linkedTopic ? [linkedTopic] : [],
     linkedQuestion,
     categories,
