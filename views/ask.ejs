@@ -18,12 +18,64 @@
       <!-- Beskrivning -->
       <div>
         <label for="body" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-          Beskriv frågan (valfritt)
+          Er fråga
         </label>
         <textarea name="body" id="body" rows="5"
                   class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"></textarea>
       </div>
 
+<!-- Er maskin (obligatorisk, flerval via checkbox-dropdown) -->
+<div class="relative" id="machinesField">
+  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+    Er maskin <span class="text-red-500">*</span>
+  </label>
+
+  <!-- Trigger-knapp -->
+  <button type="button" id="machinesBtn"
+          class="mt-1 w-full inline-flex items-center justify-between rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-left text-sm text-slate-900 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+    <span id="machinesLabel" class="truncate">Välj maskin(er)…</span>
+    <svg class="ml-2 h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+  </button>
+
+  <!-- Dropdown-menyn -->
+  <div id="machinesMenu"
+       class="absolute z-20 mt-2 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-2 hidden">
+    <ul class="max-h-44 overflow-auto text-sm space-y-1" role="listbox" aria-label="Välj maskiner">
+      <li>
+        <label class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+          <input type="checkbox" class="h-4 w-4" value="AutoTuner" data-machine>
+          <span>AutoTuner</span>
+        </label>
+      </li>
+      <li>
+        <label class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+          <input type="checkbox" class="h-4 w-4" value="Flex" data-machine>
+          <span>Flex</span>
+        </label>
+      </li>
+      <li>
+        <label class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+          <input type="checkbox" class="h-4 w-4" value="Kess" data-machine>
+          <span>Kess</span>
+        </label>
+      </li>
+    </ul>
+    <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+      <button type="button" id="machinesClear" class="text-xs px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
+        Rensa val
+      </button>
+      <button type="button" id="machinesDone" class="text-xs font-semibold text-sky-600 hover:underline">
+        Klar
+      </button>
+    </div>
+  </div>
+
+  <!-- Dold container där val synkas som machines[] för FormData -->
+  <div id="machinesHidden"></div>
+
+  <!-- Liten hjälprad -->
+  <p class="mt-1 text-xs text-slate-500">Välj en eller flera maskiner.</p>
+</div>
         <!-- Bild (valfritt) -->
   <div>
     <label for="image" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -65,6 +117,78 @@
   const imgPreviewWrap = document.getElementById('imgPreviewWrap');
   const imgPreview = document.getElementById('imgPreview');
 
+  // --- Checkbox-dropdown (Er maskin) ---
+  const machinesField  = document.getElementById('machinesField');
+  const machinesBtn    = document.getElementById('machinesBtn');
+  const machinesMenu   = document.getElementById('machinesMenu');
+  const machinesLabel  = document.getElementById('machinesLabel');
+  const machinesHidden = document.getElementById('machinesHidden');
+  const machinesClear  = document.getElementById('machinesClear');
+  const machinesDone   = document.getElementById('machinesDone');
+
+  let machinesTouched = false;
+
+  function openMachines(open){
+    machinesMenu.classList.toggle('hidden', !open);
+    machinesBtn.setAttribute('aria-expanded', String(open));
+  }
+
+  function getCheckedMachines(){
+    return [...machinesMenu.querySelectorAll('input[data-machine]:checked')].map(i => i.value);
+  }
+
+  function syncHiddenInputs(values){
+    machinesHidden.innerHTML = '';
+    values.forEach(v=>{
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'machines[]';
+      input.value = v;
+      machinesHidden.appendChild(input);
+    });
+  }
+
+  function updateMachinesUI(){
+    const vals = getCheckedMachines();
+    syncHiddenInputs(vals);
+    machinesLabel.textContent = vals.length ? vals.join(', ') : 'Välj maskin(er)…';
+    machinesBtn.classList.toggle('ring-2', vals.length === 0 && machinesTouched);
+    machinesBtn.classList.toggle('ring-red-500', vals.length === 0 && machinesTouched);
+  }
+
+  if (machinesField) {
+    machinesBtn.addEventListener('click', () => {
+      const isOpen = !machinesMenu.classList.contains('hidden');
+      openMachines(!isOpen);
+    });
+
+    machinesDone.addEventListener('click', () => { openMachines(false); });
+
+    machinesClear.addEventListener('click', () => {
+      machinesMenu.querySelectorAll('input[data-machine]').forEach(i => i.checked = false);
+      machinesTouched = true;
+      updateMachinesUI();
+    });
+
+    machinesMenu.addEventListener('change', () => {
+      machinesTouched = true;
+      updateMachinesUI();
+    });
+
+    // Stäng vid klick utanför
+    document.addEventListener('click', (e)=>{
+      if (!machinesField.contains(e.target)) openMachines(false);
+    });
+
+    // Stäng med Escape
+    document.addEventListener('keydown', (e)=>{
+      if (e.key === 'Escape') openMachines(false);
+    });
+
+    // Init UI
+    updateMachinesUI();
+  }
+
   function showMsg(type, text) {
     msg.className = 'mb-6 rounded-lg px-4 py-3 text-sm ' +
       (type === 'ok'
@@ -91,7 +215,7 @@
     msg.classList.add('hidden');
     btn.disabled = true;
 
-    const fd = new FormData(form); // innehåller title, body OCH ev. image
+    const fd = new FormData(form); // innehåller title, body, machines[], ev. image
 
     // Trimma textfält innan vi skickar
     fd.set('title', (fd.get('title') || '').toString().trim());
@@ -101,6 +225,19 @@
       showMsg('err', 'Ange en titel.');
       btn.disabled = false;
       return;
+    }
+
+    // Obligatoriskt: minst ett val i "Er maskin"
+    if (machinesField) {
+      const selectedMachines = [...document.querySelectorAll('#machinesMenu input[data-machine]:checked')].map(i=>i.value);
+      if (selectedMachines.length === 0) {
+        showMsg('err', 'Välj minst en maskin under ”Er maskin”.');
+        machinesTouched = true;
+        updateMachinesUI();
+        machinesBtn.focus();
+        btn.disabled = false;
+        return;
+      }
     }
 
     try {

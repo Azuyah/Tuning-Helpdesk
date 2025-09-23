@@ -204,6 +204,13 @@ function initSchemaAndSeed() {
   addColumnIfMissing('users', 'updated_at', 'TEXT');
   db.prepare(`UPDATE users SET created_at = COALESCE(created_at, datetime('now'))`).run();
   db.prepare(`UPDATE users SET updated_at = COALESCE(updated_at, datetime('now'))`).run();
+  db.prepare(`
+  CREATE TABLE IF NOT EXISTS question_machines (
+    question_id INTEGER NOT NULL,
+    machine TEXT NOT NULL,
+    FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE
+  )
+`).run();
 
   // Rebuild FTS om tom
   const ftsCountRow = db.prepare(`SELECT count(*) AS n FROM topics_fts`).get();
@@ -1722,23 +1729,43 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
   try {
     const title = (req.body.title || '').trim();
     const body  = (req.body.body  || '').trim();
-    if (!title) return res.status(400).json({ error: 'Titel krävs' });
 
-    // lagra relativ path
+    // machines[] från formuläret (checkbox-dropdownen skapar machines[])
+    let machines = req.body['machines[]'] ?? req.body.machines ?? [];
+    if (typeof machines === 'string') machines = [machines];
+    machines = machines.filter(Boolean);
+
+    // validering
+    if (!title) {
+      return res.status(400).json({ ok: false, error: 'Titel krävs' });
+    }
+    if (machines.length === 0) {
+      return res.status(422).json({ ok: false, error: 'Välj minst en maskin.' });
+    }
+
+    // bild (relativ path)
     const image_url = req.file ? `/uploads/questions/${req.file.filename}` : null;
 
+    // spara fråga
     const info = db.prepare(`
-      INSERT INTO questions (user_id,title,body,image_url,created_at,updated_at)
-      VALUES (?,?,?, ?, datetime('now'), datetime('now'))
+      INSERT INTO questions (user_id, title, body, image_url, created_at, updated_at)
+      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
     `).run(req.user.id, title, body, image_url);
 
-    res.json({ ok: true, id: info.lastInsertRowid });
+    const qid = info.lastInsertRowid;
+
+    // spara maskiner i join-tabell
+    const ins = db.prepare(`INSERT INTO question_machines (question_id, machine) VALUES (?, ?)`);
+    const tx  = db.transaction((arr) => { arr.forEach(m => ins.run(qid, m)); });
+    tx(machines);
+
+    return res.json({ ok: true, id: qid });
   } catch (err) {
     if (err && err.message === 'INVALID_FILETYPE') {
-      return res.status(400).json({ error: 'Endast JPG/PNG/WEBP tillåts' });
+      return res.status(400).json({ ok: false, error: 'Endast JPG/PNG/WEBP tillåts' });
     }
     console.error(err);
-    res.status(500).json({ error: 'Kunde inte spara frågan' });
+    return res.status(500).json({ ok: false, error: 'Kunde inte spara frågan' });
   }
 });
 
@@ -2585,11 +2612,15 @@ try {
   if ((!linked || !linked.length) && inheritedTopic) {
     linked = [{ id: inheritedTopic.id, title: inheritedTopic.title }];
   }
+// Hämta maskiner innan render
+const machinesRows = db.prepare('SELECT machine FROM question_machines WHERE question_id=?').all(id);
+const machines = machinesRows.map(r => r.machine);
 
   res.locals.showHero = false;
   res.render('question', {
     title: `Fråga: ${q.title}`,
     q,
+    machines,
     answerTopic,          // kan komma från denna fråga ELLER från länkad fråga
     linked,               // används för den gröna rutan
     linkedQuestion,       // så du kan visa blå länk till frågan om du vill
