@@ -3572,13 +3572,15 @@ app.get('/category/:id', (req, res) => {
 app.post('/admin/questions/:id/delete', requireStaff, (req, res) => {
   const id = Number(req.params.id);
 
-  // ta bort kopplingar först (om några)
   db.prepare('DELETE FROM question_topic WHERE question_id=?').run(id);
-
-  // radera själva frågan
   db.prepare('DELETE FROM questions WHERE id=?').run(id);
 
-  res.redirect('/admin');
+  const u = getUser(req);
+  if (u && u.role === 'support') {
+    return res.redirect(req.get('Referer') || '/support-questions');
+  } else {
+    return res.redirect('/admin');
+  }
 });
 
 app.get('/login', (req, res) =>
