@@ -1207,70 +1207,42 @@ app.get('/admin/edit-topic/:id', requireAdmin, (req, res) => {
   });
 });
 
-app.post('/admin/edit-topic/:id', requireAdmin, express.urlencoded({ extended: false }), (req, res) => {
-  const id = String(req.params.id);
+app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
+  const id = req.params.id;
 
   const title        = (req.body.title || '').trim();
   const excerpt      = (req.body.excerpt || '').trim();
   const body         = (req.body.body || '').trim();
   const tags         = (req.body.tags || '').trim();
-  const categoryId   = (req.body.categoryId || '').trim(); // kan vara tomt
+  const categoryId   = req.body.categoryId || null;
 
-  const is_resource  = req.body.is_resource ? 1 : 0;
+  // Nya fält
+  const is_resource  = req.body.is_resource ? 1 : 0;               // checkbox -> 1/0
   const download_url = (req.body.download_url || '').trim();
 
   if (!title) return res.status(400).send('Titel krävs');
 
-  // 1) Uppdatera ämnet
   db.prepare(`
     UPDATE topics
-       SET title=?,
-           excerpt=?,
-           body=?,
-           tags=?,
-           is_resource=?,
-           download_url=?
+       SET title=?, excerpt=?, body=?, tags=?,
+           is_resource=?, download_url=?
      WHERE id=?
   `).run(title, excerpt, body, tags, is_resource, download_url, id);
 
-  // Markera ändrad tid
-  try {
-    db.prepare(`UPDATE topics_base SET updated_at = datetime('now') WHERE id=?`).run(id);
-  } catch {}
+  db.prepare(`
+    UPDATE topics_fts
+       SET title=?, excerpt=?, body=?
+     WHERE id=?
+  `).run(title, excerpt, body, id);
 
-  // 2) Uppdatera kategori-koppling (stöd för både singular/plural)
-  //    - rensa ev. gamla kopplingar
-  try { db.prepare(`DELETE FROM topic_categories WHERE topic_id=?`).run(id); } catch {}
-  try { db.prepare(`DELETE FROM topic_category  WHERE topic_id=?`).run(id); } catch {}
-
-  //    - skapa ny koppling om användaren valt kategori
   if (categoryId) {
-    let inserted = false;
-    try {
-      db.prepare(`INSERT INTO topic_categories (topic_id, category_id) VALUES (?, ?)`).run(id, categoryId);
-      inserted = true;
-    } catch {}
-    if (!inserted) {
-      try {
-        db.prepare(`INSERT INTO topic_category (topic_id, category_id) VALUES (?, ?)`).run(id, categoryId);
-      } catch {}
-    }
+    db.prepare(`
+      INSERT OR REPLACE INTO topic_category (topic_id, category_id) VALUES (?,?)
+    `).run(id, categoryId);
   }
 
-  // 3) Uppdatera FTS om möjligt (ignorera om contentless)
-  try {
-    db.prepare(`
-      UPDATE topics_fts
-         SET title=?, excerpt=?, body=?
-       WHERE id=?
-    `).run(title, excerpt, body, id);
-  } catch {}
-
-  // 4) Tillbaka till ämnets publika vy
-  return res.redirect(`/topic/${encodeURIComponent(id)}`);
+  res.redirect('/admin');
 });
-
-
 
 // Visa en fråga i admin
 app.get('/admin/questions/:id', requireStaff, (req, res) => {
@@ -1574,103 +1546,44 @@ if (categoryId) {
 
 // Lista + skapa kategorier
 app.get('/admin/categories', requireAdmin, (req, res) => {
-  // Kolla vilka kopplingstabeller som finns
-  const hasTC   = hasTable('topic_category');
-  const hasTCS  = hasTable('topic_categories');
-  const hasQC   = hasTable('question_category');
-  const hasQCS  = hasTable('question_categories');
-
-  // Bygg uttryck för att räkna ämnen/resurser per kategori
-  let topicCountExpr = '0';
-  if (hasTC && hasTCS) {
-    topicCountExpr = `
-      (
-        IFNULL((SELECT COUNT(*) FROM topic_category    tc  WHERE tc.category_id  = c.id), 0) +
-        IFNULL((SELECT COUNT(*) FROM topic_categories tcs WHERE tcs.category_id = c.id), 0)
-      )
-    `;
-  } else if (hasTC) {
-    topicCountExpr = `(SELECT COUNT(*) FROM topic_category tc WHERE tc.category_id = c.id)`;
-  } else if (hasTCS) {
-    topicCountExpr = `(SELECT COUNT(*) FROM topic_categories tcs WHERE tcs.category_id = c.id)`;
-  }
-
-  // Bygg uttryck för att räkna frågor per kategori
-  let questionCountExpr = '0';
-  if (hasQC && hasQCS) {
-    questionCountExpr = `
-      (
-        IFNULL((SELECT COUNT(*) FROM question_category   qc  WHERE qc.category_id  = c.id), 0) +
-        IFNULL((SELECT COUNT(*) FROM question_categories qcs WHERE qcs.category_id = c.id), 0)
-      )
-    `;
-  } else if (hasQC) {
-    questionCountExpr = `(SELECT COUNT(*) FROM question_category qc WHERE qc.category_id = c.id)`;
-  } else if (hasQCS) {
-    questionCountExpr = `(SELECT COUNT(*) FROM question_categories qcs WHERE qcs.category_id = c.id)`;
-  }
-
-  // Hämta kategorier + korrekta counts (ämnen/resurser + frågor)
+  // Kategorier + TOTALT antal poster (ämnen/resurser + frågor)
   const cats = db.prepare(`
     SELECT
       c.id,
       c.title,
       c.icon,
       c.sort_order,
-      ${topicCountExpr}    AS topic_count,
-      ${questionCountExpr} AS question_count,
-      (${topicCountExpr} + ${questionCountExpr}) AS total_count
+      COALESCE(t.topic_cnt, 0)    AS topic_count,    -- ämnen/resurser
+      COALESCE(q.q_cnt, 0)        AS question_count, -- frågor
+      COALESCE(t.topic_cnt, 0) + COALESCE(q.q_cnt, 0) AS total_count
     FROM categories c
+    LEFT JOIN (
+      SELECT category_id, COUNT(*) AS topic_cnt
+      FROM topic_category
+      GROUP BY category_id
+    ) t ON t.category_id = c.id
+    LEFT JOIN (
+      SELECT category_id, COUNT(*) AS q_cnt
+      FROM question_category
+      GROUP BY category_id
+    ) q ON q.category_id = c.id
     ORDER BY COALESCE(c.sort_order, 9999), c.title
   `).all();
 
-  // ---- "rows" för senaste poster i kategorierna (ämnen/resurser) ----
-  // Använd UNION över ev. båda topic-tabellerna
-  let topicRowsSql = '';
-  if (hasTC && hasTCS) {
-    topicRowsSql = `
-      SELECT tc.category_id AS cid, b.id, t.title, COALESCE(b.updated_at, b.created_at) AS updated_at
-      FROM topic_category tc
-      JOIN topics_base b ON b.id = tc.topic_id
-      JOIN topics     t  ON t.id = tc.topic_id
-      UNION ALL
-      SELECT tcs.category_id AS cid, b.id, t.title, COALESCE(b.updated_at, b.created_at) AS updated_at
-      FROM topic_categories tcs
-      JOIN topics_base b ON b.id = tcs.topic_id
-      JOIN topics     t  ON t.id = tcs.topic_id
-    `;
-  } else if (hasTC) {
-    topicRowsSql = `
-      SELECT tc.category_id AS cid, b.id, t.title, COALESCE(b.updated_at, b.created_at) AS updated_at
-      FROM topic_category tc
-      JOIN topics_base b ON b.id = tc.topic_id
-      JOIN topics     t  ON t.id = tc.topic_id
-    `;
-  } else if (hasTCS) {
-    topicRowsSql = `
-      SELECT tcs.category_id AS cid, b.id, t.title, COALESCE(b.updated_at, b.created_at) AS updated_at
-      FROM topic_categories tcs
-      JOIN topics_base b ON b.id = tcs.topic_id
-      JOIN topics     t  ON t.id = tcs.topic_id
-    `;
-  } else {
-    topicRowsSql = `SELECT NULL AS cid, NULL AS id, NULL AS title, NULL AS updated_at LIMIT 0`;
-  }
-
+  // ---- behåll "rows" som namn (används nedan) ----
   const rows = db.prepare(`
-    SELECT * FROM (${topicRowsSql})
-    ORDER BY datetime(updated_at) DESC
+    SELECT tc.category_id AS cid, b.id, t.title, b.updated_at
+    FROM topic_category tc
+    JOIN topics_base b ON b.id = tc.topic_id
+    JOIN topics t      ON t.id  = tc.topic_id
+    ORDER BY b.updated_at DESC
   `).all();
 
-  // Gruppera per kategori (behåller ditt namn "topicsByCat")
   const topicsByCat = {};
   for (const r of rows) {
-    if (r && r.cid != null) {
-      (topicsByCat[r.cid] ||= []).push(r);
-    }
+    (topicsByCat[r.cid] ||= []).push(r);
   }
 
-  // Alternativlista för flytt
   const catOptions = db.prepare(`
     SELECT id, title
     FROM categories
@@ -1748,11 +1661,12 @@ app.post('/admin/categories/:id/delete', requireAdmin, (req, res) => {
 
 // Visa ALLA poster i en kategori (ämnen, resurser, frågor)
 app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
-  const catId = String(req.params.id || '');
+  const catId = req.params.id;
 
   const category = db.prepare(`SELECT id, title FROM categories WHERE id=?`).get(catId);
   if (!category) return res.status(404).send('Kategori saknas');
 
+  // UNION över ämnen (is_resource=0), resurser (is_resource=1) och frågor
   const rows = db.prepare(`
     SELECT * FROM (
       -- ÄMNEN
@@ -1761,16 +1675,11 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
         b.id    AS id,
         t.title AS title,
         COALESCE(NULLIF(t.excerpt,''), substr(IFNULL(t.body,''),1,180)) AS excerpt,
-        COALESCE(b.updated_at, b.created_at) AS updated_at,
-        0 AS is_resource
-      FROM topics_base b
-      JOIN topics t ON t.id = b.id
-      WHERE IFNULL(t.is_resource,0) = 0
-        AND (
-          EXISTS (SELECT 1 FROM topic_categories tc  WHERE tc.topic_id = b.id AND tc.category_id = ?)
-          OR
-          EXISTS (SELECT 1 FROM topic_category  tc2 WHERE tc2.topic_id = b.id AND tc2.category_id = ?)
-        )
+        COALESCE(b.updated_at, b.created_at) AS updated_at
+      FROM topic_category tc
+      JOIN topics t      ON t.id = tc.topic_id
+      JOIN topics_base b ON b.id = tc.topic_id
+      WHERE tc.category_id = ? AND IFNULL(t.is_resource,0) = 0
 
       UNION ALL
 
@@ -1780,16 +1689,11 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
         b.id    AS id,
         t.title AS title,
         COALESCE(NULLIF(t.excerpt,''), substr(IFNULL(t.body,''),1,180)) AS excerpt,
-        COALESCE(b.updated_at, b.created_at) AS updated_at,
-        1 AS is_resource
-      FROM topics_base b
-      JOIN topics t ON t.id = b.id
-      WHERE IFNULL(t.is_resource,0) = 1
-        AND (
-          EXISTS (SELECT 1 FROM topic_categories tc  WHERE tc.topic_id = b.id AND tc.category_id = ?)
-          OR
-          EXISTS (SELECT 1 FROM topic_category  tc2 WHERE tc2.topic_id = b.id AND tc2.category_id = ?)
-        )
+        COALESCE(b.updated_at, b.created_at) AS updated_at
+      FROM topic_category tc
+      JOIN topics t      ON t.id = tc.topic_id
+      JOIN topics_base b ON b.id = tc.topic_id
+      WHERE tc.category_id = ? AND IFNULL(t.is_resource,0) = 1
 
       UNION ALL
 
@@ -1799,20 +1703,16 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
         q.id       AS id,
         q.title    AS title,
         substr(IFNULL(q.body,''),1,180) AS excerpt,
-        COALESCE(q.updated_at, q.created_at) AS updated_at,
-        0 AS is_resource
-      FROM questions q
-      WHERE
-        EXISTS (SELECT 1 FROM question_categories qc  WHERE qc.question_id = q.id AND qc.category_id = ?)
-        OR
-        EXISTS (SELECT 1 FROM question_category  qc2 WHERE qc2.question_id = q.id AND qc2.category_id = ?)
+        COALESCE(q.updated_at, q.created_at) AS updated_at
+      FROM question_category qc
+      JOIN questions q ON q.id = qc.question_id
+      WHERE qc.category_id = ?
     )
     ORDER BY datetime(updated_at) DESC
-  `).all(catId, catId, catId, catId, catId, catId);
+  `).all(catId, catId, catId);
 
   const otherCats = db.prepare(`
-    SELECT id, title
-    FROM categories
+    SELECT id, title FROM categories
     WHERE id <> ?
     ORDER BY COALESCE(sort_order,9999), title
   `).all(catId);
@@ -1820,7 +1720,7 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
   res.render('category-topics', {
     title: `Poster i ${category.title}`,
     category,
-    topics: rows,
+    topics: rows,         // <- nu är det blandade "poster" med field "type"
     otherCats
   });
 });
@@ -2131,10 +2031,11 @@ app.put('/api/questions/:id/status', requireStaff, (req, res) => {
   res.json({ ok: true });
 });
 
-function hasTable(name) {
-  return !!db.prepare(
-    `SELECT 1 FROM sqlite_master WHERE type='table' AND name=?`
-  ).get(name);
+
+/// Hjälpare
+function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a; }
+function hasTable(name){
+  return !!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(name);
 }
 
 // Bygg kategorikort (ämnen + resurser + frågor)
