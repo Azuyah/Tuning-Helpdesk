@@ -1544,33 +1544,64 @@ if (categoryId) {
   res.json({ ok: true });
 });
 
+// Hjälpare överst i filen (en gång)
+function hasTable(name) {
+  return !!db.prepare(
+    `SELECT 1 FROM sqlite_master WHERE type='table' AND name=?`
+  ).get(name);
+}
+
 // Lista + skapa kategorier
 app.get('/admin/categories', requireAdmin, (req, res) => {
-  // Kategorier + TOTALT antal poster (ämnen/resurser + frågor)
+  // Dynamiska count-uttryck (stöd för singular/plural)
+  const hasTC  = hasTable('topic_category');
+  const hasTCS = hasTable('topic_categories');
+  const hasQC  = hasTable('question_category');
+  const hasQCS = hasTable('question_categories');
+
+  let topicCountExpr = '0';
+  if (hasTC && hasTCS) {
+    topicCountExpr = `
+      (
+        IFNULL((SELECT COUNT(*) FROM topic_category tc    WHERE tc.category_id = c.id), 0) +
+        IFNULL((SELECT COUNT(*) FROM topic_categories tcs WHERE tcs.category_id = c.id), 0)
+      )
+    `;
+  } else if (hasTC) {
+    topicCountExpr = `(SELECT COUNT(*) FROM topic_category tc WHERE tc.category_id = c.id)`;
+  } else if (hasTCS) {
+    topicCountExpr = `(SELECT COUNT(*) FROM topic_categories tcs WHERE tcs.category_id = c.id)`;
+  }
+
+  let questionCountExpr = '0';
+  if (hasQC && hasQCS) {
+    questionCountExpr = `
+      (
+        IFNULL((SELECT COUNT(*) FROM question_category qc    WHERE qc.category_id = c.id), 0) +
+        IFNULL((SELECT COUNT(*) FROM question_categories qcs WHERE qcs.category_id = c.id), 0)
+      )
+    `;
+  } else if (hasQC) {
+    questionCountExpr = `(SELECT COUNT(*) FROM question_category qc WHERE qc.category_id = c.id)`;
+  } else if (hasQCS) {
+    questionCountExpr = `(SELECT COUNT(*) FROM question_categories qcs WHERE qcs.category_id = c.id)`;
+  }
+
+  // Kategorier + korrekta totals
   const cats = db.prepare(`
     SELECT
       c.id,
       c.title,
       c.icon,
       c.sort_order,
-      COALESCE(t.topic_cnt, 0)    AS topic_count,    -- ämnen/resurser
-      COALESCE(q.q_cnt, 0)        AS question_count, -- frågor
-      COALESCE(t.topic_cnt, 0) + COALESCE(q.q_cnt, 0) AS total_count
+      ${topicCountExpr}    AS topic_count,
+      ${questionCountExpr} AS question_count,
+      (${topicCountExpr} + ${questionCountExpr}) AS total_count
     FROM categories c
-    LEFT JOIN (
-      SELECT category_id, COUNT(*) AS topic_cnt
-      FROM topic_category
-      GROUP BY category_id
-    ) t ON t.category_id = c.id
-    LEFT JOIN (
-      SELECT category_id, COUNT(*) AS q_cnt
-      FROM question_category
-      GROUP BY category_id
-    ) q ON q.category_id = c.id
     ORDER BY COALESCE(c.sort_order, 9999), c.title
   `).all();
 
-  // ---- behåll "rows" som namn (används nedan) ----
+  // ---- behåll "rows" som namn (om du använder den längre ned) ----
   const rows = db.prepare(`
     SELECT tc.category_id AS cid, b.id, t.title, b.updated_at
     FROM topic_category tc
@@ -1580,9 +1611,7 @@ app.get('/admin/categories', requireAdmin, (req, res) => {
   `).all();
 
   const topicsByCat = {};
-  for (const r of rows) {
-    (topicsByCat[r.cid] ||= []).push(r);
-  }
+  for (const r of rows) (topicsByCat[r.cid] ||= []).push(r);
 
   const catOptions = db.prepare(`
     SELECT id, title
