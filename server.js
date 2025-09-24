@@ -3577,7 +3577,7 @@ app.post('/admin/questions/:id/delete', requireStaff, (req, res) => {
 
   const u = getUser(req);
   if (u && u.role === 'support') {
-    return res.redirect(req.get('Referer') || '/support-questions');
+    return res.redirect('/support-questions');
   } else {
     return res.redirect('/admin');
   }
