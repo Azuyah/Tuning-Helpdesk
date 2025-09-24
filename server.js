@@ -1207,41 +1207,68 @@ app.get('/admin/edit-topic/:id', requireAdmin, (req, res) => {
   });
 });
 
-app.post('/admin/edit-topic/:id', requireAdmin, (req, res) => {
-  const id = req.params.id;
+app.post('/admin/edit-topic/:id', requireAdmin, express.urlencoded({ extended: false }), (req, res) => {
+  const id = String(req.params.id);
 
   const title        = (req.body.title || '').trim();
   const excerpt      = (req.body.excerpt || '').trim();
   const body         = (req.body.body || '').trim();
   const tags         = (req.body.tags || '').trim();
-  const categoryId   = req.body.categoryId || null;
+  const categoryId   = (req.body.categoryId || '').trim(); // kan vara tomt
 
-  // Nya fält
-  const is_resource  = req.body.is_resource ? 1 : 0;               // checkbox -> 1/0
+  const is_resource  = req.body.is_resource ? 1 : 0;
   const download_url = (req.body.download_url || '').trim();
 
   if (!title) return res.status(400).send('Titel krävs');
 
+  // 1) Uppdatera ämnet
   db.prepare(`
     UPDATE topics
-       SET title=?, excerpt=?, body=?, tags=?,
-           is_resource=?, download_url=?
+       SET title=?,
+           excerpt=?,
+           body=?,
+           tags=?,
+           is_resource=?,
+           download_url=?
      WHERE id=?
   `).run(title, excerpt, body, tags, is_resource, download_url, id);
 
-  db.prepare(`
-    UPDATE topics_fts
-       SET title=?, excerpt=?, body=?
-     WHERE id=?
-  `).run(title, excerpt, body, id);
+  // Markera ändrad tid
+  try {
+    db.prepare(`UPDATE topics_base SET updated_at = datetime('now') WHERE id=?`).run(id);
+  } catch {}
 
+  // 2) Uppdatera kategori-koppling (stöd för både singular/plural)
+  //    - rensa ev. gamla kopplingar
+  try { db.prepare(`DELETE FROM topic_categories WHERE topic_id=?`).run(id); } catch {}
+  try { db.prepare(`DELETE FROM topic_category  WHERE topic_id=?`).run(id); } catch {}
+
+  //    - skapa ny koppling om användaren valt kategori
   if (categoryId) {
-    db.prepare(`
-      INSERT OR REPLACE INTO topic_category (topic_id, category_id) VALUES (?,?)
-    `).run(id, categoryId);
+    let inserted = false;
+    try {
+      db.prepare(`INSERT INTO topic_categories (topic_id, category_id) VALUES (?, ?)`).run(id, categoryId);
+      inserted = true;
+    } catch {}
+    if (!inserted) {
+      try {
+        db.prepare(`INSERT INTO topic_category (topic_id, category_id) VALUES (?, ?)`).run(id, categoryId);
+      } catch {}
+    }
   }
 
-  res.redirect('/admin');
+  // 3) (Valfritt) uppdatera FTS om din FTS-tabell tillåter UPDATE.
+  // Om du kör "contentless FTS5" ska du INTE göra UPDATE här.
+  try {
+    db.prepare(`
+      UPDATE topics_fts
+         SET title=?, excerpt=?, body=?
+       WHERE id=?
+    `).run(title, excerpt, body, id);
+  } catch {}
+
+  // 4) Tillbaka till ämnets publika vy
+  return res.redirect(`/topic/${encodeURIComponent(id)}`);
 });
 
 // Visa en fråga i admin
