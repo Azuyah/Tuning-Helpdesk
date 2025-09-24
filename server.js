@@ -1661,15 +1661,23 @@ app.post('/admin/categories/:id/delete', requireAdmin, (req, res) => {
 
 // Visa ALLA poster i en kategori (ämnen, resurser, frågor)
 app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
-  const catId = req.params.id;
+  const catId = String(req.params.id);
 
   const category = db.prepare(`SELECT id, title FROM categories WHERE id=?`).get(catId);
   if (!category) return res.status(404).send('Kategori saknas');
 
-  // UNION över ämnen (is_resource=0), resurser (is_resource=1) och frågor
-  const rows = db.prepare(`
-    SELECT * FROM (
-      -- ÄMNEN
+  // vilka kopplingstabeller finns?
+  const hasTC  = hasTable('topic_category');
+  const hasTCS = hasTable('topic_categories');
+  const hasQC  = hasTable('question_category');
+  const hasQCS = hasTable('question_categories');
+
+  // bygg UNION-delar för ämnen/resurser
+  const topicParts = [];
+  const topicParams = [];
+
+  if (hasTC) {
+    topicParts.push(`
       SELECT
         'topic' AS type,
         b.id    AS id,
@@ -1680,10 +1688,9 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
       JOIN topics t      ON t.id = tc.topic_id
       JOIN topics_base b ON b.id = tc.topic_id
       WHERE tc.category_id = ? AND IFNULL(t.is_resource,0) = 0
-
-      UNION ALL
-
-      -- RESURSER
+    `);
+    topicParams.push(catId);
+    topicParts.push(`
       SELECT
         'resource' AS type,
         b.id    AS id,
@@ -1694,10 +1701,43 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
       JOIN topics t      ON t.id = tc.topic_id
       JOIN topics_base b ON b.id = tc.topic_id
       WHERE tc.category_id = ? AND IFNULL(t.is_resource,0) = 1
+    `);
+    topicParams.push(catId);
+  }
+  if (hasTCS) {
+    topicParts.push(`
+      SELECT
+        'topic' AS type,
+        b.id    AS id,
+        t.title AS title,
+        COALESCE(NULLIF(t.excerpt,''), substr(IFNULL(t.body,''),1,180)) AS excerpt,
+        COALESCE(b.updated_at, b.created_at) AS updated_at
+      FROM topic_categories tcs
+      JOIN topics t      ON t.id = tcs.topic_id
+      JOIN topics_base b ON b.id = tcs.topic_id
+      WHERE tcs.category_id = ? AND IFNULL(t.is_resource,0) = 0
+    `);
+    topicParams.push(catId);
+    topicParts.push(`
+      SELECT
+        'resource' AS type,
+        b.id    AS id,
+        t.title AS title,
+        COALESCE(NULLIF(t.excerpt,''), substr(IFNULL(t.body,''),1,180)) AS excerpt,
+        COALESCE(b.updated_at, b.created_at) AS updated_at
+      FROM topic_categories tcs
+      JOIN topics t      ON t.id = tcs.topic_id
+      JOIN topics_base b ON b.id = tcs.topic_id
+      WHERE tcs.category_id = ? AND IFNULL(t.is_resource,0) = 1
+    `);
+    topicParams.push(catId);
+  }
 
-      UNION ALL
-
-      -- FRÅGOR
+  // bygg UNION-delar för frågor
+  const qParts = [];
+  const qParams = [];
+  if (hasQC) {
+    qParts.push(`
       SELECT
         'question' AS type,
         q.id       AS id,
@@ -1707,9 +1747,31 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
       FROM question_category qc
       JOIN questions q ON q.id = qc.question_id
       WHERE qc.category_id = ?
-    )
-    ORDER BY datetime(updated_at) DESC
-  `).all(catId, catId, catId);
+    `);
+    qParams.push(catId);
+  }
+  if (hasQCS) {
+    qParts.push(`
+      SELECT
+        'question' AS type,
+        q.id       AS id,
+        q.title    AS title,
+        substr(IFNULL(q.body,''),1,180) AS excerpt,
+        COALESCE(q.updated_at, q.created_at) AS updated_at
+      FROM question_categories qcs
+      JOIN questions q ON q.id = qcs.question_id
+      WHERE qcs.category_id = ?
+    `);
+    qParams.push(catId);
+  }
+
+  // om inga kopplingstabeller finns, returnera tomt
+  const unions = [...topicParts, ...qParts];
+  const params = [...topicParams, ...qParams];
+
+  const rows = unions.length
+    ? db.prepare(`SELECT * FROM (${unions.join('\nUNION ALL\n')}) ORDER BY datetime(updated_at) DESC`).all(...params)
+    : [];
 
   const otherCats = db.prepare(`
     SELECT id, title FROM categories
@@ -1720,7 +1782,7 @@ app.get('/admin/categories/:id/topics', requireAdmin, (req, res) => {
   res.render('category-topics', {
     title: `Poster i ${category.title}`,
     category,
-    topics: rows,         // <- nu är det blandade "poster" med field "type"
+    topics: rows,
     otherCats
   });
 });
