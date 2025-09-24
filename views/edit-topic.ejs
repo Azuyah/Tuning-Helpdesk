@@ -1,6 +1,13 @@
 <section class="mx-auto max-w-3xl px-4 py-10">
   <h1 class="text-2xl font-bold text-slate-900 mb-6">Redigera ämne</h1>
 
+  <%
+const curCat = String(currentCat || '');
+const moveAction = curCat
+  ? `/admin/categories/${encodeURIComponent(curCat)}/topics/${encodeURIComponent(topic.id)}/move`
+  : '';
+%>
+
   <form method="POST" action="/admin/edit-topic/<%= topic.id %>" class="space-y-5">
     <div class="text-xs text-slate-500">
       ID (slug): <code class="bg-slate-100 px-1 py-0.5 rounded"><%= topic.id %></code>
@@ -37,25 +44,25 @@
     </div>
 
   <!-- Kategori -->
-  <div>
-    <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
-    <div class="relative">
-      <select id="categorySelect" name="categoryId"
-              data-current="<%= currentCat || '' %>"
-              data-move-action="<%= moveAction %>"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                     focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
-        <option value="">— Välj kategori —</option>
-        <% (categories || []).forEach(c => { %>
-          <option value="<%= c.id %>" <%= String(currentCat) === String(c.id) ? 'selected' : '' %>>
-            <%= c.title %>
-          </option>
-        <% }) %>
-      </select>
-      <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
-    </div>
-    <p class="text-xs text-slate-500 mt-1">Primär kategori för ämnet.</p>
+<div>
+  <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+  <div class="relative">
+    <select id="categorySelect" name="categoryId"
+            data-current="<%= curCat %>"
+            data-move-action="<%= moveAction %>"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
+      <option value="">— Välj kategori —</option>
+      <% (categories || []).forEach(c => { %>
+        <option value="<%= c.id %>" <%= String(curCat)===String(c.id) ? 'selected' : '' %>>
+          <%= c.title %>
+        </option>
+      <% }) %>
+    </select>
+    <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
   </div>
+  <p class="text-xs text-slate-500 mt-1">Primär kategori för ämnet.</p>
+</div>
 
   <div class="flex gap-3">
     <button type="submit"
@@ -129,33 +136,31 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const form   = document.getElementById('editTopicForm');
-  const select = document.getElementById('categorySelect');
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('categorySelect');
+  if (!sel) return;
 
-  form.addEventListener('submit', async (e) => {
-    const current  = String(select.dataset.current || '');
-    const selected = String(select.value || '');
-    const moveUrl  = select.dataset.moveAction;
+  sel.addEventListener('change', () => {
+    const newCat = sel.value;
+    const curCat = sel.dataset.current || '';
+    const moveAction = sel.dataset.moveAction || '';
 
-    // Har kategorin ändrats? Kör samma POST som "Flytta"-menyn
-    if (moveUrl && selected && selected !== current) {
-      e.preventDefault();
-      try {
-        const fd = new FormData();
-        fd.append('newCategoryId', selected); // exakt samma nyckel som i Flytta
-        const resp = await fetch(moveUrl, { method: 'POST', body: fd, credentials: 'same-origin' });
-        if (!resp.ok) throw new Error('Flytt misslyckades: ' + resp.status);
+    // Om vi har en giltig "flytta"-endpoint och ett nytt val → posta dit
+    if (newCat && moveAction) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = moveAction;
 
-        // uppdatera "current" så fler sparningar inte försöker flytta igen
-        select.dataset.current = selected;
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'newCategoryId';
+      input.value = newCat;
 
-        // nu kan vi skicka original-formuläret (title, body, tags…)
-        form.submit();
-      } catch (err) {
-        alert('Kunde inte flytta till vald kategori.\n' + (err?.message || ''));
-      }
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
     }
+    // Annars gör vi inget särskilt (kan falla tillbaka på vanlig "Spara")
   });
 });
 </script>
