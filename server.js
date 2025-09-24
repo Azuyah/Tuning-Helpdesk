@@ -2131,13 +2131,6 @@ app.put('/api/questions/:id/status', requireStaff, (req, res) => {
   res.json({ ok: true });
 });
 
-
-/// Hjälpare
-function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a; }
-function hasTable(name){
-  return !!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`).get(name);
-}
-
 function hasTable(name) {
   return !!db.prepare(
     `SELECT 1 FROM sqlite_master WHERE type='table' AND name=?`
