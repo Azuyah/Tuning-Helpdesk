@@ -1544,13 +1544,6 @@ if (categoryId) {
   res.json({ ok: true });
 });
 
-// Hjälpare överst i filen (en gång)
-function hasTable(name) {
-  return !!db.prepare(
-    `SELECT 1 FROM sqlite_master WHERE type='table' AND name=?`
-  ).get(name);
-}
-
 // Lista + skapa kategorier
 app.get('/admin/categories', requireAdmin, (req, res) => {
   // Dynamiska count-uttryck (stöd för singular/plural)
