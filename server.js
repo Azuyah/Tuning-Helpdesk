@@ -1071,64 +1071,97 @@ app.get('/topic/:id', (req, res) => {
     }
   }
 
-  // --- Relaterat via KATEGORI: ämnen + resurser + frågor (FIXADE FÄLTEN) ---
-  let relatedTopics = [];
+  function getCatIdsForTopic(db, topicId) {
+  const ids = new Set();
   try {
-    let catIds = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id=?`)
-                   .all(topic.id).map(r => r.category_id);
-    if (!catIds.length && category?.id) catIds = [category.id];
+    const r = db.prepare(`SELECT category_id FROM topic_categories WHERE topic_id=?`).all(topicId);
+    r.forEach(x => ids.add(String(x.category_id)));
+  } catch {}
+  try {
+    const r = db.prepare(`SELECT category_id FROM topic_category WHERE topic_id=?`).all(topicId);
+    r.forEach(x => ids.add(String(x.category_id)));
+  } catch {}
+  return Array.from(ids);
+}
 
-    if (catIds.length) {
-      const ph = catIds.map(() => '?').join(',');
+// --- Relaterat via KATEGORI: ämnen + resurser + frågor (robust mot singular/plural) ---
+let relatedTopics = [];
+try {
+  // Hämta kat-ID från BÅDA tabellerna
+  const catIds = getCatIdsForTopic(db, topic.id);
 
-      // Ämnen + resurser i samma kategori (exkludera aktuell post)
-      const sameCatTopics = db.prepare(`
-        SELECT b.id, t.title, IFNULL(t.is_resource,0) AS is_resource,
-               COALESCE(b.updated_at, b.created_at) AS ts
-        FROM topics_base b
-        JOIN topics t            ON t.id = b.id
-        JOIN topic_categories tc ON tc.topic_id = t.id
-        WHERE tc.category_id IN (${ph})
-          AND b.id <> ?
-      `).all(...catIds, topic.id);
+  if (catIds.length) {
+    const ph = catIds.map(() => '?').join(',');
 
-      // Frågor i samma kategori
-      const sameCatQuestions = db.prepare(`
-        SELECT q.id, q.title,
-               COALESCE(q.updated_at, q.created_at) AS ts
-        FROM questions q
-        JOIN question_category qc ON qc.question_id = q.id
-        WHERE qc.category_id IN (${ph})
-      `).all(...catIds);
+    // Finns tabellerna?
+    const hasTC   = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='topic_category'`).get();
+    const hasTCS  = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='topic_categories'`).get();
+    const hasQC   = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='question_category'`).get();
+    const hasQCS  = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='question_categories'`).get();
 
-      const mixed = [
-        ...sameCatTopics.map(r => ({
-          id: r.id,
-          title: r.title,
-          is_resource: Number(r.is_resource),
-          kind: Number(r.is_resource) === 1 ? 'resource' : 'topic',
-          ts: r.ts
-        })),
-        ...sameCatQuestions.map(r => ({
-          id: r.id,
-          title: r.title,
-          is_resource: 0,
-          kind: 'question',
-          ts: r.ts
-        })),
-      ]
-      .sort((a,b) => new Date(b.ts) - new Date(a.ts))
-      .slice(0, 10)
-      .map(it => ({
-        ...it,
-        url: it.kind === 'question'
-          ? `/questions/${it.id}`
-          : (it.is_resource ? `/resources/${it.id}` : `/topic/${it.id}`)
-      }));
+    // UNION över de kopplingstabeller som faktiskt finns
+    let relTopicSQL = '';
+    if (hasTCS) relTopicSQL += `SELECT topic_id, category_id FROM topic_categories`;
+    if (hasTC)  relTopicSQL += (relTopicSQL ? ` UNION ALL ` : ``) + `SELECT topic_id, category_id FROM topic_category`;
 
-      relatedTopics = mixed;
-    }
-  } catch (_) {}
+    let relQuestionSQL = '';
+    if (hasQC)  relQuestionSQL += `SELECT question_id, category_id FROM question_category`;
+    if (hasQCS) relQuestionSQL += (relQuestionSQL ? ` UNION ALL ` : ``) + `SELECT question_id, category_id FROM question_categories`;
+
+    // Ämnen/resurser i samma kategori(er), exkludera aktuell post
+    const sameCatTopics = relTopicSQL
+      ? db.prepare(`
+          SELECT b.id, t.title, IFNULL(t.is_resource,0) AS is_resource,
+                 COALESCE(b.updated_at, b.created_at) AS ts
+          FROM (${relTopicSQL}) tc
+          JOIN topics_base b ON b.id = tc.topic_id
+          JOIN topics      t ON t.id = b.id
+          WHERE tc.category_id IN (${ph})
+            AND b.id <> ?
+        `).all(...catIds, topic.id)
+      : [];
+
+    // Frågor i samma kategori(er)
+    const sameCatQuestions = (relQuestionSQL)
+      ? db.prepare(`
+          SELECT q.id, q.title,
+                 COALESCE(q.updated_at, q.created_at) AS ts
+          FROM (${relQuestionSQL}) qc
+          JOIN questions q ON q.id = qc.question_id
+          WHERE qc.category_id IN (${ph})
+        `).all(...catIds)
+      : [];
+
+    const mixed = [
+      ...sameCatTopics.map(r => ({
+        id: r.id,
+        title: r.title,
+        is_resource: Number(r.is_resource),
+        kind: Number(r.is_resource) === 1 ? 'resource' : 'topic',
+        ts: r.ts
+      })),
+      ...sameCatQuestions.map(r => ({
+        id: r.id,
+        title: r.title,
+        is_resource: 0,
+        kind: 'question',
+        ts: r.ts
+      })),
+    ]
+    .sort((a,b) => new Date(b.ts) - new Date(a.ts))
+    .slice(0, 10)
+    .map(it => ({
+      ...it,
+      url: it.kind === 'question'
+        ? `/questions/${it.id}`
+        : (it.is_resource ? `/resources/${it.id}` : `/topic/${it.id}`)
+    }));
+
+    relatedTopics = mixed;
+  }
+} catch (_) {}
+
+  
 
   // Fallback via första taggen (om inga kategori-träffar) – lämnar endast ämnen (ej resurser/frågor)
   const firstTagLower = (topic.tags || '').split(',')[0]?.trim().toLowerCase() || '';
@@ -1677,40 +1710,6 @@ app.post('/admin/categories/move-topic', requireAdmin, (req, res) => {
 
   db.prepare('UPDATE topics_base SET updated_at=CURRENT_TIMESTAMP WHERE id=?').run(topicId);
   res.redirect('/admin/categories');
-});
-
-// Engångs-route med knapp för att rensa dubletter -- TILLFÄLLIG
-app.get('/admin/cleanup-duplicates', requireAdmin, (req, res) => {
-  res.render('cleanup-duplicates', { title: 'Rensa dubletter' });
-});
-
-app.post('/admin/cleanup-duplicates', requireAdmin, (req, res) => {
-  try {
-    db.prepare(`
-      DELETE FROM topic_category
-      WHERE rowid NOT IN (
-        SELECT MIN(rowid) FROM topic_category GROUP BY topic_id
-      )
-    `).run();
-  } catch (e) {
-    console.warn('topic_category saknas eller redan rensad');
-  }
-
-  try {
-    db.prepare(`
-      DELETE FROM topic_categories
-      WHERE rowid NOT IN (
-        SELECT MIN(rowid) FROM topic_categories GROUP BY topic_id
-      )
-    `).run();
-  } catch (e) {
-    console.warn('topic_categories saknas eller redan rensad');
-  }
-
-  res.render('cleanup-duplicates', { 
-    title: 'Rensa dubletter',
-    success: '✅ Alla dubletter har rensats'
-  });
 });
 
 app.post('/admin/categories/:id/delete', requireAdmin, (req, res) => {
