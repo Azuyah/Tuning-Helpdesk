@@ -1557,55 +1557,63 @@ if (categoryId) {
 
 // Lista + skapa kategorier
 app.get('/admin/categories', requireAdmin, (req, res) => {
-  // Dynamiska count-uttryck (stöd för singular/plural)
-  const hasTC  = hasTable('topic_category');
-  const hasTCS = hasTable('topic_categories');
-  const hasQC  = hasTable('question_category');
-  const hasQCS = hasTable('question_categories');
+  // Kolla vilka kopplingstabeller som finns
+  const hasTC  = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='topic_category'`).get();
+  const hasTCS = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='topic_categories'`).get();
+  const hasQC  = !!db.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='question_category'`).get();
 
-  let topicCountExpr = '0';
+  // Bygg en säker subquery för ämnen/resurser
+  let topicRelSQL = `SELECT category_id, topic_id FROM topic_category`;
   if (hasTC && hasTCS) {
-    topicCountExpr = `
-      (
-        IFNULL((SELECT COUNT(*) FROM topic_category tc    WHERE tc.category_id = c.id), 0) +
-        IFNULL((SELECT COUNT(*) FROM topic_categories tcs WHERE tcs.category_id = c.id), 0)
-      )
+    topicRelSQL = `
+      SELECT category_id, topic_id FROM topic_category
+      UNION
+      SELECT category_id, topic_id FROM topic_categories
     `;
-  } else if (hasTC) {
-    topicCountExpr = `(SELECT COUNT(*) FROM topic_category tc WHERE tc.category_id = c.id)`;
-  } else if (hasTCS) {
-    topicCountExpr = `(SELECT COUNT(*) FROM topic_categories tcs WHERE tcs.category_id = c.id)`;
+  } else if (!hasTC && hasTCS) {
+    topicRelSQL = `SELECT category_id, topic_id FROM topic_categories`;
   }
 
-  let questionCountExpr = '0';
-  if (hasQC && hasQCS) {
-    questionCountExpr = `
-      (
-        IFNULL((SELECT COUNT(*) FROM question_category qc    WHERE qc.category_id = c.id), 0) +
-        IFNULL((SELECT COUNT(*) FROM question_categories qcs WHERE qcs.category_id = c.id), 0)
-      )
-    `;
-  } else if (hasQC) {
-    questionCountExpr = `(SELECT COUNT(*) FROM question_category qc WHERE qc.category_id = c.id)`;
-  } else if (hasQCS) {
-    questionCountExpr = `(SELECT COUNT(*) FROM question_categories qcs WHERE qcs.category_id = c.id)`;
+  // Räknare för ämnen/resurser: räkna bara kopplingar som pekar på existerande topics
+  const topicCounts = db.prepare(`
+    SELECT r.category_id, COUNT(DISTINCT r.topic_id) AS topic_cnt
+    FROM (${topicRelSQL}) r
+    JOIN topics t ON t.id = r.topic_id
+    GROUP BY r.category_id
+  `).all();
+  const topicCountMap = Object.fromEntries(topicCounts.map(r => [String(r.category_id), r.topic_cnt]));
+
+  // Räknare för frågor: räkna bara kopplingar som pekar på existerande questions
+  let questionCountMap = {};
+  if (hasQC) {
+    const qCounts = db.prepare(`
+      SELECT qc.category_id, COUNT(DISTINCT qc.question_id) AS q_cnt
+      FROM question_category qc
+      JOIN questions q ON q.id = qc.question_id
+      GROUP BY qc.category_id
+    `).all();
+    questionCountMap = Object.fromEntries(qCounts.map(r => [String(r.category_id), r.q_cnt]));
   }
 
-  // Kategorier + korrekta totals
-  const cats = db.prepare(`
-    SELECT
-      c.id,
-      c.title,
-      c.icon,
-      c.sort_order,
-      ${topicCountExpr}    AS topic_count,
-      ${questionCountExpr} AS question_count,
-      (${topicCountExpr} + ${questionCountExpr}) AS total_count
-    FROM categories c
-    ORDER BY COALESCE(c.sort_order, 9999), c.title
+  // Hämta alla kategorier och sätt counts
+  const catsRaw = db.prepare(`
+    SELECT id, title, icon, sort_order
+    FROM categories
+    ORDER BY COALESCE(sort_order, 9999), title
   `).all();
 
-  // ---- behåll "rows" som namn (om du använder den längre ned) ----
+  const cats = catsRaw.map(c => {
+    const topic_cnt = topicCountMap[String(c.id)] || 0;
+    const q_cnt     = questionCountMap[String(c.id)] || 0;
+    return {
+      ...c,
+      topic_count: topic_cnt,
+      question_count: q_cnt,
+      total_count: topic_cnt + q_cnt
+    };
+  });
+
+  // (Behåll ev. din extrasektion för “senaste per kategori” om du använder den)
   const rows = db.prepare(`
     SELECT tc.category_id AS cid, b.id, t.title, b.updated_at
     FROM topic_category tc
@@ -1613,7 +1621,6 @@ app.get('/admin/categories', requireAdmin, (req, res) => {
     JOIN topics t      ON t.id  = tc.topic_id
     ORDER BY b.updated_at DESC
   `).all();
-
   const topicsByCat = {};
   for (const r of rows) (topicsByCat[r.cid] ||= []).push(r);
 
