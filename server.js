@@ -1672,6 +1672,40 @@ app.post('/admin/categories/move-topic', requireAdmin, (req, res) => {
   res.redirect('/admin/categories');
 });
 
+// Engångs-route med knapp för att rensa dubletter -- TILLFÄLLIG
+app.get('/admin/cleanup-duplicates', requireAdmin, (req, res) => {
+  res.render('cleanup-duplicates', { title: 'Rensa dubletter' });
+});
+
+app.post('/admin/cleanup-duplicates', requireAdmin, (req, res) => {
+  try {
+    db.prepare(`
+      DELETE FROM topic_category
+      WHERE rowid NOT IN (
+        SELECT MIN(rowid) FROM topic_category GROUP BY topic_id
+      )
+    `).run();
+  } catch (e) {
+    console.warn('topic_category saknas eller redan rensad');
+  }
+
+  try {
+    db.prepare(`
+      DELETE FROM topic_categories
+      WHERE rowid NOT IN (
+        SELECT MIN(rowid) FROM topic_categories GROUP BY topic_id
+      )
+    `).run();
+  } catch (e) {
+    console.warn('topic_categories saknas eller redan rensad');
+  }
+
+  res.render('cleanup-duplicates', { 
+    title: 'Rensa dubletter',
+    success: '✅ Alla dubletter har rensats'
+  });
+});
+
 app.post('/admin/categories/:id/delete', requireAdmin, (req, res) => {
   const { id } = req.params;
   const { moveTo } = req.body;
