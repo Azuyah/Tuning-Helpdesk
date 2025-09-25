@@ -50,23 +50,40 @@ export function getAdminEmails(db) {
 // ---- mailers ----
 export async function sendNewQuestionNotifications(db, { id, title, authorName }) {
   const toList = getStaffEmails(db);
-  if (!toList.length) return;
-  const url = `${BASE}/questions/${encodeURIComponent(id)}`;
+  console.log('[mail] new-question: toList=', toList);
 
-  await mailTransport.sendMail({
-    from: FROM,
-    to: toList.join(','),
-    subject: `Ny fråga: ${title}`,
-    text:
+  if (!toList.length) {
+    console.warn('[mail] new-question: NO RECIPIENTS (admin/support not found with valid emails)');
+    return;
+  }
+
+  const url = `${BASE}/questions/${encodeURIComponent(id)}`;
+  const from = FROM;
+
+  try {
+    // validera transport (dyrt, men ok för debug)
+    const verified = await mailTransport.verify().catch(e => ({ error: e.message }));
+    console.log('[mail] transport.verify =', verified);
+
+    const info = await mailTransport.sendMail({
+      from,
+      to: toList.join(','),
+      subject: `Ny fråga: ${title}`,
+      text:
 `En ny fråga har skapats av ${authorName || 'okänd'}.
 
 Titel: ${title}
 Öppna: ${url}`,
-    html:
+      html:
 `<p>En ny fråga har skapats av <strong>${authorName || 'okänd'}</strong>.</p>
 <p><strong>Titel:</strong> ${escapeHtml(title)}</p>
 <p><a href="${url}">Öppna frågan</a></p>`,
-  });
+    });
+
+    console.log('[mail] new-question sent. messageId=', info?.messageId);
+  } catch (err) {
+    console.error('[mail] new-question ERROR:', err);
+  }
 }
 
 export async function sendQuestionAnswered(db, { id, title, userId }) {

@@ -1919,6 +1919,7 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
     `).run(req.user.id, title, body, image_url);
 
     const qid = info.lastInsertRowid;
+    console.log('[questions] saved id=', qid, 'title=', title, 'user=', req.user?.email);
 
     // 2) Spara maskiner i join-tabell
     const ins = db.prepare(`INSERT INTO question_machines (question_id, machine) VALUES (?, ?)`);
@@ -1943,6 +1944,19 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
     }
     console.error(err);
     return res.status(500).json({ ok: false, error: 'Kunde inte spara frågan' });
+  }
+});
+
+app.get('/admin/debug/staff-emails', requireAdmin, (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT id, email, name, role, COALESCE(is_active,1) AS active
+      FROM users
+      WHERE role IN ('admin','support')
+    `).all();
+    res.type('json').send(JSON.stringify(rows, null, 2));
+  } catch (e) {
+    res.status(500).send(e.message);
   }
 });
 
@@ -4032,3 +4046,7 @@ cron.schedule('15 3 * * *', async () => {
 // ---------- Start ----------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server kör på port " + PORT));
+console.log('[env] MAIL_HOST', process.env.MAIL_HOST);
+console.log('[env] MAIL_USER', process.env.MAIL_USER);
+console.log('[env] MAIL_FROM', process.env.MAIL_FROM);
+console.log('[env] PUBLIC_BASE_URL', process.env.PUBLIC_BASE_URL);
