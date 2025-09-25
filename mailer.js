@@ -2,16 +2,19 @@
 import nodemailer from 'nodemailer';
 
 export const mailTransport = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 465),
-  secure: true,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  host: process.env.MAIL_HOST,
+  port: Number(process.env.MAIL_PORT || 465),
+  secure: String(process.env.MAIL_SECURE).toLowerCase() === 'true', // true=465, false=587
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+  },
 });
 
-const FROM = process.env.MAIL_FROM || process.env.SMTP_USER;
+const FROM = process.env.MAIL_FROM || process.env.MAIL_USER;
 const BASE = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
 
-// Hämta staff (admin + support)
+// ---- helpers ----
 export function getStaffEmails(db) {
   try {
     const rows = db.prepare(`
@@ -28,7 +31,6 @@ export function getStaffEmails(db) {
   }
 }
 
-// Hämta endast admins
 export function getAdminEmails(db) {
   try {
     const rows = db.prepare(`
@@ -45,7 +47,7 @@ export function getAdminEmails(db) {
   }
 }
 
-// Ny fråga → staff
+// ---- mailers ----
 export async function sendNewQuestionNotifications(db, { id, title, authorName }) {
   const toList = getStaffEmails(db);
   if (!toList.length) return;
@@ -67,7 +69,6 @@ Titel: ${title}
   });
 }
 
-// Fråga besvarad → frågeställaren
 export async function sendQuestionAnswered(db, { id, title, userId }) {
   const row = db.prepare(`SELECT email, name FROM users WHERE id=?`).get(userId);
   if (!row || !row.email) return;
@@ -92,7 +93,6 @@ Läs svaret: ${url}`,
   });
 }
 
-// Ny feedback → endast admins
 export async function sendNewFeedbackNotifications(db, { id, category, message }) {
   const toList = getAdminEmails(db);
   if (!toList.length) return;
@@ -115,7 +115,7 @@ ${message ? `<p>${escapeHtml(message)}</p>` : ''}
   });
 }
 
-// enkel HTML-escape
+// ---- utils ----
 function escapeHtml(s='') {
   return String(s)
     .replace(/&/g,'&amp;')
