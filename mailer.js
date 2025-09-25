@@ -3,12 +3,13 @@ import nodemailer from 'nodemailer';
 
 export const mailTransport = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
-  port: Number(process.env.MAIL_PORT || 465),
-  secure: String(process.env.MAIL_SECURE).toLowerCase() === 'true', // true=465, false=587
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
+  port: Number(process.env.MAIL_PORT || 587),
+  secure: String(process.env.MAIL_SECURE).toLowerCase() === 'false', // false för 587
+  auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
+  requireTLS: true,                 // tvinga STARTTLS
+  tls: { minVersion: 'TLSv1.2' },   // modern TLS
+  connectionTimeout: 15000,         // 15s
+  socketTimeout: 20000,             // 20s
 });
 
 const FROM = process.env.MAIL_FROM || process.env.MAIL_USER;
