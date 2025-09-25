@@ -12,12 +12,32 @@ import expressLayouts from 'express-ejs-layouts';
 import crypto from 'crypto';
 import cron from 'node-cron';
 import multer from 'multer';
+import 'dotenv/config';
+import nodemailer from 'nodemailer';
+import {
+  sendNewQuestionNotifications,
+  sendQuestionAnswered,
+  sendNewFeedbackNotifications
+} from './mailer.js';
+import { mailTransport } from './mailer.js';
+
+// Skapa transport baserat på env-variabler
+const mailTransport = nodemailer.createTransport({
+  host: process.env.MAIL_HOST,
+  port: Number(process.env.MAIL_PORT),
+  secure: process.env.MAIL_SECURE === 'true', // true = 465, false = 587
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+  },
+});
 
 const ROOT = path.resolve(process.cwd());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const uploadDir = path.join(__dirname, 'uploads', 'questions');
 fs.mkdirSync(uploadDir, { recursive: true });
+
 
 const app = express();
 
@@ -1882,12 +1902,10 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
     const title = (req.body.title || '').trim();
     const body  = (req.body.body  || '').trim();
 
-    // machines[] från formuläret (checkbox-dropdownen skapar machines[])
     let machines = req.body['machines[]'] ?? req.body.machines ?? [];
     if (typeof machines === 'string') machines = [machines];
     machines = machines.filter(Boolean);
 
-    // validering
     if (!title) {
       return res.status(400).json({ ok: false, error: 'Titel krävs' });
     }
@@ -1895,23 +1913,33 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
       return res.status(422).json({ ok: false, error: 'Välj minst en maskin.' });
     }
 
-    // bild (relativ path)
     const image_url = req.file ? `/uploads/questions/${req.file.filename}` : null;
 
-    // spara fråga
+    // 1) Spara frågan
     const info = db.prepare(`
-      INSERT INTO questions (user_id, title, body, image_url, created_at, updated_at)
-      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+      INSERT INTO questions (user_id, title, body, image_url, created_at, updated_at, status)
+      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), 'open')
     `).run(req.user.id, title, body, image_url);
 
     const qid = info.lastInsertRowid;
 
-    // spara maskiner i join-tabell
+    // 2) Spara maskiner i join-tabell
     const ins = db.prepare(`INSERT INTO question_machines (question_id, machine) VALUES (?, ?)`);
     const tx  = db.transaction((arr) => { arr.forEach(m => ins.run(qid, m)); });
     tx(machines);
 
+    // 3) Maila staff (fire-and-forget)
+    sendNewQuestionNotifications(db, {
+      id: qid,
+      title,
+      authorName: req.user?.name || req.user?.email || 'Okänd'
+    }).catch(err => {
+      console.error('Kunde inte skicka staff-mail för ny fråga:', err);
+    });
+
+    // 4) Svara till klienten
     return res.json({ ok: true, id: qid });
+
   } catch (err) {
     if (err && err.message === 'INVALID_FILETYPE') {
       return res.status(400).json({ ok: false, error: 'Endast JPG/PNG/WEBP tillåts' });
@@ -2260,7 +2288,7 @@ function buildCategories() {
   }));
 }
 
-app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extended:false}), (req, res) => {
+app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extended:false}), async (req, res) => {
   const id     = Number(req.params.id);
   const status = String(req.body.status || '').toLowerCase();
   const hide   = req.body.hide === 'on' ? 1 : 0;
@@ -2269,14 +2297,31 @@ app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extend
     return res.status(400).send('Ogiltig status');
   }
 
+  // Hämta tidigare status + info för ev. mail
+  const before = db.prepare(`SELECT status, is_answered, user_id, title, answered_at FROM questions WHERE id=?`).get(id);
+  if (!before) return res.status(404).send('Fråga saknas');
+
+  // Uppdatera status (sätt answered_at första gången den blir besvarad)
+  const setAnsweredAt = (status === 'answered' && !before.answered_at) ? `, answered_at = datetime('now')` : '';
   db.prepare(`
     UPDATE questions
        SET status = ?,
            hidden = ?,
            is_answered = CASE WHEN ?='answered' THEN 1 ELSE is_answered END,
            updated_at = datetime('now')
+           ${setAnsweredAt}
      WHERE id = ?
   `).run(status, hide, status, id);
+
+  // Skicka mail om vi just gick till "answered"
+  const becameAnswered = (before.status !== 'answered' && status === 'answered') || (!before.is_answered && status === 'answered');
+  if (becameAnswered) {
+    sendQuestionAnswered(db, {
+      id,
+      title: before.title,
+      userId: before.user_id
+    }).catch(err => console.error('Kunde inte skicka mail till frågeställaren:', err));
+  }
 
   return res.redirect('/admin/questions/' + id);
 });
@@ -3050,31 +3095,40 @@ function listFilesRecursive(dirAbs, baseUrl = '/public/resources') {
   return out;
 }
 
-// Visa formulär
-app.get('/feedback', (req, res) => {
-  res.render('feedback', { title: 'Feedback', flash: null });
-});
+// ---------- FEEDBACK ----------
+app.post('/feedback', requireAuth, express.urlencoded({ extended: false }), (req, res) => {
+  try {
+    const categoryRaw = String(req.body.category || '').toLowerCase().trim();
+    const message     = (req.body.message || '').trim();
 
-// Ta emot formulär
-app.post('/feedback', express.urlencoded({ extended: false }), (req, res) => {
-  const me = getUser(req);
-  const category = String(req.body.category || '').toLowerCase();
-  const message  = (req.body.message || '').trim();
+    // Tillåtna värden måste matcha era form-värden (ex. wish | suggestion | bug)
+    const allowed = new Set(['wish', 'suggestion', 'bug']);
+    const category = allowed.has(categoryRaw) ? categoryRaw : null;
 
-  const allowed = ['wish','suggestion','bug'];
-  if (!allowed.includes(category) || !message) {
-    return res.status(400).render('feedback', {
-      title: 'Feedback',
-      flash: 'Något saknas. Välj kategori och skriv ett meddelande.'
-    });
+    if (!category) return res.status(400).send('Ogiltig kategori.');
+    if (!message)  return res.status(400).send('Meddelande krävs.');
+
+    const info = db.prepare(`
+      INSERT INTO feedbacks (user_id, category, message, is_handled, created_at, updated_at)
+      VALUES (?, ?, ?, 0, datetime('now'), datetime('now'))
+    `).run(req.user.id, category, message);
+
+    const fid = info.lastInsertRowid;
+
+    // Skicka mail till ADMIN (via mailer.js) – fire-and-forget
+    (async () => {
+      try {
+        await sendNewFeedbackNotifications(db, { id: fid, category });
+      } catch (err) {
+        console.error('Kunde inte skicka admin-mail om ny feedback:', err);
+      }
+    })();
+
+    return res.redirect('/feedback?ok=1');
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('Kunde inte spara feedback.');
   }
-
-  db.prepare(`
-    INSERT INTO feedbacks (user_id, category, message)
-    VALUES (?, ?, ?)
-  `).run(me?.id || null, category, message);
-
-  res.render('feedback', { title: 'Feedback', flash: 'Tack! Din feedback har skickats.' });
 });
 
 app.get('/admin/feedback', requireStaff, (req, res) => {
