@@ -4026,6 +4026,93 @@ app.use((req, res) => {
   });
 });
 
+// ---- DEBUG: Visa vilka staff som skulle få mail ----
+app.get('/admin/debug/staff-emails', requireAdmin, (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, name, email, role, 
+           CASE WHEN is_active IS NULL THEN 1 ELSE is_active END AS is_active
+    FROM users
+    ORDER BY 
+      CASE role 
+        WHEN 'admin' THEN 1 
+        WHEN 'support' THEN 2 
+        ELSE 3 
+      END, 
+      lower(email)
+  `).all();
+
+  // Samma logik som i mailer.js → vilka kvalar in?
+  const qualifies = (u) =>
+    (u.role === 'admin' || u.role === 'support') &&
+    Number(u.is_active) === 1 &&
+    u.email && String(u.email).trim().includes('@');
+
+  const html = `
+    <section style="max-width:900px;margin:2rem auto;font-family:system-ui">
+      <h1>Debug: Staff emails</h1>
+      <p>Visar alla users och markerar vilka som kvalar för staff-utskick.</p>
+
+      <form method="POST" action="/admin/debug/staff-emails/test" style="margin:.5rem 0 1rem">
+        <button style="padding:.5rem 1rem;background:#0369a1;color:#fff;border:0;border-radius:.5rem;cursor:pointer">
+          Skicka testmail till alla kvalificerade
+        </button>
+      </form>
+
+      <table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%">
+        <thead style="background:#f1f5f9">
+          <tr>
+            <th>ID</th><th>Namn</th><th>Email</th><th>Roll</th><th>is_active</th><th>Kvalificerar?</th><th>Orsak om nej</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(u => {
+            const ok = qualifies(u);
+            let why = '';
+            if (!ok) {
+              const probs = [];
+              if (!(u.role === 'admin' || u.role === 'support')) probs.push('roll ≠ admin/support');
+              if (!(Number(u.is_active) === 1)) probs.push('is_active ≠ 1');
+              if (!(u.email && String(u.email).trim().includes('@'))) probs.push('ogiltig email');
+              why = probs.join(', ');
+            }
+            return `<tr>
+              <td>${u.id}</td>
+              <td>${u.name || ''}</td>
+              <td>${u.email || ''}</td>
+              <td>${u.role}</td>
+              <td>${Number(u.is_active)}</td>
+              <td style="color:${ok?'#16a34a':'#dc2626'};font-weight:600">${ok?'JA':'NEJ'}</td>
+              <td>${why}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </section>
+  `;
+  res.send(html);
+});
+
+// ---- DEBUG: Skicka testmail till staff (admin + support) ----
+app.post('/admin/debug/staff-emails/test', requireAdmin, async (req, res) => {
+  try {
+    const toList = getStaffEmails(db); // från mailer.js
+    console.log('[mail][debug] recipients:', toList);
+    if (!toList.length) {
+      return res.status(200).send('Inga kvalificerade staff-mottagare hittades. Gå tillbaka och kolla listan.');
+    }
+    await mailTransport.sendMail({
+      from: process.env.MAIL_FROM || process.env.SMTP_USER,
+      to: toList.join(','),
+      subject: 'Test: staff-utskick från Tuning Helpdesk',
+      text: 'Detta är ett testutskick till staff (admin/support).',
+    });
+    res.status(200).send(`Testmail skickat till: ${toList.join(', ')}`);
+  } catch (e) {
+    console.error('[mail][debug] error:', e);
+    res.status(500).send('Fel vid utskick: ' + (e?.message || e));
+  }
+});
+
 // Kör en initial sync när servern startar
 (async () => {
   try { await syncAllDealers(); }
