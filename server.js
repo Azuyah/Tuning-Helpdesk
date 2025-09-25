@@ -3091,6 +3091,14 @@ function listFilesRecursive(dirAbs, baseUrl = '/public/resources') {
   return out;
 }
 
+// --- Publik feedback ---
+app.get('/feedback', (req, res) => {
+  res.render('feedback', {
+    title: 'Feedback',
+    flash: req.query.ok ? 'Tack! Vi har mottagit din feedback.' : null
+  });
+});
+
 // ---------- FEEDBACK ----------
 app.post('/feedback', requireAuth, express.urlencoded({ extended: false }), (req, res) => {
   try {
