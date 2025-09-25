@@ -4097,27 +4097,6 @@ app.get('/admin/debug/staff-emails', requireAdmin, (req, res) => {
   res.send(html);
 });
 
-// ---- DEBUG: Skicka testmail till staff (admin + support) ----
-app.post('/admin/debug/staff-emails/test', requireAdmin, async (req, res) => {
-  try {
-    const toList = getStaffEmails(db); // från mailer.js
-    console.log('[mail][debug] recipients:', toList);
-    if (!toList.length) {
-      return res.status(200).send('Inga kvalificerade staff-mottagare hittades. Gå tillbaka och kolla listan.');
-    }
-    await mailTransport.sendMail({
-      from: process.env.MAIL_FROM || process.env.SMTP_USER,
-      to: toList.join(','),
-      subject: 'Test: staff-utskick från Tuning Helpdesk',
-      text: 'Detta är ett testutskick till staff (admin/support).',
-    });
-    res.status(200).send(`Testmail skickat till: ${toList.join(', ')}`);
-  } catch (e) {
-    console.error('[mail][debug] error:', e);
-    res.status(500).send('Fel vid utskick: ' + (e?.message || e));
-  }
-});
-
 // Kör en initial sync när servern startar
 (async () => {
   try { await syncAllDealers(); }

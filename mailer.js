@@ -47,42 +47,57 @@ export async function sendMail({ from = FROM, to, subject, text, html }) {
 
 // -------------------- DB helpers --------------------
 // OBS: din users-tabell har kolumnen "active" (inte is_active).
-export function getStaffEmails(db) {
+// ---- helpers (ersätt båda funktionerna) ----
+function tableHasColumn(db, table, col) {
   try {
-    const rows = db
-      .prepare(`
-        SELECT email
-        FROM users
-        WHERE role IN ('admin','support')
-          AND COALESCE(active,1)=1
-          AND email IS NOT NULL
-          AND TRIM(email) <> ''
-      `)
-      .all();
-    return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+    return cols.some(c => c.name === col);
   } catch {
-    return [];
+    return false;
   }
+}
+
+export function getStaffEmails(db) {
+  const hasActive = tableHasColumn(db, 'users', 'active');
+  const whereActive = hasActive ? `AND COALESCE(active,1)=1` : ``;
+
+  const rows = db.prepare(`
+    SELECT email, role${hasActive ? ', active' : ''}
+    FROM users
+    WHERE LOWER(role) IN ('admin','support')
+      ${whereActive}
+      AND email IS NOT NULL
+      AND TRIM(email) <> ''
+  `).all();
+
+  const emails = rows
+    .map(r => String(r.email || '').trim())
+    .filter(e => e.includes('@'));
+
+  console.log('[mail:getStaffEmails] found=', rows.length, 'emails=', emails);
+  return emails;
 }
 
 export function getAdminEmails(db) {
-  try {
-    const rows = db
-      .prepare(`
-        SELECT email
-        FROM users
-        WHERE role = 'admin'
-          AND COALESCE(active,1)=1
-          AND email IS NOT NULL
-          AND TRIM(email) <> ''
-      `)
-      .all();
-    return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
-  } catch {
-    return [];
-  }
-}
+  const hasActive = tableHasColumn(db, 'users', 'active');
+  const whereActive = hasActive ? `AND COALESCE(active,1)=1` : ``;
 
+  const rows = db.prepare(`
+    SELECT email, role${hasActive ? ', active' : ''}
+    FROM users
+    WHERE LOWER(role) = 'admin'
+      ${whereActive}
+      AND email IS NOT NULL
+      AND TRIM(email) <> ''
+  `).all();
+
+  const emails = rows
+    .map(r => String(r.email || '').trim())
+    .filter(e => e.includes('@'));
+
+  console.log('[mail:getAdminEmails] found=', rows.length, 'emails=', emails);
+  return emails;
+}
 // -------------------- Notifierare --------------------
 export async function sendNewQuestionNotifications(db, { id, title, authorName, authorEmail }) {
   const toList = getStaffEmails(db);
