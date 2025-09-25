@@ -14,13 +14,12 @@ import cron from 'node-cron';
 import multer from 'multer';
 import 'dotenv/config';
 import nodemailer from 'nodemailer';
-
 import {
   sendNewQuestionNotifications,
   sendQuestionAnswered,
   sendNewFeedbackNotifications,
-  mailTransport, // valfritt att använda för manuella tester
-} from './mailer.js';
+  sendMail, // valfritt för egna tester
+} from "./mailer.js";
 
 const ROOT = path.resolve(process.cwd());
 const __filename = fileURLToPath(import.meta.url);
