@@ -1,60 +1,38 @@
-// mailer.js — Resend-version (ingen SMTP behövs)
-const FROM = process.env.MAIL_FROM || "Tuning Helpdesk <noreply@tuninghelpdesk.com>";
+// mailer.js — Resend-version
+const FROM = (process.env.MAIL_FROM || "noreply@tuninghelpdesk.com").trim().replace(/^["']|["']$/g, '');
 const BASE = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
 
 // -------------------- Resend core --------------------
-async function sendViaResend({ from = FROM, to, subject, text, html, reply_to }) {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("Missing RESEND_API_KEY");
+async function sendViaResend({ from = FROM, to, subject, text, html }) {
+  if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
+
+  const payload = { from, to: Array.isArray(to) ? to : [to], subject, text, html };
+  const resp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => "");
+    throw new Error(`Resend error ${resp.status}: ${errText || resp.statusText}`);
   }
-  const payload = {
-    from,
-    to: Array.isArray(to) ? to : [to],
-    subject,
-    text,
-    html,
-    reply_to, // valfritt
-  };
-
-  try {
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const body = await resp.text(); // läs alltid kroppen för bra fel-logg
-    if (!resp.ok) {
-      console.error('[resend] HTTP', resp.status, body);
-      throw new Error(`Resend error ${resp.status}: ${body}`);
-    }
-
-    console.log('[resend] OK:', body);
-    return JSON.parse(body);
-  } catch (e) {
-    console.error('[resend] FAIL:', e);
-    throw e;
-  }
+  return resp.json();
 }
 
-// Publik helper så servern kan skicka brev direkt om man vill
 export async function sendMail({ from = FROM, to, subject, text, html }) {
   return sendViaResend({ from, to, subject, text, html });
 }
 
 // -------------------- DB helpers --------------------
-// OBS: din users-tabell har kolumnen "active" (inte is_active).
-// ---- helpers (ersätt båda funktionerna) ----
 function tableHasColumn(db, table, col) {
   try {
     const cols = db.prepare(`PRAGMA table_info(${table})`).all();
     return cols.some(c => c.name === col);
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
 export function getStaffEmails(db) {
@@ -62,7 +40,7 @@ export function getStaffEmails(db) {
   const whereActive = hasActive ? `AND COALESCE(active,1)=1` : ``;
 
   const rows = db.prepare(`
-    SELECT email, role${hasActive ? ', active' : ''}
+    SELECT email
     FROM users
     WHERE LOWER(role) IN ('admin','support')
       ${whereActive}
@@ -70,12 +48,7 @@ export function getStaffEmails(db) {
       AND TRIM(email) <> ''
   `).all();
 
-  const emails = rows
-    .map(r => String(r.email || '').trim())
-    .filter(e => e.includes('@'));
-
-  console.log('[mail:getStaffEmails] found=', rows.length, 'emails=', emails);
-  return emails;
+  return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
 }
 
 export function getAdminEmails(db) {
@@ -83,7 +56,7 @@ export function getAdminEmails(db) {
   const whereActive = hasActive ? `AND COALESCE(active,1)=1` : ``;
 
   const rows = db.prepare(`
-    SELECT email, role${hasActive ? ', active' : ''}
+    SELECT email
     FROM users
     WHERE LOWER(role) = 'admin'
       ${whereActive}
@@ -91,28 +64,25 @@ export function getAdminEmails(db) {
       AND TRIM(email) <> ''
   `).all();
 
-  const emails = rows
-    .map(r => String(r.email || '').trim())
-    .filter(e => e.includes('@'));
-
-  console.log('[mail:getAdminEmails] found=', rows.length, 'emails=', emails);
-  return emails;
+  return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
 }
+
 // -------------------- Notifierare --------------------
-export async function sendNewQuestionNotifications(db, { id, title, authorName, authorEmail }) {
+export async function sendNewQuestionNotifications(db, { id, title, authorName }) {
   const toList = getStaffEmails(db);
-  console.log('[mail:new-question] recipients =', toList);
   if (!toList.length) return;
 
   const url = `${BASE}/questions/${encodeURIComponent(id)}`;
-  await sendViaResend({
+  return sendViaResend({
     to: toList,
     subject: `Ny fråga: ${title}`,
-    reply_to: authorEmail || undefined,
-    text: `En ny fråga har skapats av ${authorName || "okänd"}.\n\nTitel: ${title}\nÖppna: ${url}`,
+    text: `En ny fråga har skapats av ${authorName || "okänd"}.
+
+Titel: ${title}
+Öppna: ${url}`,
     html: `<p>En ny fråga har skapats av <strong>${escapeHtml(authorName || "okänd")}</strong>.</p>
-           <p><strong>Titel:</strong> ${escapeHtml(title)}</p>
-           <p><a href="${url}">Öppna frågan</a></p>`,
+<p><strong>Titel:</strong> ${escapeHtml(title)}</p>
+<p><a href="${url}">Öppna frågan</a></p>`,
   });
 }
 
@@ -121,7 +91,7 @@ export async function sendQuestionAnswered(db, { id, title, userId }) {
   if (!row || !row.email) return;
 
   const url = `${BASE}/questions/${encodeURIComponent(id)}`;
-  await sendViaResend({
+  return sendViaResend({
     to: row.email,
     subject: `Ditt svar är klart: ${title}`,
     text: `Hej ${row.name || ""}!
@@ -138,11 +108,11 @@ Läs svaret: ${url}`,
 }
 
 export async function sendNewFeedbackNotifications(db, { id, category, message }) {
-  const toList = getAdminEmails(db); // endast admins
+  const toList = getAdminEmails(db);
   if (!toList.length) return;
 
   const url = `${BASE}/admin/feedback`;
-  await sendViaResend({
+  return sendViaResend({
     to: toList,
     subject: `Ny feedback: ${category || "okänd kategori"}`,
     text: `Ny feedback har inkommit (${category || "okänd kategori"}).

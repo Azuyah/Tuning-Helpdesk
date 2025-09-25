@@ -27,11 +27,6 @@ const __dirname  = path.dirname(__filename);
 const uploadDir = path.join(__dirname, 'uploads', 'questions');
 fs.mkdirSync(uploadDir, { recursive: true });
 
-console.log('[env] RESEND_API_KEY set?', !!process.env.RESEND_API_KEY);
-console.log('[env] MAIL_FROM =', process.env.MAIL_FROM);
-console.log('[env] PUBLIC_BASE_URL =', process.env.PUBLIC_BASE_URL);
-
-
 const app = express();
 
 /* --- DB-path + se till att katalogen finns --- */
@@ -1312,41 +1307,104 @@ app.get('/admin/edit-topic/:id', requireAdmin, (req, res) => {
 });
 
 // POST /admin/edit-topic/:id
-app.post('/admin/edit-topic/:id', requireAdmin, express.urlencoded({extended:false}), (req, res) => {
+app.post('/admin/edit-topic/:id', requireAdmin, express.urlencoded({ extended: false }), async (req, res) => {
   const id = String(req.params.id);
-  const title   = (req.body.title || '').trim();
-  const excerpt = (req.body.excerpt || '').trim();
-  const body    = (req.body.body || '').trim();
-  const tags    = (req.body.tags || '').trim();
-  const categoryId = (req.body.categoryId || '').trim();   // kan vara ""
 
-  const is_resource  = req.body.is_resource ? 1 : 0;
+  const title       = (req.body.title || '').trim();
+  const excerpt     = (req.body.excerpt || '').trim();
+  const body        = (req.body.body || '').trim();
+  const tags        = (req.body.tags || '').trim();
+  const categoryId  = (req.body.categoryId || '').trim();   // kan vara ""
+  const is_resource = req.body.is_resource ? 1 : 0;
   const download_url = (req.body.download_url || '').trim();
+
+  // NYTT: koppling till fråga
+  const answerForQ = Number(req.body.answer_for_question_id || 0) || null;
 
   if (!title) return res.status(400).send('Titel krävs');
 
+  // Spara topic-data
   db.prepare(`
     UPDATE topics
        SET title=?, excerpt=?, body=?, tags=?, is_resource=?, download_url=?
      WHERE id=?
   `).run(title, excerpt, body, tags, is_resource, download_url, id);
 
-  try { db.prepare(`UPDATE topics_base SET updated_at = datetime('now') WHERE id=?`).run(id); } catch {}
-
-  // Viktigt: rensa båda, skriv till båda
-  try { db.prepare(`DELETE FROM topic_category    WHERE topic_id=?`).run(id); } catch {}
-  try { db.prepare(`DELETE FROM topic_categories  WHERE topic_id=?`).run(id); } catch {}
-
-  if (categoryId) {
-    try { db.prepare(`INSERT OR REPLACE INTO topic_category    (topic_id, category_id) VALUES (?,?)`).run(id, categoryId); } catch {}
-    try { db.prepare(`INSERT OR REPLACE INTO topic_categories  (topic_id, category_id) VALUES (?,?)`).run(id, categoryId); } catch {}
+  // Hämta "före"-status om vi kopplar som svar
+  let beforeQ = null;
+  if (answerForQ) {
+    try {
+      beforeQ = db.prepare(`
+        SELECT id, user_id, title, status, COALESCE(is_answered,0) AS is_answered, answered_at
+        FROM questions
+        WHERE id=?
+      `).get(answerForQ);
+    } catch {}
   }
 
-  // (valfritt) uppdatera FTS bara om din FTS-tabell tillåter UPDATE
+  // Uppdatera topics_base (updated_at + ev. koppling till fråga)
   try {
-    db.prepare(`UPDATE topics_fts SET title=?, excerpt=?, body=? WHERE id=?`).run(title, excerpt, body, id);
+    db.prepare(`
+      UPDATE topics_base
+         SET updated_at = datetime('now'),
+             answer_for_question_id = ?
+       WHERE id = ?
+    `).run(answerForQ, id);
   } catch {}
 
+  // Rensa gammal kategori-koppling i båda tabellerna och sätt ny om vald
+  try { db.prepare(`DELETE FROM topic_category   WHERE topic_id=?`).run(id); } catch {}
+  try { db.prepare(`DELETE FROM topic_categories WHERE topic_id=?`).run(id); } catch {}
+
+  if (categoryId) {
+    try { db.prepare(`INSERT OR REPLACE INTO topic_category   (topic_id, category_id) VALUES (?,?)`).run(id, categoryId); } catch {}
+    try { db.prepare(`INSERT OR REPLACE INTO topic_categories (topic_id, category_id) VALUES (?,?)`).run(id, categoryId); } catch {}
+  }
+
+  // (valfritt) uppdatera FTS
+  try {
+    db.prepare(`UPDATE topics_fts SET title=?, excerpt=?, body=? WHERE id=?`)
+      .run(title, excerpt, body, id);
+  } catch {}
+
+  // OM vi kopplade detta ämne som svar på en fråga → markera frågan besvarad och maila användaren första gången
+  if (answerForQ && beforeQ) {
+    try {
+      // Markera som besvarad (sätt answered_at första gången)
+      db.prepare(`
+        UPDATE questions
+           SET is_answered = 1,
+               status = CASE WHEN COALESCE(status,'open') <> 'answered' THEN 'answered' ELSE status END,
+               answered_at = COALESCE(answered_at, datetime('now')),
+               answered_by = COALESCE(answered_by, ?),
+               answered_role = COALESCE(answered_role, ?),
+               updated_at = datetime('now')
+         WHERE id = ?
+      `).run((req.user?.email || req.user?.name || ''), (req.user?.role || ''), answerForQ);
+
+      const afterQ = db.prepare(`
+        SELECT COALESCE(is_answered,0) AS is_answered, status
+        FROM questions
+        WHERE id=?
+      `).get(answerForQ);
+
+      const becameAnswered =
+        (!beforeQ.is_answered && afterQ.is_answered) ||
+        (beforeQ.status !== 'answered' && afterQ.status === 'answered');
+
+      if (becameAnswered) {
+        await sendQuestionAnswered(db, {
+          id: answerForQ,
+          title: beforeQ.title,
+          userId: beforeQ.user_id
+        }).catch(err => console.error('Kunde inte skicka mail till frågeställaren:', err));
+      }
+    } catch (e) {
+      console.error('Kunde inte markera fråga som besvarad:', e);
+    }
+  }
+
+  // Tillbaka till ämnets publika vy
   return res.redirect(`/topic/${encodeURIComponent(id)}`);
 });
 
@@ -4117,7 +4175,3 @@ cron.schedule('15 3 * * *', async () => {
 // ---------- Start ----------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server kör på port " + PORT));
-console.log('[env] MAIL_HOST', process.env.MAIL_HOST);
-console.log('[env] MAIL_USER', process.env.MAIL_USER);
-console.log('[env] MAIL_FROM', process.env.MAIL_FROM);
-console.log('[env] PUBLIC_BASE_URL', process.env.PUBLIC_BASE_URL);
