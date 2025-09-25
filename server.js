@@ -978,7 +978,13 @@ app.get('/topic/:id', (req, res) => {
     LIMIT 1
   `).get(req.params.id);
 
-  if (!topic) return res.status(404).render('404', { title: 'Hittades inte' });
+if (!topic) {
+  return res.status(404).render('404', {
+    title: 'Hittades inte',
+    path: req.originalUrl || '/'
+    // user: res.locals.me  // valfritt – om din layout väntar på user
+  });
+}
   if (topic.is_resource) return res.redirect(301, `/resources/${topic.id}`);
 
   // --- Hämta EN kategori (pröva plural, sedan singular) ---
