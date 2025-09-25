@@ -64,29 +64,54 @@ const moveAction = curCat
 </div>
 
     <!-- Resurs-inställningar -->
-    <div class="mt-6 grid sm:grid-cols-2 gap-4">
-      <label class="inline-flex items-center gap-2">
-        <input type="checkbox" name="is_resource" value="1"
-               <%= Number(topic.is_resource) === 1 ? 'checked' : '' %> />
-        Detta är en resurs
-      </label>
+<div class="grid sm:grid-cols-2 gap-4">
+  <label class="inline-flex items-center gap-2">
+    <input type="checkbox" name="is_resource" value="1" <%= Number(topic?.is_resource) === 1 ? 'checked' : '' %> />
+    Detta är en resurs
+  </label>
 
-      <input type="url" name="download_url"
-             value="<%- topic.download_url || '' %>"
-             placeholder="https://… eller /public/files/fil.zip"
-             class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                    focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-    </div>
+  <%
+    const dl = (topic?.download_url || '').trim();
+    const isInternal = dl.startsWith('/public/resources/');
+    const hasAny = Array.isArray(downloadFiles) && downloadFiles.length > 0;
+  %>
 
-    <div class="flex gap-3">
+<div>
+  <label class="block text-sm font-medium text-slate-700 mb-1">Resursfil</label>
+
+  <div class="relative">
+    <select id="downloadSelect"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                   focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none
+                   <%= hasAny ? '' : 'bg-slate-50 text-slate-400 cursor-not-allowed' %>"
+            <%= hasAny ? '' : 'disabled' %>>
+      <option value="">— Välj fil från servern —</option>
+      <% if (hasAny) { downloadFiles.forEach(f => { %>
+        <option value="<%- f.url %>" <%= (isInternal && dl === f.url) ? 'selected' : '' %>><%- f.relPath %></option>
+      <% }); } %>
+      <option value="__custom__" <%= (!isInternal && dl) ? 'selected' : '' %>>Annan URL …</option>
+    </select>
+    <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2
+               text-slate-500 pointer-events-none"></i>
+  </div>
+
+  <!-- Fältet som POST:as till servern -->
+<input id="downloadUrlInput"
+       type="text"
+       name="download_url"
+       value="<%- dl %>"
+       placeholder="https://… eller /public/resources/fil.zip"
+       class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+              focus:border-sky-500 focus:ring-sky-500 sm:text-sm <%= (!isInternal && dl) ? '' : 'hidden' %>"/>
+  <p class="text-xs text-slate-500 mt-1">Välj fil från servern eller “Annan URL …” för att skriva egen länk.</p>
+</div>
+    <!-- Spara-knapp -->
+    <div class="pt-4">
       <button type="submit"
-              class="rounded-lg bg-sky-600 text-white px-5 py-2 font-medium hover:bg-sky-700 shadow-sm">
-        Spara
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-6 py-3 text-white font-semibold shadow hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1">
+        <i class="ti ti-device-floppy text-lg"></i>
+        Spara ändringar
       </button>
-      <a href="/admin"
-         class="rounded-lg border border-slate-300 px-5 py-2 font-medium text-slate-700 hover:bg-slate-50">
-        Avbryt
-      </a>
     </div>
   </form>
 </section>
@@ -148,4 +173,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+</script>
+
+<script>
+(function(){
+  const sel = document.getElementById('downloadSelect');
+  const inp = document.getElementById('downloadUrlInput');
+  if (!sel || !inp) return;
+
+  function sync() {
+    const v = sel.value;
+    if (v === '__custom__') {
+      // Visa fritextfältet för egen URL
+      inp.classList.remove('hidden');
+      // Rensa inte automatiskt – låt användaren skriva/klistra in
+      inp.focus();
+    } else if (v) {
+      // Vald serverfil → skriv in sökvägen och dölj input (men låt den vara enabled!)
+      inp.value = v;
+      inp.classList.add('hidden');
+    } else {
+      // “— Välj fil —” → nollställ och dölj
+      inp.value = '';
+      inp.classList.add('hidden');
+    }
+  }
+
+  // Kör vid start och vid ändring
+  sync();
+  sel.addEventListener('change', sync);
+})();
 </script>

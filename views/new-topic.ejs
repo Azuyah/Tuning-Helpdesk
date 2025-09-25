@@ -30,8 +30,7 @@
         <label class="block text-sm font-medium text-slate-700 mb-1">Taggar</label>
         <input type="text" name="tags"
                placeholder="ex: autotuner, virtual read, credits"
-               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
-                      focus:border-sky-500 focus:ring-sky-500 sm:text-sm"/>
+               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"/>
         <p class="text-xs text-slate-500 mt-1">Används för sök och filter (komma-separerade).</p>
       </div>
 
@@ -52,18 +51,54 @@
         <p class="text-xs text-slate-500 mt-1">Primär kategori för ämnet.</p>
       </div>
 
-      <div class="grid sm:grid-cols-2 gap-4">
-        <label class="inline-flex items-center gap-2">
-          <input type="checkbox" name="is_resource" value="1" <%= topic?.is_resource ? 'checked' : '' %> />
-          Detta är en resurs
-        </label>
-        <input type="url" name="download_url" placeholder="https://… /public/files/fil.zip"
-               value="<%- topic?.download_url || '' %>"
-               class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm" />
-      </div>
+<!-- Resurs-inställningar -->
+<div class="grid sm:grid-cols-2 gap-4">
+  <label class="inline-flex items-center gap-2">
+    <input type="checkbox" name="is_resource" value="1" />
+    Detta är en resurs
+  </label>
 
-      <!-- Submit -->
-      <div class="pt-4">
+  <%
+    const dl = '';
+    const isInternal = false;
+    const hasAny = Array.isArray(downloadFiles) && downloadFiles.length > 0;
+  %>
+
+  <div>
+    <label class="block text-sm font-medium text-slate-700 mb-1">Resursfil</label>
+
+    <div class="relative">
+      <select id="downloadSelect"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+                     focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none
+                     <%= hasAny ? '' : 'bg-slate-50 text-slate-400 cursor-not-allowed' %>"
+              <%= hasAny ? '' : 'disabled' %>>
+        <option value="">— Välj fil från servern —</option>
+        <% if (hasAny) { downloadFiles.forEach(f => { %>
+          <option value="<%- f.url %>"><%- f.relPath %></option>
+        <% }); } %>
+        <option value="__custom__">Annan URL …</option>
+      </select>
+      <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2
+                 text-slate-500 pointer-events-none"></i>
+    </div>
+
+    <!-- Fältet som POST:as till servern -->
+<input id="downloadUrlInput"
+       type="text"
+       name="download_url"
+       value="<%- dl %>"
+       placeholder="https://… eller /public/resources/fil.zip"
+       class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
+              focus:border-sky-500 focus:ring-sky-500 sm:text-sm <%= (!isInternal && dl) ? '' : 'hidden' %>"/>
+    <p class="text-xs text-slate-500 mt-1">
+      Välj fil från servern eller “Annan URL …” för att skriva egen länk.
+    </p>
+  </div>
+</div>
+
+      <!-- Submit (INNE i formuläret) -->
+      <div class="pt-2">
         <button type="submit"
                 class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-6 py-3 text-white font-semibold shadow hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1">
           <i class="ti ti-plus text-lg"></i>
@@ -74,30 +109,62 @@
   </div>
 </section>
 
-<!-- TinyMCE self-host (ingen API-nyckel) -->
+<!-- Self-hosted TinyMCE -->
 <script src="/tinymce/tinymce.min.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    tinymce.init({
-      selector: '#bodyEditor',
-      height: 500,
-      menubar: false,
-      branding: false,
-      promotion: false,
-      base_url: '/tinymce',                 // så Tiny hittar sina assets
-      plugins: 'link image media table lists code',
-      toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image media table | alignleft aligncenter alignright | code',
-      media_live_embeds: true,
-      // tillåt <iframe> i innehållet (YouTube m.m.)
-      extended_valid_elements: 'iframe[src|frameborder|allowfullscreen|width|height|name|title|allow|referrerpolicy|sandbox]',
-      // i denna vy: inga uploads – använd URL/klistra in
-      paste_data_images: true,
-      automatic_uploads: false,
-      images_upload_handler: function (_blobInfo, _success, fail) {
-        fail('Uppladdning avstängd här. Använd bild-URL eller klistra in.');
-      },
-      convert_urls: false,
-      content_style: 'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;font-size:16px;line-height:1.65}'
-    });
+document.addEventListener('DOMContentLoaded', function () {
+  tinymce.init({
+    selector: '#bodyEditor',
+    height: 500,
+    menubar: false,
+    branding: false,
+    promotion: false,
+    base_url: '/tinymce',                          // så Tiny hittar sina assets
+    plugins: 'link image media table lists code',  // listor + media/YouTube
+    toolbar: 'undo redo | blocks | bold italic underline | ' +
+             'bullist numlist | alignleft aligncenter alignright | ' +
+             'link image media table | code',
+    block_formats: 'Rubrik 1=h1; Rubrik 2=h2; Rubrik 3=h3; Brödtext=p',
+    media_live_embeds: true,
+    // tillåt <iframe> för YouTube m.m.
+    extended_valid_elements: 'iframe[src|frameborder|allowfullscreen|width|height|name|title|allow|referrerpolicy|sandbox]',
+    // ingen upload i denna vy: använd URL eller klistra in
+    paste_data_images: true,
+    automatic_uploads: false,
+    images_upload_handler: function (_blobInfo, _success, fail) {
+      fail('Uppladdning är avstängd här. Använd bild-URL eller klistra in.');
+    },
+    convert_urls: false,
+    content_style: 'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;font-size:16px;line-height:1.65}'
   });
+});
+</script>
+<script>
+(function(){
+  const sel = document.getElementById('downloadSelect');
+  const inp = document.getElementById('downloadUrlInput');
+  if (!sel || !inp) return;
+
+  function sync() {
+    const v = sel.value;
+    if (v === '__custom__') {
+      // Visa fritextfältet för egen URL
+      inp.classList.remove('hidden');
+      // Rensa inte automatiskt – låt användaren skriva/klistra in
+      inp.focus();
+    } else if (v) {
+      // Vald serverfil → skriv in sökvägen och dölj input (men låt den vara enabled!)
+      inp.value = v;
+      inp.classList.add('hidden');
+    } else {
+      // “— Välj fil —” → nollställ och dölj
+      inp.value = '';
+      inp.classList.add('hidden');
+    }
+  }
+
+  // Kör vid start och vid ändring
+  sync();
+  sel.addEventListener('change', sync);
+})();
 </script>

@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import cron from 'node-cron';
 import multer from 'multer';
 
+const ROOT = path.resolve(process.cwd());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const uploadDir = path.join(__dirname, 'uploads', 'questions');
@@ -1256,6 +1257,9 @@ const upload = multer({
 app.get('/admin/edit-topic/:id', requireAdmin, (req, res) => {
   const id = String(req.params.id);
 
+  const resDir = path.join(ROOT, 'public', 'resources');
+  const downloadFiles = listFilesRecursive(resDir, '/public/resources');
+
   const topic = db.prepare(`
     SELECT b.id, t.title, t.excerpt, t.body, t.tags, t.is_resource, t.download_url
     FROM topics_base b JOIN topics t ON t.id=b.id
@@ -1281,7 +1285,8 @@ app.get('/admin/edit-topic/:id', requireAdmin, (req, res) => {
     title: 'Redigera ämne',
     topic,
     categories,
-    currentCat
+    currentCat,
+    downloadFiles,
   });
 });
 
@@ -2982,6 +2987,30 @@ if (tag) {
   });
 });
 
+function listFilesRecursive(dirAbs, baseUrl = '/public/resources') {
+  const out = [];
+  function walk(currentAbs, prefix = '') {
+    let entries = [];
+    try { entries = fs.readdirSync(currentAbs, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      const abs = path.join(currentAbs, e.name);
+      const rel = prefix ? path.join(prefix, e.name) : e.name;
+      if (e.isDirectory()) {
+        walk(abs, rel);
+      } else {
+        out.push({
+          url: `${baseUrl}/${rel.replace(/\\/g, '/')}`,
+          name: e.name,
+          relPath: rel.replace(/\\/g, '/'),
+        });
+      }
+    }
+  }
+  walk(dirAbs);
+  out.sort((a, b) => a.relPath.localeCompare(b.relPath));
+  return out;
+}
+
 // Visa formulär
 app.get('/feedback', (req, res) => {
   res.render('feedback', { title: 'Feedback', flash: null });
@@ -3343,7 +3372,16 @@ app.get('/admin/new-topic', requireAdmin, (req, res) => {
     SELECT id, title FROM categories
     ORDER BY COALESCE(sort_order, 9999), title
   `).all();
-  res.render('new-topic', { title: 'Nytt ämne', categories, topic: {} });
+
+  const resourcesDir = path.join(process.cwd(), 'public', 'resources');
+  const downloadFiles = listFilesRecursive(resourcesDir, '/public/resources');
+
+  res.render('new-topic', {
+    title: 'Nytt ämne',
+    categories,
+    topic: {},
+    downloadFiles       // <-- viktig
+  });
 });
 
 // Hantera POST från formuläret
