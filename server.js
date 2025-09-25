@@ -94,6 +94,7 @@ try {
 try { addColumnIfMissing('questions', 'answered_role', 'TEXT'); } catch (_) {}
 try { addColumnIfMissing('questions', 'answered_by',   'TEXT'); } catch (_) {}
 addColumnIfMissing('feedbacks', 'updated_at', 'TEXT');
+addColumnIfMissing('users', 'is_active', 'INTEGER DEFAULT 1');
 
 // Backfill: sätt default-värden där svar redan finns men fält saknas
 try {
