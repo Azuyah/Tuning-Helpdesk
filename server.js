@@ -27,6 +27,10 @@ const __dirname  = path.dirname(__filename);
 const uploadDir = path.join(__dirname, 'uploads', 'questions');
 fs.mkdirSync(uploadDir, { recursive: true });
 
+console.log('[env] RESEND_API_KEY set?', !!process.env.RESEND_API_KEY);
+console.log('[env] MAIL_FROM =', process.env.MAIL_FROM);
+console.log('[env] PUBLIC_BASE_URL =', process.env.PUBLIC_BASE_URL);
+
 
 const app = express();
 
