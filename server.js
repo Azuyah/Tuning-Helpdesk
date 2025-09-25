@@ -93,6 +93,7 @@ try {
 // questions.answered_role (och answered_by om den saknas i äldre DB)
 try { addColumnIfMissing('questions', 'answered_role', 'TEXT'); } catch (_) {}
 try { addColumnIfMissing('questions', 'answered_by',   'TEXT'); } catch (_) {}
+addColumnIfMissing('feedbacks', 'updated_at', 'TEXT');
 
 // Backfill: sätt default-värden där svar redan finns men fält saknas
 try {
