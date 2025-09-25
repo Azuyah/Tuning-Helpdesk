@@ -14,23 +14,13 @@ import cron from 'node-cron';
 import multer from 'multer';
 import 'dotenv/config';
 import nodemailer from 'nodemailer';
+
 import {
   sendNewQuestionNotifications,
   sendQuestionAnswered,
-  sendNewFeedbackNotifications
+  sendNewFeedbackNotifications,
+  mailTransport, // valfritt att använda för manuella tester
 } from './mailer.js';
-import { mailTransport } from './mailer.js';
-
-// Skapa transport baserat på env-variabler
-const mailTransport = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: Number(process.env.MAIL_PORT),
-  secure: process.env.MAIL_SECURE === 'true', // true = 465, false = 587
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-});
 
 const ROOT = path.resolve(process.cwd());
 const __filename = fileURLToPath(import.meta.url);
