@@ -2358,12 +2358,10 @@ q.views = (q.views || 0) + 1;
   });
 });
 
-// ---------- VIEWS ----------
 // Hem (öppen för alla)
 app.get('/', (req, res) => {
   const user = getUser(req);
 
-  // Senaste ämnen (som du hade innan)
   const topics = db.prepare(`
     SELECT b.id, t.title, t.excerpt, t.tags, b.updated_at
     FROM topics_base b
@@ -2372,7 +2370,6 @@ app.get('/', (req, res) => {
     LIMIT 12
   `).all();
 
-  // Senaste frågor
   const latestQuestions = db.prepare(`
     SELECT q.id, q.title, q.status, q.created_at
     FROM questions q
@@ -2380,16 +2377,58 @@ app.get('/', (req, res) => {
     LIMIT 6
   `).all();
 
-  // Visa bara tre kategorikort
- const categoriesShow = buildCategoriesMixed();
-res.set('Cache-Control','no-store'); // så slumpen gäller varje laddning
+  const categoriesShow = buildCategoriesMixed();
+  res.set('Cache-Control','no-store');
+
+  // 🔹 Topp 6 mest använda taggar
+  let popularTags = [];
+  try {
+    popularTags = db.prepare(`
+      WITH t AS (
+        SELECT lower(trim(value)) AS tag
+        FROM topics
+        JOIN json_each('["' || replace(IFNULL(tags,''), ',', '","') || '"]')
+        WHERE value <> ''
+      ),
+      q AS (
+        SELECT lower(trim(value)) AS tag
+        FROM questions
+        JOIN json_each('["' || replace(IFNULL(answer_tags,''), ',', '","') || '"]')
+        WHERE value <> ''
+      )
+      SELECT tag, COUNT(*) AS cnt
+      FROM (
+        SELECT tag FROM t
+        UNION ALL
+        SELECT tag FROM q
+      )
+      GROUP BY tag
+      ORDER BY cnt DESC, tag ASC
+      LIMIT 6
+    `).all().map(r => r.tag);
+  } catch {
+    popularTags = db.prepare(`
+      WITH t AS (
+        SELECT lower(trim(value)) AS tag
+        FROM topics
+        JOIN json_each('["' || replace(IFNULL(tags,''), ',', '","') || '"]')
+        WHERE value <> ''
+      )
+      SELECT tag, COUNT(*) AS cnt
+      FROM t
+      GROUP BY tag
+      ORDER BY cnt DESC, tag ASC
+      LIMIT 6
+    `).all().map(r => r.tag);
+  }
 
   res.render('home', {
     user,
     topics,
-    latestQuestions,   // ⬅️ skickas till vyn
+    latestQuestions,
     categoriesShow,
-    q: ''
+    q: '',
+    popularTags // 🔹 skicka till vyn (hero.ejs ser den också)
   });
 });
 
