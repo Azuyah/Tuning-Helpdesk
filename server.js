@@ -1934,7 +1934,8 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
     sendNewQuestionNotifications(db, {
       id: qid,
       title,
-      authorName: req.user?.name || req.user?.email || 'Okänd'
+      authorName: req.user?.name || req.user?.email || 'Okänd',
+      authorEmail: req.user?.email || null
     }).catch(err => {
       console.error('Kunde inte skicka staff-mail för ny fråga:', err);
     });

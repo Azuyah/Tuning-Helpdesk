@@ -3,7 +3,7 @@ const FROM = process.env.MAIL_FROM || "Tuning Helpdesk <noreply@tuninghelpdesk.c
 const BASE = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
 
 // -------------------- Resend core --------------------
-async function sendViaResend({ from = FROM, to, subject, text, html }) {
+async function sendViaResend({ from = FROM, to, subject, text, html, reply_to }) {
   if (!process.env.RESEND_API_KEY) {
     throw new Error("Missing RESEND_API_KEY");
   }
@@ -13,22 +13,31 @@ async function sendViaResend({ from = FROM, to, subject, text, html }) {
     subject,
     text,
     html,
+    reply_to, // valfritt
   };
 
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => "");
-    throw new Error(`Resend error ${resp.status}: ${errText || resp.statusText}`);
+    const body = await resp.text(); // läs alltid kroppen för bra fel-logg
+    if (!resp.ok) {
+      console.error('[resend] HTTP', resp.status, body);
+      throw new Error(`Resend error ${resp.status}: ${body}`);
+    }
+
+    console.log('[resend] OK:', body);
+    return JSON.parse(body);
+  } catch (e) {
+    console.error('[resend] FAIL:', e);
+    throw e;
   }
-  return resp.json();
 }
 
 // Publik helper så servern kan skicka brev direkt om man vill
@@ -75,21 +84,20 @@ export function getAdminEmails(db) {
 }
 
 // -------------------- Notifierare --------------------
-export async function sendNewQuestionNotifications(db, { id, title, authorName }) {
+export async function sendNewQuestionNotifications(db, { id, title, authorName, authorEmail }) {
   const toList = getStaffEmails(db);
+  console.log('[mail:new-question] recipients =', toList);
   if (!toList.length) return;
 
   const url = `${BASE}/questions/${encodeURIComponent(id)}`;
   await sendViaResend({
     to: toList,
     subject: `Ny fråga: ${title}`,
-    text: `En ny fråga har skapats av ${authorName || "okänd"}.
-
-Titel: ${title}
-Öppna: ${url}`,
+    reply_to: authorEmail || undefined,
+    text: `En ny fråga har skapats av ${authorName || "okänd"}.\n\nTitel: ${title}\nÖppna: ${url}`,
     html: `<p>En ny fråga har skapats av <strong>${escapeHtml(authorName || "okänd")}</strong>.</p>
-<p><strong>Titel:</strong> ${escapeHtml(title)}</p>
-<p><a href="${url}">Öppna frågan</a></p>`,
+           <p><strong>Titel:</strong> ${escapeHtml(title)}</p>
+           <p><a href="${url}">Öppna frågan</a></p>`,
   });
 }
 
