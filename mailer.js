@@ -16,12 +16,13 @@ const BASE = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
 
 // ---- helpers ----
 export function getStaffEmails(db) {
+  const whereActive = activePredicate(db);
   try {
     const rows = db.prepare(`
       SELECT email
       FROM users
       WHERE role IN ('admin','support')
-        AND COALESCE(is_active,1)=1
+        AND ${whereActive}
         AND email IS NOT NULL
         AND TRIM(email) <> ''
     `).all();
@@ -32,12 +33,13 @@ export function getStaffEmails(db) {
 }
 
 export function getAdminEmails(db) {
+  const whereActive = activePredicate(db);
   try {
     const rows = db.prepare(`
       SELECT email
       FROM users
       WHERE role = 'admin'
-        AND COALESCE(is_active,1)=1
+        AND ${whereActive}
         AND email IS NOT NULL
         AND TRIM(email) <> ''
     `).all();
@@ -140,4 +142,13 @@ function escapeHtml(s='') {
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
+}
+
+function activePredicate(db) {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(users)`).all().map(c => c.name);
+    if (cols.includes('is_active')) return 'COALESCE(is_active,1)=1';
+    if (cols.includes('active'))    return 'COALESCE(active,1)=1';
+  } catch {}
+  return '1=1'; // om ingen kolumn finns: filtrera inte på aktiv
 }
