@@ -70,15 +70,15 @@
                 const qParam   = (typeof q   !== 'undefined' && q)   ? '&q='  + encodeURIComponent(q)   : '';
                 const catParam = (typeof cat !== 'undefined' && cat) ? '&cat='+ encodeURIComponent(cat) : '';
               %>
-              <% tags6.forEach(t => { %>
-                <a
-                  href="/explore?tab=all&tag=<%= encodeURIComponent(t) %><%- qParam %><%- catParam %>"
-                  class="text-xs rounded-full px-3 py-1 border border-slate-300 dark:border-slate-700 
-                         text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-700 
-                         dark:hover:border-red-500 dark:hover:text-red-400">
-                  <%= t %>
-                </a>
-              <% }) %>
+<% tags6.forEach(t => { %>
+  <a
+    href="/explore?tab=all&tag=<%= encodeURIComponent(t) %><%- qParam %><%- catParam %>"
+    class="text-xs rounded-full px-3 py-1 border border-slate-300 dark:border-slate-700 
+           text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-700 
+           dark:hover:border-red-500 dark:hover:text-red-400">
+    <%= t.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') %>
+  </a>
+<% }) %>
             </div>
           <% } %>
         </div>
