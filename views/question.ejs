@@ -70,12 +70,15 @@
     </div>
   <% } %>
 
-      <div class="mt-4 text-sm text-slate-500">
-        Från: <span class="font-medium"><%= q.user_name || 'Anonym' %></span>
-        • Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>
-        <% if (q.updated_at && q.updated_at !== q.created_at) { %>
-        <% } %>
-      </div>
+<div class="mt-4 text-sm text-slate-500">
+  <% if (user && user.role === 'admin') { %>
+    Från: <span class="font-medium"><%= q.user_name || 'Anonym' %></span>
+    • 
+  <% } %>
+  Skapad: <%= new Date(q.created_at).toLocaleString('sv-SE') %>
+  <% if (q.updated_at && q.updated_at !== q.created_at) { %>
+  <% } %>
+</div>
       <!-- Maskin -->
 <% if (machines && machines.length) { %>
   <div class="mt-3">
