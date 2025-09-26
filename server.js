@@ -2362,6 +2362,7 @@ function buildCategories() {
   }));
 }
 
+// Sätta status på fråga + ev. maila frågeställaren
 app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extended:false}), async (req, res) => {
   const id     = Number(req.params.id);
   const status = String(req.body.status || '').toLowerCase();
@@ -2371,12 +2372,16 @@ app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extend
     return res.status(400).send('Ogiltig status');
   }
 
-  // Hämta tidigare status + info för ev. mail
-  const before = db.prepare(`SELECT status, is_answered, user_id, title, answered_at FROM questions WHERE id=?`).get(id);
+  // Hämta "före" för info om mottagare och titel
+  const before = db.prepare(`
+    SELECT id, user_id, title, status, COALESCE(is_answered,0) AS is_answered, answered_at
+    FROM questions
+    WHERE id = ?
+  `).get(id);
   if (!before) return res.status(404).send('Fråga saknas');
 
-  // Uppdatera status (sätt answered_at första gången den blir besvarad)
   const setAnsweredAt = (status === 'answered' && !before.answered_at) ? `, answered_at = datetime('now')` : '';
+
   db.prepare(`
     UPDATE questions
        SET status = ?,
@@ -2387,14 +2392,17 @@ app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extend
      WHERE id = ?
   `).run(status, hide, status, id);
 
-  // Skicka mail om vi just gick till "answered"
-  const becameAnswered = (before.status !== 'answered' && status === 'answered') || (!before.is_answered && status === 'answered');
-  if (becameAnswered) {
-    sendQuestionAnswered(db, {
-      id,
-      title: before.title,
-      userId: before.user_id
-    }).catch(err => console.error('Kunde inte skicka mail till frågeställaren:', err));
+  // SKICKA ALLTID MAIL när status är 'answered' (enkelt och pålitligt)
+  if (status === 'answered') {
+    try {
+      await sendQuestionAnswered(db, {
+        id,
+        title: before.title,
+        userId: before.user_id
+      });
+    } catch (err) {
+      console.error('Kunde inte skicka mail till frågeställaren:', err);
+    }
   }
 
   return res.redirect('/admin/questions/' + id);
