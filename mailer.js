@@ -128,7 +128,7 @@ export async function sendQuestionAnswered(db, { id, title, userId }) {
 
   const url = `${BASE}/questions/${encodeURIComponent(id)}`;
   const subject = `Ditt svar är klart: ${title}`;
-  const html = renderTemplate("answer-ready.html", {
+  const html = renderTemplate("question-answered.html", {
     subject,
     preheader: "Ditt svar är klart.",
     title: "Ditt svar är klart",
@@ -154,7 +154,7 @@ export async function sendNewFeedbackNotifications(db, { id, category, message }
 
   const url = `${BASE}/admin/feedback`;
   const subject = `Ny feedback: ${category || "okänd kategori"}`;
-  const html = renderTemplate("new-feedback.html", {
+  const html = renderTemplate("feedback.html", {
     subject,
     preheader: "Ny feedback har inkommit.",
     title: "Ny feedback",
