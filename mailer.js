@@ -4,7 +4,9 @@ import path from "path";
 import mustache from "mustache";
 
 // Miljö
-const FROM = (process.env.MAIL_FROM || "noreply@tuninghelpdesk.com").trim().replace(/^["']|["']$/g, "");
+const FROM = (process.env.MAIL_FROM || "noreply@tuninghelpdesk.com")
+  .trim()
+  .replace(/^["']|["']$/g, ""); // ta bort ev. kringliggande citationstecken
 const BASE = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
@@ -35,7 +37,11 @@ export async function sendMail({ from = FROM, to, subject, text, html }) {
 
 // -------------------- Template rendering --------------------
 function safeRead(filePath) {
-  try { return fs.readFileSync(filePath, "utf8"); } catch { return null; }
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch {
+    return null;
+  }
 }
 
 function renderTemplate(fileName, vars) {
@@ -50,13 +56,13 @@ function renderTemplate(fileName, vars) {
       vars.preheader ? `<p>${escapeHtml(vars.preheader)}</p>` : "",
       vars.intro ? `<p>${escapeHtml(vars.intro)}</p>` : "",
       vars.bodyHtml || "",
-      vars.ctaHref ? `<p><a href="${vars.ctaHref}">${escapeHtml(vars.ctaLabel || "Öppna")}</a></p>` : ""
+      vars.url ? `<p><a href="${vars.url}">${escapeHtml(vars.ctaLabel || "Öppna")}</a></p>` : "",
     ].join("\n");
     return simple;
   }
 
   const body = mustache.render(partial, vars);
-  // injicera baseUrl + body i layout
+  // injicera baseUrl + body i layout (layout använder {{{content}}} och {{baseUrl}})
   return mustache.render(layout, { ...vars, baseUrl: BASE, content: body });
 }
 
@@ -64,60 +70,65 @@ function renderTemplate(fileName, vars) {
 function tableHasColumn(db, table, col) {
   try {
     const cols = db.prepare(`PRAGMA table_info(${table})`).all();
-    return cols.some(c => c.name === col);
-  } catch { return false; }
+    return cols.some((c) => c.name === col);
+  } catch {
+    return false;
+  }
 }
 
 export function getStaffEmails(db) {
   const hasActive = tableHasColumn(db, "users", "active");
   const whereActive = hasActive ? `AND COALESCE(active,1)=1` : ``;
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT email
     FROM users
     WHERE LOWER(role) IN ('admin','support')
       ${whereActive}
       AND email IS NOT NULL
       AND TRIM(email) <> ''
-  `).all();
-  return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
+  `
+    )
+    .all();
+  return rows.map((r) => String(r.email).trim()).filter((e) => e.includes("@"));
 }
 
 export function getAdminEmails(db) {
   const hasActive = tableHasColumn(db, "users", "active");
   const whereActive = hasActive ? `AND COALESCE(active,1)=1` : ``;
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT email
     FROM users
     WHERE LOWER(role)='admin'
       ${whereActive}
       AND email IS NOT NULL
       AND TRIM(email) <> ''
-  `).all();
-  return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
+  `
+    )
+    .all();
+  return rows.map((r) => String(r.email).trim()).filter((e) => e.includes("@"));
 }
 
-// -------------------- Notifierare (med templates) --------------------
+// -------------------- Notifierare (matchar templates) --------------------
 export async function sendNewQuestionNotifications(db, { id, title, authorName }) {
   const toList = getStaffEmails(db);
   if (!toList.length) return;
 
   const url = `${BASE}/questions/${encodeURIComponent(id)}`;
   const subject = `Ny fråga: ${title}`;
+
+  // new-question.html väntar: {{author}}, {{title}}, {{url}}
   const html = renderTemplate("new-question.html", {
+    author: authorName || "okänd",
+    title,
+    url,
     subject,
-    preheader: `Ny fråga från ${authorName || "okänd"}.`,
-    title: "Ny fråga",
-    intro: `En ny fråga har skapats av ${escapeHtml(authorName || "okänd")}.`,
-    meta: `Titel: ${escapeHtml(title)}`,
-    ctaHref: url,
-    ctaLabel: "Öppna frågan",
   });
 
-  const text = [
-    `Ny fråga: ${title}`,
-    `Från: ${authorName || "okänd"}`,
-    `Öppna: ${url}`
-  ].join("\n");
+  const text = `Ny fråga av ${authorName || "okänd"}\nTitel: ${title}\nÖppna: ${url}`;
 
   return sendViaResend({ to: toList, subject, text, html });
 }
@@ -128,22 +139,16 @@ export async function sendQuestionAnswered(db, { id, title, userId }) {
 
   const url = `${BASE}/questions/${encodeURIComponent(id)}`;
   const subject = `Ditt svar är klart: ${title}`;
+
+  // question-answered.html väntar: {{name}}, {{title}}, {{url}}
   const html = renderTemplate("question-answered.html", {
+    name: row.name || "",
+    title,
+    url,
     subject,
-    preheader: "Ditt svar är klart.",
-    title: "Ditt svar är klart",
-    intro: `Hej ${escapeHtml(row.name || "")}!`,
-    bodyHtml: `<p>Din fråga har besvarats.</p><p><strong>Titel:</strong> ${escapeHtml(title)}</p>`,
-    ctaHref: url,
-    ctaLabel: "Läs svaret",
   });
 
-  const text = [
-    `Hej ${row.name || ""}!`,
-    `Din fråga har besvarats.`,
-    `Titel: ${title}`,
-    `Läs svaret: ${url}`
-  ].join("\n");
+  const text = `Hej ${row.name || ""}!\nDin fråga har besvarats.\nTitel: ${title}\nLäs svaret: ${url}`;
 
   return sendViaResend({ to: row.email, subject, text, html });
 }
@@ -154,21 +159,16 @@ export async function sendNewFeedbackNotifications(db, { id, category, message }
 
   const url = `${BASE}/admin/feedback`;
   const subject = `Ny feedback: ${category || "okänd kategori"}`;
+
+  // feedback.html väntar: {{category}}, {{message}}, {{url}}
   const html = renderTemplate("feedback.html", {
+    category: category || "okänd kategori",
+    message: message || "",
+    url,
     subject,
-    preheader: "Ny feedback har inkommit.",
-    title: "Ny feedback",
-    intro: `Kategori: ${escapeHtml(category || "okänd kategori")}`,
-    bodyHtml: message ? `<pre style="white-space:pre-wrap">${escapeHtml(message)}</pre>` : "",
-    ctaHref: url,
-    ctaLabel: "Visa i admin",
   });
 
-  const text = [
-    `Ny feedback (${category || "okänd kategori"})`,
-    message || "",
-    `Visa i admin: ${url}`
-  ].join("\n");
+  const text = `Ny feedback (${category || "okänd kategori"})\n${message || ""}\nVisa i admin: ${url}`;
 
   return sendViaResend({ to: toList, subject, text, html });
 }
