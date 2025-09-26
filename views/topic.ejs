@@ -161,18 +161,25 @@
 </div>
 
 <%
-// --- Dedupe + filter ---
-const _seen = new Set();
-const _items = (relatedTopics || [])
-  .filter(it => it && it.id)                                // giltig rad
-  .filter(it => String(it.id) !== String(q.id || ''))       // inte nuvarande
-  .filter(it => {
-    const key = (it.kind ? String(it.kind).toLowerCase() : 'topic') + ':' + String(it.id);
-    if (_seen.has(key)) return false;
-    _seen.add(key);
-    return true;
-  })
-  .slice(0, 8); // valfritt: begränsa antal
+  // --- Dedupe + filter (funkar både i topic.ejs och questions.ejs) ---
+  const currentId =
+    (typeof q !== 'undefined'      && q      && q.id)      ||
+    (typeof topic !== 'undefined'  && topic  && topic.id)  ||
+    (typeof t !== 'undefined'      && t      && t.id)      ||
+    null;
+
+  const _seen  = new Set();
+  const _items = (relatedTopics || [])
+    .filter(it => it && it.id)                                   // giltig rad
+    .filter(it => !currentId || String(it.id) !== String(currentId)) // uteslut aktuell
+    .filter(it => {
+      const kind = (it.kind ? String(it.kind).toLowerCase() : 'topic');
+      const key  = kind + ':' + String(it.id);
+      if (_seen.has(key)) return false;
+      _seen.add(key);
+      return true;
+    })
+    .slice(0, 8); // valfritt tak
 %>
 
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
