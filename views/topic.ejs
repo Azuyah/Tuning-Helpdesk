@@ -160,17 +160,34 @@
 <% } %>
 </div>
 
-<!-- Fler ämnen i denna kategori -->
+<%
+// --- Dedupe + filter ---
+const _seen = new Set();
+const _items = (relatedTopics || [])
+  .filter(it => it && it.id)                                // giltig rad
+  .filter(it => String(it.id) !== String(q.id || ''))       // inte nuvarande
+  .filter(it => {
+    const key = (it.kind ? String(it.kind).toLowerCase() : 'topic') + ':' + String(it.id);
+    if (_seen.has(key)) return false;
+    _seen.add(key);
+    return true;
+  })
+  .slice(0, 8); // valfritt: begränsa antal
+%>
+
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
   <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
-  <% if (relatedTopics && relatedTopics.length) { %>
+  <% if (_items.length) { %>
     <ul class="space-y-3">
-      <% relatedTopics.forEach(function(it){ 
+      <% _items.forEach(function(it){ 
            var kind  = String(it.kind || 'topic').toLowerCase();
            var isRes = (kind !== 'question') && Number(it.is_resource) === 1;
-           var href  = it.url || (kind === 'question'
+
+           var href  = (kind === 'question')
              ? ('/questions/' + it.id)
-             : (isRes ? ('/resources/' + it.id) : ('/topic/' + it.id)));
+             : (isRes ? ('/resources/' + it.id) : ('/topic/' + it.id));
+
+           if (it.url && typeof it.url === 'string' && it.url.startsWith('/')) href = it.url;
 
            var badgeHtml =
              (kind === 'question')
@@ -180,9 +197,9 @@
                    : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>');
       %>
         <li>
-          <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
+          <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700 min-w-0">
             <%- badgeHtml %>
-            <span class="truncate"><%= it.title %></span>
+            <span class="truncate max-w-[14rem]"><%= it.title %></span>
           </a>
         </li>
       <% }) %>
