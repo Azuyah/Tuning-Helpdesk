@@ -1544,17 +1544,17 @@ app.put('/api/questions/:id/categories', requireStaff, express.json(), (req, res
 });
 
 // Admin: spara/redigera svar direkt på frågan
-app.post('/admin/questions/:id', requireStaff, (req, res) => {
+app.post('/admin/questions/:id', requireStaff, express.urlencoded({ extended: false }), async (req, res) => {
   const id = Number(req.params.id);
   const q = db.prepare('SELECT * FROM questions WHERE id=?').get(id);
   if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
 
-  const answer_title = (req.body.answer_title || '').trim() || `Svar: ${q.title}`;
-  const answer_body  = (req.body.answer_body || '').trim();  
-  const answer_tags  = (req.body.answer_tags || '').trim();
-  const answered_by  = req.user?.name || req.user?.email || 'Admin';
+  const answer_title  = (req.body.answer_title || '').trim() || `Svar: ${q.title}`;
+  const answer_body   = (req.body.answer_body || '').trim();
+  const answer_tags   = (req.body.answer_tags || '').trim();
+  const answered_by   = req.user?.name || req.user?.email || 'Admin';
   const answered_role = req.user?.role || 'user';
-  const answered_at  = new Date().toISOString();
+  const answered_at   = new Date().toISOString();
 
   db.prepare(`
     UPDATE questions
@@ -1569,6 +1569,17 @@ app.post('/admin/questions/:id', requireStaff, (req, res) => {
            updated_at=datetime('now')
      WHERE id=?
   `).run(answer_title, answer_body, answer_tags, answered_by, answered_role, answered_at, id);
+
+  // Skicka mail till frågeställaren
+  try {
+    await sendQuestionAnswered(db, {
+      id,
+      title: q.title,
+      userId: q.user_id
+    });
+  } catch (err) {
+    console.error('Kunde inte skicka mail till frågeställaren:', err);
+  }
 
   res.redirect('/questions/' + id);
 });
@@ -2362,8 +2373,8 @@ function buildCategories() {
   }));
 }
 
-// Sätta status på fråga + ev. maila frågeställaren
-app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extended:false}), async (req, res) => {
+// Ändra status / göm fråga
+app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({ extended: false }), (req, res) => {
   const id     = Number(req.params.id);
   const status = String(req.body.status || '').toLowerCase();
   const hide   = req.body.hide === 'on' ? 1 : 0;
@@ -2372,15 +2383,18 @@ app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extend
     return res.status(400).send('Ogiltig status');
   }
 
-  // Hämta "före" för info om mottagare och titel
   const before = db.prepare(`
-    SELECT id, user_id, title, status, COALESCE(is_answered,0) AS is_answered, answered_at
+    SELECT status, answered_at
     FROM questions
     WHERE id = ?
   `).get(id);
   if (!before) return res.status(404).send('Fråga saknas');
 
-  const setAnsweredAt = (status === 'answered' && !before.answered_at) ? `, answered_at = datetime('now')` : '';
+  // Sätt answered_at första gången den blir markerad som answered
+  const setAnsweredAt =
+    (status === 'answered' && !before.answered_at)
+      ? `, answered_at = datetime('now')`
+      : '';
 
   db.prepare(`
     UPDATE questions
@@ -2391,19 +2405,6 @@ app.post('/admin/questions/:id/status', requireStaff, express.urlencoded({extend
            ${setAnsweredAt}
      WHERE id = ?
   `).run(status, hide, status, id);
-
-  // SKICKA ALLTID MAIL när status är 'answered' (enkelt och pålitligt)
-  if (status === 'answered') {
-    try {
-      await sendQuestionAnswered(db, {
-        id,
-        title: before.title,
-        userId: before.user_id
-      });
-    } catch (err) {
-      console.error('Kunde inte skicka mail till frågeställaren:', err);
-    }
-  }
 
   return res.redirect('/admin/questions/' + id);
 });
