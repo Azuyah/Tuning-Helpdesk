@@ -1,12 +1,25 @@
-// mailer.js — Resend-version
-const FROM = (process.env.MAIL_FROM || "noreply@tuninghelpdesk.com").trim().replace(/^["']|["']$/g, '');
+// mailer.js — Resend + Mustache templates
+import fs from "fs";
+import path from "path";
+import mustache from "mustache";
+
+// Bas-uppgifter
+const FROM = process.env.MAIL_FROM || "Tuning Helpdesk <noreply@tuninghelpdesk.com>";
 const BASE = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
 
 // -------------------- Resend core --------------------
 async function sendViaResend({ from = FROM, to, subject, text, html }) {
-  if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("Missing RESEND_API_KEY");
+  }
+  const payload = {
+    from,
+    to: Array.isArray(to) ? to : [to],
+    subject,
+    text,
+    html,
+  };
 
-  const payload = { from, to: Array.isArray(to) ? to : [to], subject, text, html };
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -23,48 +36,56 @@ async function sendViaResend({ from = FROM, to, subject, text, html }) {
   return resp.json();
 }
 
+// Publik helper om du vill skicka fristående
 export async function sendMail({ from = FROM, to, subject, text, html }) {
   return sendViaResend({ from, to, subject, text, html });
 }
 
-// -------------------- DB helpers --------------------
-function tableHasColumn(db, table, col) {
-  try {
-    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
-    return cols.some(c => c.name === col);
-  } catch { return false; }
+// -------------------- Template rendering --------------------
+function renderTemplate(file, vars) {
+  const emailsDir = path.join(process.cwd(), "emails");
+  const layout = fs.readFileSync(path.join(emailsDir, "layout.html"), "utf8");
+  const tpl    = fs.readFileSync(path.join(emailsDir, file), "utf8");
+  const body   = mustache.render(tpl, vars);
+  return mustache.render(layout, { ...vars, baseUrl: BASE, content: body });
 }
 
+// -------------------- DB helpers --------------------
+// OBS: er users-tabell använder kolumnen "active" (inte is_active)
 export function getStaffEmails(db) {
-  const hasActive = tableHasColumn(db, 'users', 'active');
-  const whereActive = hasActive ? `AND COALESCE(active,1)=1` : ``;
-
-  const rows = db.prepare(`
-    SELECT email
-    FROM users
-    WHERE LOWER(role) IN ('admin','support')
-      ${whereActive}
-      AND email IS NOT NULL
-      AND TRIM(email) <> ''
-  `).all();
-
-  return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
+  try {
+    const rows = db
+      .prepare(`
+        SELECT email
+        FROM users
+        WHERE role IN ('admin','support')
+          AND COALESCE(active,1)=1
+          AND email IS NOT NULL
+          AND TRIM(email) <> ''
+      `)
+      .all();
+    return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
+  } catch {
+    return [];
+  }
 }
 
 export function getAdminEmails(db) {
-  const hasActive = tableHasColumn(db, 'users', 'active');
-  const whereActive = hasActive ? `AND COALESCE(active,1)=1` : ``;
-
-  const rows = db.prepare(`
-    SELECT email
-    FROM users
-    WHERE LOWER(role) = 'admin'
-      ${whereActive}
-      AND email IS NOT NULL
-      AND TRIM(email) <> ''
-  `).all();
-
-  return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
+  try {
+    const rows = db
+      .prepare(`
+        SELECT email
+        FROM users
+        WHERE role = 'admin'
+          AND COALESCE(active,1)=1
+          AND email IS NOT NULL
+          AND TRIM(email) <> ''
+      `)
+      .all();
+    return rows.map(r => String(r.email).trim()).filter(e => e.includes("@"));
+  } catch {
+    return [];
+  }
 }
 
 // -------------------- Notifierare --------------------
@@ -73,16 +94,24 @@ export async function sendNewQuestionNotifications(db, { id, title, authorName }
   if (!toList.length) return;
 
   const url = `${BASE}/questions/${encodeURIComponent(id)}`;
-  return sendViaResend({
-    to: toList,
-    subject: `Ny fråga: ${title}`,
-    text: `En ny fråga har skapats av ${authorName || "okänd"}.
+
+  const html = renderTemplate("new-question.html", {
+    author: authorName || "okänd",
+    title,
+    url
+  });
+
+  // ren text fallback
+  const text = `En ny fråga har skapats av ${authorName || "okänd"}.
 
 Titel: ${title}
-Öppna: ${url}`,
-    html: `<p>En ny fråga har skapats av <strong>${escapeHtml(authorName || "okänd")}</strong>.</p>
-<p><strong>Titel:</strong> ${escapeHtml(title)}</p>
-<p><a href="${url}">Öppna frågan</a></p>`,
+Öppna: ${url}`;
+
+  await sendViaResend({
+    to: toList,
+    subject: `Ny fråga: ${title}`,
+    text,
+    html,
   });
 }
 
@@ -91,38 +120,51 @@ export async function sendQuestionAnswered(db, { id, title, userId }) {
   if (!row || !row.email) return;
 
   const url = `${BASE}/questions/${encodeURIComponent(id)}`;
-  return sendViaResend({
-    to: row.email,
-    subject: `Ditt svar är klart: ${title}`,
-    text: `Hej ${row.name || ""}!
+
+  const html = renderTemplate("question-answered.html", {
+    name: row.name || "",
+    title,
+    url
+  });
+
+  const text = `Hej ${row.name || ""}!
 
 Din fråga har besvarats.
 
 Titel: ${title}
-Läs svaret: ${url}`,
-    html: `<p>Hej ${escapeHtml(row.name || "")}!</p>
-<p>Din fråga har besvarats.</p>
-<p><strong>Titel:</strong> ${escapeHtml(title)}</p>
-<p><a href="${url}">Läs svaret</a></p>`,
+Läs svaret: ${url}`;
+
+  await sendViaResend({
+    to: row.email,
+    subject: `Ditt svar är klart: ${title}`,
+    text,
+    html,
   });
 }
 
 export async function sendNewFeedbackNotifications(db, { id, category, message }) {
-  const toList = getAdminEmails(db);
+  const toList = getAdminEmails(db); // endast admins
   if (!toList.length) return;
 
   const url = `${BASE}/admin/feedback`;
-  return sendViaResend({
-    to: toList,
-    subject: `Ny feedback: ${category || "okänd kategori"}`,
-    text: `Ny feedback har inkommit (${category || "okänd kategori"}).
+
+  const html = renderTemplate("feedback.html", {
+    category: category || "okänd kategori",
+    message: message || "",
+    url
+  });
+
+  const text = `Ny feedback har inkommit (${category || "okänd kategori"}).
 
 ${message || ""}
 
-Visa i admin: ${url}`,
-    html: `<p>Ny feedback har inkommit (<strong>${escapeHtml(category || "okänd kategori")}</strong>).</p>
-${message ? `<p>${escapeHtml(message)}</p>` : ""}
-<p><a href="${url}">Visa i admin</a></p>`,
+Visa i admin: ${url}`;
+
+  await sendViaResend({
+    to: toList,
+    subject: `Ny feedback: ${category || "okänd kategori"}`,
+    text,
+    html,
   });
 }
 
