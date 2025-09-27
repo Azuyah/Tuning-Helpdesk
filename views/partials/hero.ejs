@@ -1,18 +1,14 @@
-<section class="hero-surface relative overflow-visible py-16 md:py-24">
-  <!-- Dekor: diskret rutnät -->
-  <div aria-hidden="true"
-       class="pointer-events-none absolute inset-0 opacity-[0.06] dark:opacity-[0.12] -z-10">
-    <svg class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
-          <path d="M32 0H0V32" fill="none" stroke="currentColor" stroke-width="1"/>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#grid)" class="text-slate-900 dark:text-white"></rect>
-    </svg>
+<section class="relative min-h-[420px] md:min-h-[440px] py-16 md:py-24 overflow-hidden">
+  <!-- Bakgrundsbild (ligger under innehållet men inte negativt) -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="h-full w-full"
+         style="background:url('public/hero.jpg') center/cover no-repeat;"></div>
+    <!-- Svag overlay för läsbarhet -->
+    <div class="absolute inset-0 bg-gradient-to-br from-white/50 via-white/30 to-transparent
+                dark:from-slate-900/70 dark:via-slate-900/50"></div>
   </div>
-
-  <div class="relative mx-auto max-w-6xl px-4 z-10">
+  <!-- Innehåll -->
+  <div class="relative mx-auto max-w-6xl px-4">
     <div class="grid items-center gap-10 md:grid-cols-5">
       <!-- Copy -->
       <div class="text-center md:text-left md:col-span-3">
@@ -70,15 +66,15 @@
                 const qParam   = (typeof q   !== 'undefined' && q)   ? '&q='  + encodeURIComponent(q)   : '';
                 const catParam = (typeof cat !== 'undefined' && cat) ? '&cat='+ encodeURIComponent(cat) : '';
               %>
-<% tags6.forEach(t => { %>
-  <a
-    href="/explore?tab=all&tag=<%= encodeURIComponent(t) %><%- qParam %><%- catParam %>"
-    class="text-xs rounded-full px-3 py-1 border border-slate-300 dark:border-slate-700 
-           text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-700 
-           dark:hover:border-red-500 dark:hover:text-red-400">
-    <%= t.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') %>
-  </a>
-<% }) %>
+              <% tags6.forEach(t => { %>
+                <a
+                  href="/explore?tab=all&tag=<%= encodeURIComponent(t) %><%- qParam %><%- catParam %>"
+                  class="text-xs rounded-full px-3 py-1 border border-slate-300 dark:border-slate-700 
+                         text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-700 
+                         dark:hover:border-red-500 dark:hover:text-red-400">
+                  <%= t.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') %>
+                </a>
+              <% }) %>
             </div>
           <% } %>
         </div>
@@ -86,8 +82,8 @@
 
       <!-- Bild / Lottie animation -->
       <div class="md:col-span-2 hidden md:block">
-        <div class="relative mx-auto w-full max-w-sm z-20">
-          <div id="lottieEngine" class="w-64 h-64 mx-auto scale-125"></div>
+        <div class="relative mx-auto w-full max-w-x1">
+          <div id="lottieEngine" class="w-64 h-64 mx-auto scale-150"></div>
         </div>
       </div>
     </div>
@@ -103,7 +99,7 @@
       renderer: 'svg',
       loop: true,
       autoplay: true,
-      path: '/public/animations/hero.json'
+      path: '/public/animations/hero2.json'
     });
   });
 </script>
