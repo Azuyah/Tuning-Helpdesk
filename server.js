@@ -55,13 +55,18 @@ const FLAG_WORDS = [
   'nmstuning',
   'dynexperformance',
   'velox',
-  'sedoc',
+  'sedox',
 ];
 
-// Bygg effektiva regex: \b-detektering + unicode
-const FLAG_REGEXES = FLAG_WORDS.map(w => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'iu'));
-function matchesFlagWords(text='') {
-  return FLAG_REGEXES.filter(rx => rx.test(text));
+// Bygg regexar för matchning
+const FLAG_REGEXES = FLAG_WORDS.map(w => ({
+  word: w,
+  rx: new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'iu')
+}));
+
+function findFlaggedWord(text = '') {
+  const hit = FLAG_REGEXES.find(obj => obj.rx.test(text));
+  return hit ? hit.word : null;
 }
 
 // MD5 helper
@@ -2015,13 +2020,13 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
 
     const image_url = req.file ? `/uploads/questions/${req.file.filename}` : null;
 
-    // 🔹 Auto-flagga
-    const haystack = `${title}\n${body}`;
-    const hits = matchesFlagWords(haystack);
-    const shouldFlag = hits.length > 0;
-    const flaggedReason = shouldFlag
-      ? `Auto-flag: matchade ${hits.map(h => h.source.replace(/\\\\b/g,'')).join(', ')}`
-      : null;
+    //  Auto-flagga
+const haystack = `${title}\n${body}`;
+const flaggedWord = findFlaggedWord(haystack);
+const shouldFlag = !!flaggedWord;
+const flaggedReason = shouldFlag
+  ? `Auto-flag: matchade ordet "${flaggedWord}"`
+  : null;
 
     // 1) Spara frågan (nu med hidden/flagged)
     const stmt = db.prepare(`
