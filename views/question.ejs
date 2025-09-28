@@ -82,7 +82,7 @@
 
       </article>
     </div>
-    
+
 <!-- SVAR (kort under frågan) -->
 <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
   <div class="mb-4">
@@ -96,27 +96,10 @@
     const hasLinkedQ  = Boolean(linkedQuestion);
   %>
 
-  <!-- 1) Visa det interna (egna) svaret om det finns -->
-  <% if (hasAnswer) { %>
-    <div class="prose prose-slate max-w-none mb-6">
-      <%- include('partials/richtext', { id: 'answer-' + q.id, html: q.answer_body }) %>
-    </div>
-    <div class="text-sm text-slate-500 mb-6">
-      Svarat av:
-      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
-        <%= q.answered_role === 'admin' ? 'bg-red-100 text-red-700' :
-            q.answered_role === 'support' ? 'bg-violet-100 text-violet-700' :
-            'bg-slate-100 text-slate-700' %>">
-        <%= (q.answered_role || 'Okänd').charAt(0).toUpperCase() + (q.answered_role || 'Okänd').slice(1) %>
-      </span>
-      • <%= new Date(q.answered_at || q.updated_at || Date.now()).toLocaleString('sv-SE') %>
-    </div>
-  <% } %>
-
-  <!-- 2) Visa kopplingsruta(r) om de finns -->
+  <!-- 1) Kopplingsruta(r) överst -->
   <% if (hasLinked) { 
        const t = linked[0]; %>
-    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 mb-4">
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 mb-6">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-start gap-3">
           <i class="ti ti-link text-lg mt-0.5 text-emerald-700"></i>
@@ -140,7 +123,7 @@
   <% } %>
 
   <% if (!hasLinked && hasLinkedQ) { %>
-    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 mb-4">
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 mb-6">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-start gap-3">
           <i class="ti ti-link text-lg mt-0.5 text-emerald-700"></i>
@@ -160,14 +143,30 @@
     </div>
   <% } %>
 
-  <!-- 3) Om inget svar och ingen koppling: visa “ej besvarad” -->
+  <!-- 2) Eget svar under rutan -->
+  <% if (hasAnswer) { %>
+    <div class="prose prose-slate max-w-none mb-6">
+      <%- include('partials/richtext', { id: 'answer-' + q.id, html: q.answer_body }) %>
+    </div>
+    <div class="text-sm text-slate-500">
+      Svarat av:
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
+        <%= q.answered_role === 'admin' ? 'bg-red-100 text-red-700' :
+            q.answered_role === 'support' ? 'bg-violet-100 text-violet-700' :
+            'bg-slate-100 text-slate-700' %>">
+        <%= (q.answered_role || 'Okänd').charAt(0).toUpperCase() + (q.answered_role || 'Okänd').slice(1) %>
+      </span>
+      • <%= new Date(q.answered_at || q.updated_at || Date.now()).toLocaleString('sv-SE') %>
+    </div>
+  <% } %>
+
+  <!-- 3) Om inget finns alls -->
   <% if (!hasAnswer && !hasLinked && !hasLinkedQ) { %>
     <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700">
       Frågan har ej blivit besvarad än.
     </div>
   <% } %>
 </article>
-  </div>
 
   <% function svStatus(s){
      return s === 'open' ? 'Öppen'
