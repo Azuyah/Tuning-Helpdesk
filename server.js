@@ -2126,101 +2126,122 @@ app.get('/api/questions', requireAuth, (req, res) => {
   res.json(rows);
 });
 
-// --- Autosuggest API ---
+// --- Autosuggest API (mixad, topp 6 oavsett typ) ---
 app.get('/api/suggest', (req, res) => {
+  const MAX_TOTAL = 6;
+
   const raw = (req.query.q || '').trim();
-  if (!raw) {
-    return res.json([]);
-  }
+  if (!raw) return res.json([]);
 
+  // Rensa input
   const q = raw.replace(/[^\p{L}\p{N}\s_-]/gu, '');
-  const termsArr = q.split(/\s+/).filter(Boolean).map(t => `${t}*`);
-  const ftsQuery = termsArr.length ? termsArr.join(' OR ') : '';
+  const termsArr = q.split(/\s+/).filter(Boolean);
+  const ftsQuery = termsArr.length ? termsArr.map(t => `${t}*`).join(' OR ') : '';
 
-  const results = [];
-  const topicIds = new Set();
-  const topicTitles = new Set();
-  const norm = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const out = [];
+  const seenKeys = new Set(); // undvik dubbletter (t.ex. samma titel)
 
-  // 1) Topics via FTS
+  // 1) Topics via FTS — har riktig relevans med bm25 (lägre = bättre)
   if (ftsQuery) {
     try {
-      const topicRows = db.prepare(`
-        SELECT t.id, t.title, t.is_resource AS is_resource,
-               substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
-        FROM topics_fts f
-        JOIN topics      t ON t.id = f.id
-        JOIN topics_base b ON b.id = f.id
+      const rows = db.prepare(`
+        SELECT t.id,
+               t.title,
+               t.is_resource AS is_resource,
+               substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 140) AS snippet,
+               bm25(topics_fts) AS score
+        FROM topics_fts
+        JOIN topics      t ON t.id = topics_fts.id
+        JOIN topics_base b ON b.id = t.id
         WHERE topics_fts MATCH ?
-        ORDER BY bm25(topics_fts)
-        LIMIT 5
+        ORDER BY bm25(topics_fts) ASC
+        LIMIT 20
       `).all(ftsQuery);
 
-
-      for (const r of topicRows) {
-        const type = r.is_resource ? 'resource' : 'topic';
-        results.push({ type, id: r.id, title: r.title, snippet: r.snippet || '' });
-        topicIds.add(r.id);
-        topicTitles.add(norm(r.title));
+      for (const r of rows) {
+        const key = `topic:${r.id}`;
+        if (seenKeys.has(key)) continue;
+        seenKeys.add(key);
+        out.push({
+          type: r.is_resource ? 'resource' : 'topic',
+          id: r.id,
+          title: r.title,
+          snippet: r.snippet || '',
+          // Normalisera poäng till “större = bättre” (för gemensam sort)
+          score: -Number(r.score || 0)  // lägre bm25 → högre -bm25
+        });
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
-  // 2) Fallback topics (LIKE)
-  if (results.length < 5) {
+  // 2) Topics fallback (LIKE) – approximera relevans
+  if (out.length < 50) { // stort spann, vi klipper senare
     const esc  = s => s.replace(/[%_]/g, m => '\\' + m);
     const like = `%${esc(q)}%`;
-    const left = 5 - results.length;
-
-    const topicLike = db.prepare(`
+    const rows = db.prepare(`
       SELECT b.id, t.title, t.is_resource AS is_resource,
-             substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 120) AS snippet
+             substr(COALESCE(NULLIF(t.excerpt,''), t.body), 1, 140) AS snippet,
+             b.updated_at AS ts
       FROM topics_base b
       JOIN topics t ON t.id = b.id
       WHERE t.title   LIKE ? ESCAPE '\\'
          OR t.excerpt LIKE ? ESCAPE '\\'
          OR t.body    LIKE ? ESCAPE '\\'
       ORDER BY b.updated_at DESC
-      LIMIT ?
-    `).all(like, like, like, left);
+      LIMIT 20
+    `).all(like, like, like);
 
-
-    for (const r of topicLike) {
-      if (topicIds.has(r.id)) continue;
-      const type = r.is_resource ? 'resource' : 'topic';
-      results.push({ type, id: r.id, title: r.title, snippet: r.snippet || '' });
-      topicIds.add(r.id);
-      topicTitles.add(norm(r.title));
+    for (const r of rows) {
+      const key = `topic:${r.id}`;
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      // Enkel heuristik: nyare = högre score
+      const score = Date.parse(r.ts || '1970-01-01T00:00:00Z') / 1000;
+      out.push({
+        type: r.is_resource ? 'resource' : 'topic',
+        id: r.id,
+        title: r.title,
+        snippet: r.snippet || '',
+        score
+      });
     }
   }
 
-  // 3) Questions (LIKE)
-  if (results.length < 8) {
+  // 3) Questions (LIKE) – filtrera bort dolda, poäng = recency
+  {
     const esc  = s => s.replace(/[%_]/g, m => '\\' + m);
     const like = `%${esc(q)}%`;
-    const left = 8 - results.length;
+    const rows = db.prepare(`
+      SELECT id, title,
+             substr(COALESCE(body,''), 1, 140) AS snippet,
+             created_at AS ts
+      FROM questions
+      WHERE (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')
+        AND IFNULL(hidden,0) = 0
+      ORDER BY datetime(created_at) DESC
+      LIMIT 20
+    `).all(like, like);
 
-const qs = db.prepare(`
-  SELECT id, title, substr(COALESCE(body,''), 1, 120) AS snippet
-  FROM questions
-  WHERE (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')
-    AND hidden = 0
-  ORDER BY datetime(created_at) DESC
-  LIMIT ?
-`).all(like, like, Math.min(left, 3));
-
-
-    for (const r of qs) {
-      if (topicTitles.has(norm(r.title))) {
-        continue;
-      }
-      results.push({ type: 'question', id: String(r.id), title: r.title, snippet: r.snippet || '' });
+    for (const r of rows) {
+      const key = `question:${r.id}`;
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      const score = Date.parse(r.ts || '1970-01-01T00:00:00Z') / 1000;
+      out.push({
+        type: 'question',
+        id: String(r.id),
+        title: r.title,
+        snippet: r.snippet || '',
+        score
+      });
     }
   }
 
-  // Summering
-  res.json(results);
+  // 4) Slå ihop, sortera på score (större = bättre), ta top N
+  out.sort((a, b) => b.score - a.score);
+  const top = out.slice(0, MAX_TOTAL).map(({score, ...rest}) => rest);
+
+  res.json(top);
 });
 
 app.get('/api/questions/:id', requireAuth, (req, res) => {
