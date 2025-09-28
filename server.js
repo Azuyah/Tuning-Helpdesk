@@ -51,7 +51,11 @@ const DEALER_APIS = [
 // Ord/fraser som triggar flagg (case-insensitive, hela ord)
 const FLAG_WORDS = [
   'dynex',
-  // lägg fler här vid behov
+  'nms',
+  'nmstuning',
+  'dynexperformance',
+  'velox',
+  'sedoc',
 ];
 
 // Bygg effektiva regex: \b-detektering + unicode
@@ -2593,6 +2597,7 @@ app.get('/', (req, res) => {
   const latestQuestions = db.prepare(`
     SELECT q.id, q.title, q.status, q.created_at
     FROM questions q
+    WHERE IFNULL(q.hidden,0) = 0
     ORDER BY q.created_at DESC
     LIMIT 8
   `).all();
