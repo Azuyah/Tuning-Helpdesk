@@ -48,6 +48,18 @@ const DEALER_APIS = [
   { source: 'dynex', url: 'https://portal.dynexperformance.se/api/dealers', apiKey: '04d87a25-3711-11f0-88c2-ac1f6bad7482' },
 ];
 
+// Ord/fraser som triggar flagg (case-insensitive, hela ord)
+const FLAG_WORDS = [
+  'dynex',
+  // lägg fler här vid behov
+];
+
+// Bygg effektiva regex: \b-detektering + unicode
+const FLAG_REGEXES = FLAG_WORDS.map(w => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'iu'));
+function matchesFlagWords(text='') {
+  return FLAG_REGEXES.filter(rx => rx.test(text));
+}
+
 // MD5 helper
 function md5(s) {
   return crypto.createHash('md5').update(String(s), 'utf8').digest('hex');
@@ -108,9 +120,6 @@ try {
      WHERE is_answered = 1
   `).run();
 } catch (e) { /* ignore */ }
-try {
-  db.prepare(`ALTER TABLE questions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0`).run();
-} catch (_) {}
 try {
   db.prepare(`ALTER TABLE questions ADD COLUMN internal_comment TEXT`).run();
 } catch (e) {
@@ -296,6 +305,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_dealers_email ON dealers (email);
   CREATE INDEX IF NOT EXISTS idx_dealers_updated ON dealers (updated_at);
 `);
+
+// --- MIGRATION: moderation/flagging på frågor ---
+try { addColumnIfMissing('questions', 'hidden',         'INTEGER DEFAULT 0'); } catch (_) {}
+try { addColumnIfMissing('questions', 'flagged',        'INTEGER DEFAULT 0'); } catch (_) {}
+try { addColumnIfMissing('questions', 'flagged_reason', 'TEXT'); } catch (_) {}
+try { addColumnIfMissing('questions', 'moderated_by',   'TEXT'); } catch (_) {}
+try { addColumnIfMissing('questions', 'moderated_at',   'TEXT'); } catch (_) {}
 
 try {
   // Kolla befintliga kolumner en gång
@@ -1361,6 +1377,8 @@ app.post('/admin/edit-topic/:id', requireAdmin, express.urlencoded({ extended: f
     try { db.prepare(`INSERT OR REPLACE INTO topic_categories (topic_id, category_id) VALUES (?,?)`).run(id, categoryId); } catch {}
   }
 
+  
+
   // (valfritt) uppdatera FTS
   try {
     db.prepare(`UPDATE topics_fts SET title=?, excerpt=?, body=? WHERE id=?`)
@@ -1986,41 +2004,60 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
     if (typeof machines === 'string') machines = [machines];
     machines = machines.filter(Boolean);
 
-    if (!title) {
-      return res.status(400).json({ ok: false, error: 'Titel krävs' });
-    }
+    if (!title) return res.status(400).json({ ok: false, error: 'Titel krävs' });
     if (machines.length === 0) {
       return res.status(422).json({ ok: false, error: 'Välj minst en maskin.' });
     }
 
     const image_url = req.file ? `/uploads/questions/${req.file.filename}` : null;
 
-    // 1) Spara frågan
-    const info = db.prepare(`
-      INSERT INTO questions (user_id, title, body, image_url, created_at, updated_at, status)
-      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), 'open')
-    `).run(req.user.id, title, body, image_url);
+    // 🔹 Auto-flagga
+    const haystack = `${title}\n${body}`;
+    const hits = matchesFlagWords(haystack);
+    const shouldFlag = hits.length > 0;
+    const flaggedReason = shouldFlag
+      ? `Auto-flag: matchade ${hits.map(h => h.source.replace(/\\\\b/g,'')).join(', ')}`
+      : null;
+
+    // 1) Spara frågan (nu med hidden/flagged)
+    const stmt = db.prepare(`
+      INSERT INTO questions
+        (user_id, title, body, image_url, status, hidden, flagged, flagged_reason, created_at, updated_at)
+      VALUES
+        (?, ?, ?, ?, 'open', ?, ?, ?, datetime('now'), datetime('now'))
+    `);
+    const info = stmt.run(
+      req.user.id,
+      title,
+      body,
+      image_url,
+      shouldFlag ? 1 : 0,               // hidden
+      shouldFlag ? 1 : 0,               // flagged
+      flaggedReason                    // flagged_reason
+    );
 
     const qid = info.lastInsertRowid;
-    console.log('[questions] saved id=', qid, 'title=', title, 'user=', req.user?.email);
+    console.log('[questions] saved id=', qid, 'title=', title, 'user=', req.user?.email, 'flagged=', shouldFlag);
 
     // 2) Spara maskiner i join-tabell
     const ins = db.prepare(`INSERT INTO question_machines (question_id, machine) VALUES (?, ?)`);
     const tx  = db.transaction((arr) => { arr.forEach(m => ins.run(qid, m)); });
     tx(machines);
 
-    // 3) Maila staff (fire-and-forget)
-    sendNewQuestionNotifications(db, {
-      id: qid,
-      title,
-      authorName: req.user?.name || req.user?.email || 'Okänd',
-      authorEmail: req.user?.email || null
-    }).catch(err => {
-      console.error('Kunde inte skicka staff-mail för ny fråga:', err);
-    });
+    // 3) Maila staff (valfritt: skicka alltid, eller bara när flagged)
+    if (true /* eller: shouldFlag */) {
+      sendNewQuestionNotifications(db, {
+        id: qid,
+        title,
+        authorName: req.user?.name || req.user?.email || 'Okänd',
+        authorEmail: req.user?.email || null,
+        flagged: shouldFlag,
+        flaggedReason
+      }).catch(err => console.error('Kunde inte skicka staff-mail:', err));
+    }
 
     // 4) Svara till klienten
-    return res.json({ ok: true, id: qid });
+    return res.json({ ok: true, id: qid, flagged: shouldFlag });
 
   } catch (err) {
     if (err && err.message === 'INVALID_FILETYPE') {
@@ -2029,6 +2066,25 @@ app.post('/api/questions', requireAuth, upload.single('image'), (req, res) => {
     console.error(err);
     return res.status(500).json({ ok: false, error: 'Kunde inte spara frågan' });
   }
+});
+
+app.get('/admin/moderation', requireAdmin, (req, res) => {
+  const pending = db.prepare(`
+    SELECT id, title, created_at, flagged_reason
+    FROM questions
+    WHERE hidden = 1 AND flagged = 1
+    ORDER BY created_at DESC
+  `).all();
+  res.render('admin-moderation', { pending });
+});
+
+app.post('/admin/questions/:id/approve', requireAdmin, (req, res) => {
+  db.prepare(`
+    UPDATE questions
+    SET hidden=0, flagged=0, flagged_reason=NULL, moderated_by=?, moderated_at=datetime('now')
+    WHERE id=?
+  `).run(req.user?.email || req.user?.id || 'admin', req.params.id);
+  res.redirect(`/questions/${req.params.id}`);
 });
 
 app.get('/admin/debug/staff-emails', requireAdmin, (req, res) => {

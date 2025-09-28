@@ -1,0 +1,17 @@
+<ul class="divide-y divide-slate-200">
+  <% pending.forEach(q => { %>
+    <li class="py-3 flex items-center justify-between">
+      <div class="min-w-0">
+        <a href="/questions/<%= q.id %>" class="font-medium text-slate-900 hover:text-sky-700 truncate"><%= q.title %></a>
+        <div class="text-xs text-slate-500"><%= new Date(q.created_at).toLocaleString('sv-SE') %></div>
+        <% if (q.flagged_reason) { %><div class="text-xs text-amber-700 mt-1"><%= q.flagged_reason %></div><% } %>
+      </div>
+      <form class="flex gap-2" method="post" action="/admin/questions/<%= q.id %>/approve">
+        <button class="px-3 py-1.5 rounded bg-emerald-600 text-white text-sm">Godkänn</button>
+      </form>
+      <form method="post" action="/admin/questions/<%= q.id %>/reject">
+        <button class="px-3 py-1.5 rounded bg-rose-600 text-white text-sm">Avslå</button>
+      </form>
+    </li>
+  <% }) %>
+</ul>
