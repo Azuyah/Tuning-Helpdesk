@@ -2538,7 +2538,7 @@ app.get('/', (req, res) => {
     SELECT q.id, q.title, q.status, q.created_at
     FROM questions q
     ORDER BY q.created_at DESC
-    LIMIT 7
+    LIMIT 8
   `).all();
 
   // Senaste resurs (highlight)
