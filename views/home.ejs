@@ -386,7 +386,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <ul class="divide-y divide-slate-200">
       <% _latestQuestionsSafe
            .filter(q => Number(q.hidden) !== 1)
-           .slice(0,8)
+           .slice(0,5)
            .forEach(q => {
              const lbl  = q.status==='answered' ? 'Besvarad' : (q.status==='closed' ? 'Stängd' : 'Öppen');
              const tone = q.status==='answered' ? 'bg-emerald-100 text-emerald-700'
