@@ -2696,7 +2696,7 @@ console.log('[HOME] featuredTopics count:', featuredTopics.length, featuredTopic
     JOIN topics_base b ON b.id = t.id
     WHERE IFNULL(t.is_resource, 0) = 0
     ORDER BY b.updated_at DESC
-    LIMIT 4
+    LIMIT 6
   `).all().map(r => ({
     id: r.id,
     title: r.title,
