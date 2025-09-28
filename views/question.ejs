@@ -6,7 +6,7 @@
   <!-- Vänsterkolumn -->
   <div class="lg:col-span-2 space-y-8">
 
-    <!-- Sidhuvud: Tillbaka + Admin-knappar -->
+<!-- Sidhuvud: Tillbaka + Admin-knappar -->
 <div class="flex items-center justify-between">
   <button type="button"
           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50"
@@ -49,28 +49,31 @@
         </button>
       </form>
 
-<% if (linkedTopic) { %>
-  <form method="POST"
-        action="/admin/topics/<%= encodeURIComponent(linkedTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
-    <% if (typeof csrfToken !== 'undefined') { %>
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <% } %>
-    <button type="submit"
-            class="inline-flex items-center gap-2 rounded-lg <%= isFeaturedTopic ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-700 hover:bg-slate-800' %> text-white px-3 py-2 text-sm font-semibold"
-            title="<%= isFeaturedTopic ? 'Avstjärnmärk detta ämne' : 'Stjärnmärk detta ämne' %>">
-      <i class="ti <%= isFeaturedTopic ? 'ti-star-filled' : 'ti-star' %>"></i>
-      <%= isFeaturedTopic ? 'Avstjärnmärk' : 'Stjärnmärk' %>
-    </button>
-  </form>
-<% } else { %>
-  <button type="button"
-          class="inline-flex items-center gap-2 rounded-lg bg-slate-200 text-slate-500 px-3 py-2 text-sm font-semibold cursor-not-allowed"
-          title="Koppla först till ett ämne för att kunna stjärnmarkera">
-    <i class="ti ti-star"></i> Stjärnmärk
-  </button>
-<% } %>
+      <% if (linkedTopic) { %>
+        <form method="POST"
+              action="/admin/topics/<%= encodeURIComponent(linkedTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
+          <% if (typeof csrfToken !== 'undefined') { %>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <% } %>
+          <button type="submit"
+                  class="inline-flex items-center gap-2 rounded-lg <%= isFeaturedTopic ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-700 hover:bg-slate-800' %> text-white px-3 py-2 text-sm font-semibold"
+                  title="<%= isFeaturedTopic ? 'Avstjärnmärk detta ämne' : 'Stjärnmärk detta ämne' %>">
+            <i class="ti <%= isFeaturedTopic ? 'ti-star-filled' : 'ti-star' %>"></i>
+            <%= isFeaturedTopic ? 'Avstjärnmärk' : 'Stjärnmärk' %>
+          </button>
+        </form>
+      <% } else { %>
+        <button type="button"
+                class="inline-flex items-center gap-2 rounded-lg bg-slate-200 text-slate-500 px-3 py-2 text-sm font-semibold cursor-not-allowed"
+                title="Koppla först till ett ämne för att kunna stjärnmarkera">
+          <i class="ti ti-star"></i> Stjärnmärk
+        </button>
+      <% } %>
+    </div>
+  <% } %>
+</div> 
 
-    <div class="relative">
+<div class="relative">
   <% if (showHiddenBanner) { %>
     <!-- Dim overlay -->
     <div class="pointer-events-none absolute inset-0 rounded-2xl bg-slate-300/25 backdrop-blur-[0.5px] z-10"></div>
