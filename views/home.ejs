@@ -7,7 +7,7 @@
   // Navigera till resultatsida
   function goSearch() {
     const q = ($q.value || '').trim();
-    const url = q ? `/search?q=${encodeURIComponent(q)}` : '/search'; // <-- FIX: ingen backtick här
+    const url = q ? `/search?q=${encodeURIComponent(q)}` : '/search';
     window.location.href = url;
   }
 
