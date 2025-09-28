@@ -2678,7 +2678,6 @@ const featuredTopics = db.prepare(`
   LIMIT 6
 `).all();
 
-console.log('[HOME] featuredTopics count:', featuredTopics.length, featuredTopics);
   // Senaste resurs (highlight)
   const latestResource = db.prepare(`
     SELECT t.id, t.title, IFNULL(t.excerpt, '') AS snippet
@@ -2790,8 +2789,6 @@ app.get('/resources/:id/download', (req, res) => {
   if (!row.download_url) return res.status(400).send('Ingen fil länkad');
 
   db.prepare(`UPDATE topics SET downloads = COALESCE(downloads,0) + 1 WHERE id = ?`).run(id);
-
-  console.log('[download] incremented for', id);
 
   return res.redirect(row.download_url);
 });

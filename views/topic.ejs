@@ -35,18 +35,18 @@
       </form>
 
       <!-- Stjärnknapp -->
-      <form method="POST"
-            action="/admin/topics/<%= encodeURIComponent(topic.id) %>/<%= isFeatured ? 'unfeature' : 'feature' %>">
-        <% if (typeof csrfToken !== 'undefined') { %>
-          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <% } %>
-        <button type="submit"
-                class="inline-flex items-center gap-2 rounded-lg <%= isFeatured ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-700 hover:bg-slate-800' %> text-white px-3 py-2 text-sm font-semibold"
-                title="<%= isFeatured ? 'Avstjärnmärk detta ämne' : 'Stjärnmärk detta ämne' %>">
-          <i class="ti <%= isFeatured ? 'ti-star-filled' : 'ti-star' %>"></i>
-          <%= isFeatured ? 'Avstjärnmärk' : 'Stjärnmärk' %>
-        </button>
-      </form>
+<form method="POST"
+      action="/admin/topics/<%= encodeURIComponent(linkedTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
+  <% if (typeof csrfToken !== 'undefined') { %>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <% } %>
+  <button type="submit"
+          class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold 
+                 <%= isFeaturedTopic ? 'bg-white text-slate-900 hover:bg-slate-50' : 'bg-white text-slate-900 hover:bg-slate-50' %>">
+<i class="ti <%= isFeaturedTopic ? 'ti-star-filled text-amber-400' : 'ti-star text-slate-400' %>"></i>
+    <%= isFeaturedTopic ? 'Stjärnmarkerat' : 'Stjärnmarkera' %>
+  </button>
+</form>
     </div>
   <% } %>
 </div>

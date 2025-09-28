@@ -360,9 +360,6 @@ document.addEventListener("DOMContentLoaded", () => {
           </a>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
             <span><%= new Date(t.updated_at || t.created_at || Date.now()).toLocaleDateString('sv-SE') %></span>
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full <%= badgeCls %> border border-slate-200">
-              <%= isRes ? 'Resurs' : 'Ämne' %>
-            </span>
             <a href="<%= href %>"
                class="ml-auto inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-0.5 text-xs text-slate-600 hover:border-sky-400 hover:text-sky-700">
               Visa <i class="ti ti-arrow-right text-[10px]"></i>
