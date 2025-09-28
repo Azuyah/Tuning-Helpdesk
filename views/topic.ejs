@@ -34,19 +34,28 @@
         </button>
       </form>
 
+      <%
+const currentTopic = (typeof topic !== 'undefined' && topic)
+  ? topic
+  : ((Array.isArray(linked) && linked.length) ? linked[0] : null);
+
+const isFeaturedTopic = currentTopic ? Number(currentTopic.is_featured) === 1 : false;
+%>
+
       <!-- Stjärnknapp -->
+<% if (currentTopic) { %>
 <form method="POST"
-      action="/admin/topics/<%= encodeURIComponent(linkedTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
+      action="/admin/topics/<%= encodeURIComponent(currentTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
   <% if (typeof csrfToken !== 'undefined') { %>
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <% } %>
   <button type="submit"
-          class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold 
-                 <%= isFeaturedTopic ? 'bg-white text-slate-900 hover:bg-slate-50' : 'bg-white text-slate-900 hover:bg-slate-50' %>">
-<i class="ti <%= isFeaturedTopic ? 'ti-star-filled text-amber-400' : 'ti-star text-slate-400' %>"></i>
+          class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold bg-white text-slate-900 hover:bg-slate-50">
+    <i class="ti <%= isFeaturedTopic ? 'ti-star-filled text-amber-400' : 'ti-star text-slate-400' %>"></i>
     <%= isFeaturedTopic ? 'Stjärnmarkerat' : 'Stjärnmarkera' %>
   </button>
 </form>
+<% } %>
     </div>
   <% } %>
 </div>
