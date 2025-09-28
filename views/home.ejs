@@ -99,96 +99,313 @@ async function fetchSuggest(q){
 })();
 </script>
 
-<!-- Kategorikort / Populärt (egen sektion under hero) -->
-<section class="mx-auto max-w-6xl px-4 mt-24 relative z-10">
-  <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-    <% if (Array.isArray(categoriesShow)) { %>
-      <% categoriesShow.forEach(function(cat){ %>
-        <article class="rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow transition p-6">
-          <div class="mb-4">
-            <i class="ti <%= cat.icon ? cat.icon : 'ti-folder' %> text-4xl text-sky-500"></i>
-          </div>
-          <h3 class="text-2xl font-semibold text-slate-900 mb-4"><%= cat.title %></h3>
+<%
+// ==== SÄKERHETS-HELPERS (inga ReferenceError) ====
+const _categories      = Array.isArray(categoriesShow) ? categoriesShow : [];
+const _latestQuestions = Array.isArray(latestQuestions) ? latestQuestions : [];
+const _resources       = (typeof popularResources !== 'undefined' && Array.isArray(popularResources)) ? popularResources : [];
+const _latestResource  = (typeof latestResource !== 'undefined' && latestResource) ? latestResource : null;
+// (Valfritt) populära ämnen – hoppa över om ej definierad
+const _popularTopics   = (typeof popularTopics !== 'undefined' && Array.isArray(popularTopics)) ? popularTopics : [];
+%>
 
-<ul class="space-y-3">
-  <% (cat.items || []).forEach(function(it){ %>
-    <li class="flex items-start gap-3">
-      <i class="text-slate-400 mt-1"></i>
+<%
+  // Säkerhet: skydda mot undefined
+  const _categoriesSafe = Array.isArray(_categories) ? _categories : [];
+%>
 
-      <% 
-        const href =
-          it.type === 'resource' ? `/resources/${encodeURIComponent(it.id)}` :
-          it.type === 'question' ? `/questions/${encodeURIComponent(it.id)}` :
-                                   `/topic/${encodeURIComponent(it.id)}`;
-        const badge =
-          it.type === 'question'
-            ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>'
-            : (it.type === 'resource'
-                ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>'
-                : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>');
-      %>
+<% if (_categoriesSafe.length) { %>
+<section class="mx-auto max-w-6xl px-4 mt-16">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+      <i class="ti ti-category text-sky-600"></i> Populära kategorier
+    </h2>
+    <% if (_categoriesSafe.length > 6) { %>
+      <button id="catShowMoreBtn" type="button"
+              class="hidden md:inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:border-sky-400 hover:text-sky-600">
+        Visa fler
+        <i class="ti ti-chevron-down text-xs"></i>
+      </button>
+    <% } %>
+  </div>
 
-      <div class="min-w-0">
-        <div class="flex items-center gap-2">
-          <%- badge %>
-          <a href="<%= href %>" class="text-slate-700 hover:text-sky-700 truncate">
-            <%= it.title %>
+  <!-- Första 3 synliga -->
+  <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" id="catGridPrimary">
+    <% _categoriesSafe.slice(0,6).forEach(function(cat){ %>
+      <article class="group rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg transition transform hover:-translate-y-1 p-6 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-tr from-sky-50 to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300"></div>
+
+        <div class="mb-4 relative z-10 flex items-center gap-3">
+          <i class="ti <%= cat.icon || 'ti-folder' %> text-3xl text-sky-500 group-hover:scale-110 transition"></i>
+          <h3 class="text-lg font-semibold text-slate-900"><%= cat.title %></h3>
+        </div>
+
+        <ul class="space-y-2 relative z-10">
+          <% (cat.items || []).slice(0,3).forEach(function(it){ 
+               const href = it.type==='resource' ? `/resources/${encodeURIComponent(it.id)}` :
+                            it.type==='question' ? `/questions/${encodeURIComponent(it.id)}` :
+                                                   `/topic/${encodeURIComponent(it.id)}`;
+          %>
+            <li>
+              <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-600 text-sm">
+                <i class="ti ti-arrow-narrow-right text-slate-400 text-xs"></i>
+                <%= it.title %>
+              </a>
+            </li>
+          <% }) %>
+        </ul>
+
+        <div class="mt-6 relative z-10">
+          <a href="/category/<%= cat.id %>" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:border-sky-400 hover:text-sky-600 text-sm">
+            Visa alla <i class="ti ti-arrow-right text-xs"></i>
           </a>
         </div>
-      </div>
-    </li>
-  <% }); %>
-</ul>
-          <div class="mt-6">
-            <a href="/category/<%= cat.id %>"
-               class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-slate-700 hover:border-sky-400">
-              Visa alla
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M13.5 4.5 21 12l-7.5 7.5-1.06-1.06 5.69-5.69H3v-1.5h15.13l-5.69-5.69L13.5 4.5Z"/>
-              </svg>
-            </a>
-          </div>
-        </article>
-      <% }); %>
-    <% } %>
+      </article>
+    <% }); %>
   </div>
-</section>
-  <!-- Senaste frågor -->
-<section class="mx-auto max-w-6xl px-4 py-10">
-  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-semibold text-slate-900 flex items-center gap-2">
-        <i class="ti ti-message-question text-sky-600"></i> Senaste frågor
-      </h2>
-      <a href="/explore?tab=questions" class="text-sky-600 hover:underline text-sm">Visa alla</a>
+
+  <!-- Resten kollapsat tills man klickar "Visa fler" -->
+  <% if (_categoriesSafe.length > 6) { %>
+    <div class="mt-6 hidden" id="catGridMore">
+      <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <% _categoriesSafe.slice(6).forEach(function(cat){ %>
+          <article class="group rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg transition transform hover:-translate-y-1 p-6 relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-tr from-sky-50 to-transparent opacity-0 group-hover:opacity-100 transition"></div>
+
+            <div class="mb-4 relative z-10 flex items-center gap-3">
+              <i class="ti <%= cat.icon || 'ti-folder' %> text-3xl text-sky-500 group-hover:scale-110 transition"></i>
+              <h3 class="text-lg font-semibold text-slate-900"><%= cat.title %></h3>
+            </div>
+
+            <ul class="space-y-2 relative z-10">
+              <% (cat.items || []).slice(0,3).forEach(function(it){ 
+                   const href = it.type==='resource' ? `/resources/${encodeURIComponent(it.id)}` :
+                                it.type==='question' ? `/questions/${encodeURIComponent(it.id)}` :
+                                                       `/topic/${encodeURIComponent(it.id)}`;
+              %>
+                <li>
+                  <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-600 text-sm">
+                    <i class="ti ti-arrow-narrow-right text-slate-400 text-xs"></i>
+                    <%= it.title %>
+                  </a>
+                </li>
+              <% }) %>
+            </ul>
+
+            <div class="mt-6 relative z-10">
+              <a href="/category/<%= cat.id %>" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:border-sky-400 hover:text-sky-600 text-sm">
+                Visa alla <i class="ti ti-arrow-right text-xs"></i>
+              </a>
+            </div>
+          </article>
+        <% }); %>
+      </div>
+
+      <!-- Stäng-knapp för desktop -->
+      <div class="mt-6 hidden md:flex justify-center">
+        <button id="catShowLessBtn" type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:border-sky-400 hover:text-sky-600">
+          Visa färre
+          <i class="ti ti-chevron-up text-xs"></i>
+        </button>
+      </div>
     </div>
 
-    <% if (!latestQuestions || latestQuestions.length === 0) { %>
-      <p class="text-slate-500 text-sm">Inga frågor ännu.</p>
-    <% } else { %>
-      <ul class="divide-y divide-slate-200">
-        <% latestQuestions.forEach(q => { %>
-          <li class="py-3 flex items-center justify-between">
-            <div class="min-w-0">
-              <a href="/questions/<%= q.id %>" class="text-slate-800 hover:text-sky-700 font-medium truncate">
-                <%= q.title %>
-              </a>
-              <div class="text-xs text-slate-500 mt-0.5">
-                <%= new Date(q.created_at).toLocaleDateString('sv-SE') %> •
-                <% const lbl = q.status==='answered'?'Besvarad': q.status==='closed'?'Stängd':'Öppen'; %>
-                <span class="inline-flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full <%= q.status==='answered'?'bg-emerald-500':q.status==='closed'?'bg-slate-400':'bg-amber-500' %>"></span>
-                  <%= lbl %>
-                </span>
-              </div>
-            </div>
-            <a href="/questions/<%= q.id %>" class="inline-flex items-center gap-1.5 text-sky-600 text-sm hover:underline">
-              Visa <i class="ti ti-arrow-right"></i>
+    <!-- Mobilknappar under primärgrid -->
+    <div class="mt-6 flex md:hidden justify-center">
+      <button id="catToggleMobile" type="button"
+              class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:border-sky-400 hover:text-sky-600">
+        Visa fler
+        <i class="ti ti-chevron-down text-xs"></i>
+      </button>
+    </div>
+  <% } %>
+</section>
+<% } %>
+
+<!-- Huvudområde: Resurser (vänster) + Senaste frågor som sidebar (höger) -->
+<section class="mx-auto max-w-6xl px-4 py-12 grid lg:grid-cols-3 gap-10">
+
+  <!-- Vänsterkolumn: Resurser -->
+  <div class="lg:col-span-2">
+    <!-- Senaste resurs (highlight) -->
+    <section class="mb-10">
+      <div class="bg-gradient-to-r from-sky-50 to-sky-100 rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col md:flex-row items-center gap-6">
+        <div class="flex-1">
+          <h2 class="text-2xl font-semibold text-slate-900 mb-3">Senaste resurs</h2>
+
+          <% if (_latestResource) { %>
+            <h3 class="text-xl font-medium text-sky-700 mb-2">
+              <a href="/resources/<%= _latestResource.id %>"><%= _latestResource.title %></a>
+            </h3>
+            <p class="text-slate-600 mb-4"><%= _latestResource.snippet || 'Kort beskrivning.' %></p>
+            <a href="/resources/<%= _latestResource.id %>" class="inline-flex items-center gap-2 text-sky-600 font-medium hover:underline">
+              Läs mer <i class="ti ti-arrow-right"></i>
             </a>
-          </li>
-        <% }) %>
-      </ul>
-    <% } %>
+          <% } else { %>
+            <!-- Placeholder när latestResource saknas -->
+            <div class="h-6 w-64 bg-white/70 rounded mb-2"></div>
+            <div class="h-4 w-96 bg-white/60 rounded mb-4"></div>
+            <span class="inline-flex items-center gap-2 text-sky-600/70">
+              Ingen resurs ännu – koppla latestResource i backend
+            </span>
+          <% } %>
+        </div>
+    <!-- Lottie container -->
+    <div class="w-full md:w-1/3 flex items-center justify-center -ml-8">
+<div class="w-20 h-20 flex items-center justify-center">
+  <div id="lottieLatestResource" class="scale-150"></div>
+</div>
+    </div>
   </div>
 </section>
+
+    <!-- Lottie script -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  lottie.loadAnimation({
+    container: document.getElementById('lottieLatestResource'),
+    renderer: 'svg',
+    loop: true,
+    autoplay: true,
+    path: '/public/animations/resource.json' // <-- byt till din json-fil
+  });
+});
+</script>
+
+    <!-- Populära ämnen (grid) -->
+<%
+  // Använd topics om den finns; annars fallback till _resources
+  const _topics = (typeof topics !== 'undefined' && Array.isArray(topics))
+    ? topics
+    : ((typeof _resources !== 'undefined' && Array.isArray(_resources)) ? _resources : []);
+%>
+
+<section>
+  <h2 class="text-2xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
+    <i class="ti ti-books text-sky-600"></i> Senaste ämnen
+  </h2>
+
+  <% if (_topics.length) { %>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+      <% _topics.slice(0,4).forEach(function(t){ %>
+        <article class="group rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
+          <div class="mb-3">
+            <i class="ti <%= t.icon || 'ti-file-text' %> text-3xl text-sky-500"></i>
+          </div>
+          <h3 class="text-lg font-semibold text-slate-900 mb-2 group-hover:text-sky-600">
+            <a href="/topic/<%= t.id %>"><%= t.title %></a>
+          </h3>
+          <p class="text-sm text-slate-600 line-clamp-2"><%= t.excerpt || t.snippet || 'Kort beskrivning av ämnet.' %></p>
+        </article>
+      <% }); %>
+    </div>
+  <% } else { %>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+      <% for (let i=0;i<4;i++){ %>
+        <article class="rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
+          <div class="h-6 w-10 bg-sky-100 rounded mb-4"></div>
+          <div class="h-5 w-3/4 bg-slate-100 rounded mb-2"></div>
+          <div class="h-4 w-full bg-slate-100 rounded"></div>
+        </article>
+      <% } %>
+    </div>
+  <% } %>
 </section>
+  </div>
+
+<!-- Högerkolumn: Senaste frågor (sidebar) -->
+<% if (_latestQuestions.length) { %>
+<aside class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-fit">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+      <i class="ti ti-message-question text-sky-600"></i> Senaste frågor
+    </h2>
+    <a href="/explore?tab=questions" class="text-sky-600 hover:underline text-sm">Alla</a>
+  </div>
+  <ul class="divide-y divide-slate-200">
+    <% _latestQuestions.slice(0,7).forEach(q => { %>
+      <li class="py-3">
+        <a href="/questions/<%= q.id %>" class="text-slate-800 hover:text-sky-700 font-medium block truncate">
+          <%= q.title %>
+        </a>
+        <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+          <span><%= new Date(q.created_at).toLocaleDateString('sv-SE') %></span>
+          <% const lbl = q.status==='answered'?'Besvarad': q.status==='closed'?'Stängd':'Öppen'; %>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full 
+                       <%= q.status==='answered'?'bg-emerald-100 text-emerald-700':
+                           q.status==='closed'?'bg-slate-100 text-slate-500':
+                           'bg-amber-100 text-amber-700' %>">
+            <%= lbl %>
+          </span>
+          <!-- Visa-knapp längst till höger -->
+          <a href="/questions/<%= q.id %>" 
+             class="ml-auto inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-0.5 text-xs text-slate-600 hover:border-sky-400 hover:text-sky-700">
+            Visa <i class="ti ti-arrow-right text-[10px]"></i>
+          </a>
+        </div>
+      </li>
+    <% }); %>
+  </ul>
+</aside>
+<% } %>
+</section>
+
+<!-- CTA (kompakt tvåkolumnslayout) -->
+<section class="mx-auto max-w-6xl px-4 py-10 md:py-12">
+  <div class="bg-gradient-to-r from-sky-50 to-sky-100 rounded-2xl border border-slate-200 shadow-sm 
+              p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
+    
+    <!-- Text vänster -->
+    <div class="text-center md:text-left">
+      <h2 class="text-xl md:text-3xl font-extrabold mb-2 text-slate-650">Behöver du hjälp?</h2>
+      <p class="text-slate-600 text-sm md:text-base">
+        Ställ en fråga och få svar från communityn, eller utforska guider och resurser.
+      </p>
+    </div>
+
+    <!-- Knappar höger -->
+    <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+      <a href="/ask"
+         class="inline-flex items-center justify-center rounded-lg bg-sky-600 text-white
+                px-5 py-2 md:px-6 md:py-2.5 font-medium shadow hover:bg-sky-700">
+        Ställ en fråga
+      </a>
+      <a href="/explore"
+         class="inline-flex items-center justify-center rounded-lg bg-sky-600 text-white
+                px-5 py-2 md:px-6 md:py-2.5 font-medium shadow hover:bg-sky-700">
+        Utforska
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const moreWrap   = document.getElementById('catGridMore');
+  const btnMore    = document.getElementById('catShowMoreBtn');
+  const btnLess    = document.getElementById('catShowLessBtn');
+  const btnMobile  = document.getElementById('catToggleMobile');
+
+  function openMore(){
+    if (moreWrap) moreWrap.classList.remove('hidden');
+    if (btnMore)  btnMore.classList.add('hidden');
+    if (btnMobile){ btnMobile.innerHTML = 'Visa färre <i class="ti ti-chevron-up text-xs"></i>'; }
+  }
+  function closeMore(){
+    if (moreWrap) moreWrap.classList.add('hidden');
+    if (btnMore)  btnMore.classList.remove('hidden');
+    if (btnMobile){ btnMobile.innerHTML = 'Visa fler <i class="ti ti-chevron-down text-xs"></i>'; }
+    // Scrolla upp till kategorirubriken för bättre UX på mobil
+    const anchor = document.querySelector('h2 i.ti-category')?.parentElement;
+    if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  btnMore?.addEventListener('click', openMore);
+  btnLess?.addEventListener('click', closeMore);
+  btnMobile?.addEventListener('click', () => {
+    if (moreWrap?.classList.contains('hidden')) openMore(); else closeMore();
+  });
+});
+</script>

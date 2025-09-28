@@ -1,4 +1,14 @@
-<!-- views/404.ejs -->
+<%
+  // Säkra lokala variabler
+  const _path  = (typeof missingPath !== 'undefined' && missingPath)
+                   ? missingPath
+                   : (typeof path !== 'undefined' ? path : '');
+  const _title = (typeof title !== 'undefined' && title) ? title : 'Oj! Vi hittade inte sidan';
+
+  // Förifyll sökfältet med något vettigt (ta bort ledande "/" och querystring)
+  const _qPrefill = _path ? _path.replace(/^\//, '').replace(/\?.*$/, '') : '';
+%>
+
 <section class="mx-auto max-w-3xl px-4 py-16">
   <div class="text-center">
     <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/40">
@@ -6,11 +16,17 @@
     </div>
 
     <h1 class="mt-4 text-3xl font-extrabold text-slate-900 dark:text-slate-100">
-      Oj! Vi hittade inte sidan
+      <%= _title %>
     </h1>
+
     <p class="mt-2 text-slate-600 dark:text-slate-400">
-      Adressen <span class="font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200"><%= path %></span> verkar inte finnas.
-      Den kan ha flyttats eller tagits bort.
+      <% if (_path) { %>
+        Adressen
+        <span class="font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200"><%= _path %></span>
+        verkar inte finnas. Den kan ha flyttats eller tagits bort.
+      <% } else { %>
+        Sidan du letade efter finns tyvärr inte.
+      <% } %>
     </p>
 
     <!-- Snabba åtgärder -->
@@ -35,6 +51,7 @@
       <div class="relative max-w-xl mx-auto">
         <input
           name="q"
+          value="<%= _qPrefill %>"
           placeholder="Sök efter ämnen, frågor eller resurser…"
           class="w-full rounded-lg border border-slate-300 px-4 py-2.5 shadow-sm focus:border-sky-500 focus:ring-sky-500
                  dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-400" />
@@ -45,41 +62,41 @@
       </div>
     </form>
 
-<!-- Populära länkar -->
-<div class="mt-10 text-left">
-  <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
-    Populärt just nu
-  </h2>
-  <ul class="grid sm:grid-cols-2 gap-2">
-    <li>
-      <a href="/explore?tab=questions"
-         class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 text-slate-700
-                dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-        <i class="ti ti-help-circle"></i> Se alla frågor
-      </a>
-    </li>
-    <li>
-      <a href="/explore?tab=topics"
-         class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 text-slate-700
-                dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-        <i class="ti ti-notes"></i> Läs våra ämnen
-      </a>
-    </li>
-    <li>
-      <a href="/explore?tab=resources"
-         class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 text-slate-700
-                dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-        <i class="ti ti-tool"></i> Resurser & guider
-      </a>
-    </li>
-    <li>
-      <a href="/ask"
-         class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 text-slate-700
-                dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-        <i class="ti ti-edit"></i> Ställ en fråga
-      </a>
-    </li>
-  </ul>
-</div>
+    <!-- Populära länkar -->
+    <div class="mt-10 text-left">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
+        Populärt just nu
+      </h2>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        <li>
+          <a href="/explore?tab=questions"
+             class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 text-slate-700
+                    dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <i class="ti ti-help-circle"></i> Se alla frågor
+          </a>
+        </li>
+        <li>
+          <a href="/explore?tab=topics"
+             class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 text-slate-700
+                    dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <i class="ti ti-notes"></i> Läs våra ämnen
+          </a>
+        </li>
+        <li>
+          <a href="/explore?tab=resources"
+             class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 text-slate-700
+                    dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <i class="ti ti-tool"></i> Resurser & guider
+          </a>
+        </li>
+        <li>
+          <a href="/ask"
+             class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 text-slate-700
+                    dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+            <i class="ti ti-edit"></i> Ställ en fråga
+          </a>
+        </li>
+      </ul>
+    </div>
   </div>
 </section>

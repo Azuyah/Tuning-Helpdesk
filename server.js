@@ -1423,7 +1423,12 @@ app.get('/admin/questions/:id', requireStaff, (req, res) => {
     LIMIT 1
   `).get(id);
 
-  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
+if (!q) {
+  return res.status(404).render('404', { 
+    title: 'Fråga saknas',
+    missingPath: req.originalUrl || req.url || ''
+  });
+}
 
   // Kategorilista (för dropdown)
   const categories = db.prepare(`
@@ -1547,7 +1552,12 @@ app.put('/api/questions/:id/categories', requireStaff, express.json(), (req, res
 app.post('/admin/questions/:id', requireStaff, express.urlencoded({ extended: false }), async (req, res) => {
   const id = Number(req.params.id);
   const q = db.prepare('SELECT * FROM questions WHERE id=?').get(id);
-  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
+if (!q) {
+  return res.status(404).render('404', { 
+    title: 'Fråga saknas',
+    missingPath: req.originalUrl || req.url || ''
+  });
+}
 
   const answer_title  = (req.body.answer_title || '').trim() || `Svar: ${q.title}`;
   const answer_body   = (req.body.answer_body || '').trim();
@@ -2245,8 +2255,18 @@ function hasTable(name){
 }
 
 // Bygg kategorikort (ämnen + resurser + frågor)
-function buildCategoriesMixed(){
-  const cats = db.prepare(`SELECT id, title, icon FROM categories ORDER BY COALESCE(sort_order,9999), title`).all();
+function buildCategoriesMixed(opts = {}) {
+  const {
+    categoryLimit = 12,   // hur många kategorier som ska ut till frontend
+    itemsPerCard  = 3,    // hur många rader (ämnen/resurser/frågor) per kategori
+    randomize     = true  // slumpa ordningen på kategorikorten
+  } = opts;
+
+  const cats = db.prepare(`
+    SELECT id, title, icon
+    FROM categories
+    ORDER BY COALESCE(sort_order, 9999), title
+  `).all();
   const catById = new Map(cats.map(c => [String(c.id), c]));
 
   // Ämnen + resurser
@@ -2277,33 +2297,48 @@ function buildCategoriesMixed(){
     : [];
 
   // Slå ihop & sortera nyast först
-  const merged = [...topicRows, ...questionRows].sort((a,b) => (a.ts < b.ts ? 1 : -1));
+  const merged = [...topicRows, ...questionRows].sort((a, b) => (a.ts < b.ts ? 1 : -1));
 
-  // Gruppera per kategori, max 4 poster per kort
+  // Gruppera per kategori, max N poster per kort
   const byCat = new Map();
   for (const r of merged) {
     const key = String(r.cid);
     if (!byCat.has(key)) byCat.set(key, []);
     const bucket = byCat.get(key);
-    if (bucket.length < 4) bucket.push({ id: r.id, title: r.title, type: r.type });
+    if (bucket.length < itemsPerCard) {
+      bucket.push({ id: r.id, title: r.title, type: r.type });
+    }
   }
 
-  // Välj endast kategorier som har innehåll och slumpa 3
+  // Bygg kort endast för kategorier som finns och har innehåll
   const filled = Array.from(byCat.keys())
     .map(cid => {
       const c = catById.get(cid);
-      return c ? {
-        id: c.id,
-        title: c.title,
-        icon: c.icon || 'ti-folder',
-        items: byCat.get(cid) || []
-      } : null;
+      return c
+        ? {
+            id: c.id,
+            title: c.title,
+            icon: c.icon || 'ti-folder',
+            items: byCat.get(cid) || []
+          }
+        : null;
     })
     .filter(Boolean)
     .filter(card => card.items.length > 0);
 
-  shuffle(filled);
-  return filled.slice(0, 3);
+  // Slumpa om du vill, och begränsa hur många kort som returneras
+  const out = randomize ? shuffleCopy(filled) : filled;
+  return out.slice(0, categoryLimit);
+}
+
+// Stabil kopia av Fisher–Yates (muterar inte originalet)
+function shuffleCopy(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 // Bygger upp "kategorikort" till startsidan (ämnen + resurser + frågor)
@@ -2453,7 +2488,12 @@ app.get('/question/:id', (req, res) => {
     WHERE q.id = ?
   `).get(id);
 
-  if (!q) return res.status(404).render('404', { title: 'Hittades inte' });
+if (!q) {
+  return res.status(404).render('404', { 
+    title: 'Hittades inte',
+    missingPath: req.originalUrl || req.url || ''
+  });
+}
  
   // Räkna upp visningar (enkelt läge)
 db.prepare(`UPDATE questions SET views = COALESCE(views,0) + 1 WHERE id = ?`).run(id);
@@ -2490,28 +2530,46 @@ q.views = (q.views || 0) + 1;
 app.get('/', (req, res) => {
   const user = getUser(req);
 
-  const topics = db.prepare(`
-    SELECT b.id, t.title, t.excerpt, t.tags, b.updated_at
-    FROM topics_base b
-    JOIN topics t ON t.id = b.id
-    ORDER BY b.updated_at DESC
-    LIMIT 12
-  `).all();
+  // Kategorikort – se till att buildCategoriesMixed INTE begränsar till 3 längre
+  const categoriesShow = buildCategoriesMixed({ categoryLimit: 3, itemsPerCard: 5, randomize: true });
 
+  // Senaste frågor (sidebar)
   const latestQuestions = db.prepare(`
     SELECT q.id, q.title, q.status, q.created_at
     FROM questions q
     ORDER BY q.created_at DESC
-    LIMIT 6
+    LIMIT 7
   `).all();
 
-  const categoriesShow = buildCategoriesMixed();
-  res.set('Cache-Control','no-store');
+  // Senaste resurs (highlight)
+  const latestResource = db.prepare(`
+    SELECT t.id, t.title, IFNULL(t.excerpt, '') AS snippet
+    FROM topics t
+    JOIN topics_base b ON b.id = t.id
+    WHERE t.is_resource = 1
+    ORDER BY b.updated_at DESC
+    LIMIT 1
+  `).get() || null;
 
-  // 🔹 Topp 6 mest använda taggar
-  let popularTags = [];
+  // “Senaste ämnen”
+  const latestSubjects = db.prepare(`
+    SELECT t.id, t.title, IFNULL(t.excerpt, '') AS snippet
+    FROM topics t
+    JOIN topics_base b ON b.id = t.id
+    WHERE IFNULL(t.is_resource, 0) = 0
+    ORDER BY b.updated_at DESC
+    LIMIT 4
+  `).all().map(r => ({
+    id: r.id,
+    title: r.title,
+    snippet: r.snippet,
+    icon: 'ti-file-text' // EJS läser res.icon – sätt default
+  }));
+
+  // Populära ämnen/taggar för chipparna
+  let popularTopics = [];
   try {
-    popularTags = db.prepare(`
+    popularTopics = db.prepare(`
       WITH t AS (
         SELECT lower(trim(value)) AS tag
         FROM topics
@@ -2524,39 +2582,48 @@ app.get('/', (req, res) => {
         JOIN json_each('["' || replace(IFNULL(answer_tags,''), ',', '","') || '"]')
         WHERE value <> ''
       )
-      SELECT tag, COUNT(*) AS cnt
+      SELECT tag
       FROM (
-        SELECT tag FROM t
-        UNION ALL
-        SELECT tag FROM q
+        SELECT tag, COUNT(*) AS cnt
+        FROM (
+          SELECT tag FROM t
+          UNION ALL
+          SELECT tag FROM q
+        )
+        GROUP BY tag
       )
-      GROUP BY tag
       ORDER BY cnt DESC, tag ASC
       LIMIT 6
     `).all().map(r => r.tag);
   } catch {
-    popularTags = db.prepare(`
+    popularTopics = db.prepare(`
       WITH t AS (
         SELECT lower(trim(value)) AS tag
         FROM topics
         JOIN json_each('["' || replace(IFNULL(tags,''), ',', '","') || '"]')
         WHERE value <> ''
       )
-      SELECT tag, COUNT(*) AS cnt
-      FROM t
-      GROUP BY tag
+      SELECT tag
+      FROM (
+        SELECT tag, COUNT(*) AS cnt
+        FROM t
+        GROUP BY tag
+      )
       ORDER BY cnt DESC, tag ASC
       LIMIT 6
     `).all().map(r => r.tag);
   }
 
+  res.set('Cache-Control','no-store');
   res.render('home', {
     user,
-    topics,
-    latestQuestions,
-    categoriesShow,
-    q: '',
-    popularTags // 🔹 skicka till vyn (hero.ejs ser den också)
+    //  EJS använder följande nycklar:
+    categoriesShow,                 // -> _categories
+    latestQuestions,                // -> _latestQuestions
+    latestResource,                 // -> _latestResource
+    popularResources: latestSubjects, // -> _resources (grid med “Senaste ämnen”)
+    popularTopics,                  // -> _popularTopics (taggar)
+    q: ''
   });
 });
 
@@ -2651,15 +2718,23 @@ app.get('/questions/:id', (req, res) => {
     LIMIT 1
   `).get(id);
 
-  if (!q) return res.status(404).render('404', { title: 'Fråga saknas' });
+if (!q) {
+  return res.status(404).render('404', { 
+    title: 'Fråga saknas',
+    missingPath: req.originalUrl || req.url || ''
+  });
+}
 
   // --- Viktigt: släpp igenom admin/support OCH författaren ---
   const isStaff  = me && (me.role === 'admin' || me.role === 'support');
   const isAuthor = me && q.user_id && Number(me.id) === Number(q.user_id);
 
-  if (Number(q.hidden) === 1 && !isStaff && !isAuthor) {
-    return res.status(404).render('404', { title: 'Fråga saknas' });
-  }
+if (Number(q.hidden) === 1 && !isStaff && !isAuthor) {
+  return res.status(404).render('404', {
+    title: 'Fråga saknas',
+    missingPath: req.originalUrl || req.url || ''
+  });
+}
 
   // Räkna upp visningar
   db.prepare(`UPDATE questions SET views = COALESCE(views,0) + 1 WHERE id = ?`).run(id);
@@ -3331,9 +3406,12 @@ app.get('/resources/:id', (req, res) => {
     } catch (_) {/* ignore */}
   }
 
-  if (!resource || !resource.is_resource) {
-    return res.status(404).render('404', { title: 'Resurs saknas' });
-  }
+if (!resource || !resource.is_resource) {
+  return res.status(404).render('404', {
+    title: 'Resurs saknas',
+    missingPath: req.originalUrl || req.url || ''
+  });
+}
 
   res.locals.showHero = false;
   res.render('resource-show', {
@@ -3827,10 +3905,12 @@ app.get('/category/:id', (req, res) => {
     SELECT id, title FROM categories WHERE id = ?
   `).get(catId);
 
-  if (!category) {
-    return res.status(404).render('404', { title: 'Kategori saknas' });
-  }
-
+if (!category) {
+  return res.status(404).render('404', {
+    title: 'Kategori saknas',
+    missingPath: req.originalUrl || req.url || ''
+  });
+}
   // Ämnen + resurser i kategorin
   const topicItems = db.prepare(`
     SELECT 
@@ -4096,72 +4176,6 @@ app.use((req, res) => {
     user: me || null,
     path: req.originalUrl || '/'
   });
-});
-
-// ---- DEBUG: Visa vilka staff som skulle få mail ----
-app.get('/admin/debug/staff-emails', requireAdmin, (req, res) => {
-  const rows = db.prepare(`
-    SELECT id, name, email, role, 
-           CASE WHEN is_active IS NULL THEN 1 ELSE is_active END AS is_active
-    FROM users
-    ORDER BY 
-      CASE role 
-        WHEN 'admin' THEN 1 
-        WHEN 'support' THEN 2 
-        ELSE 3 
-      END, 
-      lower(email)
-  `).all();
-
-  // Samma logik som i mailer.js → vilka kvalar in?
-  const qualifies = (u) =>
-    (u.role === 'admin' || u.role === 'support') &&
-    Number(u.is_active) === 1 &&
-    u.email && String(u.email).trim().includes('@');
-
-  const html = `
-    <section style="max-width:900px;margin:2rem auto;font-family:system-ui">
-      <h1>Debug: Staff emails</h1>
-      <p>Visar alla users och markerar vilka som kvalar för staff-utskick.</p>
-
-      <form method="POST" action="/admin/debug/staff-emails/test" style="margin:.5rem 0 1rem">
-        <button style="padding:.5rem 1rem;background:#0369a1;color:#fff;border:0;border-radius:.5rem;cursor:pointer">
-          Skicka testmail till alla kvalificerade
-        </button>
-      </form>
-
-      <table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%">
-        <thead style="background:#f1f5f9">
-          <tr>
-            <th>ID</th><th>Namn</th><th>Email</th><th>Roll</th><th>is_active</th><th>Kvalificerar?</th><th>Orsak om nej</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map(u => {
-            const ok = qualifies(u);
-            let why = '';
-            if (!ok) {
-              const probs = [];
-              if (!(u.role === 'admin' || u.role === 'support')) probs.push('roll ≠ admin/support');
-              if (!(Number(u.is_active) === 1)) probs.push('is_active ≠ 1');
-              if (!(u.email && String(u.email).trim().includes('@'))) probs.push('ogiltig email');
-              why = probs.join(', ');
-            }
-            return `<tr>
-              <td>${u.id}</td>
-              <td>${u.name || ''}</td>
-              <td>${u.email || ''}</td>
-              <td>${u.role}</td>
-              <td>${Number(u.is_active)}</td>
-              <td style="color:${ok?'#16a34a':'#dc2626'};font-weight:600">${ok?'JA':'NEJ'}</td>
-              <td>${why}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </section>
-  `;
-  res.send(html);
 });
 
 // Kör en initial sync när servern startar
