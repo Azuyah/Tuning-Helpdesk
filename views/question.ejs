@@ -312,7 +312,7 @@
     <h2 class="text-lg font-semibold text-slate-900 mb-4">Fler ämnen i denna kategori</h2>
     <% if (relatedTopics && relatedTopics.length) { %>
       <ul class="space-y-3">
-          <% relatedTopics.slice(0,5).forEach(function(rt){ %>
+<% relatedTopics.slice(0,5).forEach(function(rt){
              const isRes  = (rt.kind !== 'question') && Number(rt.is_resource) === 1;
              const href   = rt.kind === 'question'
                 ? (`/questions/${rt.id}`)
