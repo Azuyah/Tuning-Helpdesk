@@ -5,33 +5,81 @@
   <!-- Vänsterkolumn -->
   <div class="lg:col-span-2 space-y-8">
 
-    <!-- Sidhuvud: Tillbaka + Admin-knappar -->
-    <div class="flex items-center justify-between">
-      <button type="button"
-              class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50"
-              onclick="if (history.length>1) history.back(); else location.href='/'">
-        <i class="ti ti-arrow-left"></i> Tillbaka
-      </button>
+<!-- Sidhuvud: Tillbaka + Admin-knappar -->
+<div class="flex items-center justify-between">
+  <button type="button"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50"
+          onclick="if (history.length>1) history.back(); else location.href='/'">
+    <i class="ti ti-arrow-left"></i> Tillbaka
+  </button>
 
-      <% if (user && user.role === 'admin') { %>
-        <div class="flex items-center gap-2">
-          <a href="/admin/edit-topic/<%= encodeURIComponent(topic.id) %>"
-             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
-            <i class="ti ti-edit"></i> Redigera
-          </a>
+  <% if (user && user.role === 'admin') { %>
+    <% const isFeatured = Number(topic.is_featured) === 1; %>
+    <div class="flex items-center gap-2">
+      <a href="/admin/edit-topic/<%= encodeURIComponent(topic.id) %>"
+         class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
+        <i class="ti ti-edit"></i> Redigera
+      </a>
 
-          <form method="POST"
-                action="/admin/topics/<%= encodeURIComponent(topic.id) %>/delete"
-                data-del-form
-                data-title="<%- (topic.title || '').replace(/\"/g,'&quot;') %>">
-            <button type="submit"
-                    class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
-              <i class="ti ti-trash"></i> Ta bort
-            </button>
-          </form>
-        </div>
-      <% } %>
+      <form method="POST"
+            action="/admin/topics/<%= encodeURIComponent(topic.id) %>/delete"
+            data-del-form
+            data-title="<%- (topic.title || '').replace(/\"/g,'&quot;') %>">
+        <% if (typeof csrfToken !== 'undefined') { %>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% } %>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
+          <i class="ti ti-trash"></i> Ta bort
+        </button>
+      </form>
+
+      <!-- Stjärnknapp -->
+      <form method="POST"
+            action="/admin/topics/<%= encodeURIComponent(topic.id) %>/<%= isFeatured ? 'unfeature' : 'feature' %>">
+        <% if (typeof csrfToken !== 'undefined') { %>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% } %>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg <%= isFeatured ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-700 hover:bg-slate-800' %> text-white px-3 py-2 text-sm font-semibold"
+                title="<%= isFeatured ? 'Avstjärnmärk detta ämne' : 'Stjärnmärk detta ämne' %>">
+          <i class="ti <%= isFeatured ? 'ti-star-filled' : 'ti-star' %>"></i>
+          <%= isFeatured ? 'Avstjärnmärk' : 'Stjärnmärk' %>
+        </button>
+      </form>
     </div>
+  <% } %>
+</div>
+
+<!-- Stjärnmärkta ämnen (lägg denna utanför admin-blocket) -->
+<% if (featuredTopics && featuredTopics.length) { %>
+  <section class="mb-10">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold text-slate-900 flex items-center gap-2">
+        <i class="ti ti-star text-amber-500"></i> Stjärnmärkta ämnen
+      </h2>
+      <a href="/explore?tab=topics&starred=1" class="text-sky-600 hover:underline">Visa alla</a>
+    </div>
+
+    <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <% featuredTopics.forEach(function(t){ %>
+        <li class="rounded-xl border border-slate-200 bg-white p-4 hover:shadow-sm">
+          <a href="/topic/<%= encodeURIComponent(t.id) %>" class="text-slate-800 font-medium hover:text-sky-700">
+            <span class="inline-flex items-center gap-2">
+              <i class="ti ti-star text-amber-500"></i>
+              <span class="truncate"><%= t.title %></span>
+            </span>
+          </a>
+          <% if (t.excerpt) { %>
+            <p class="mt-1 text-sm text-slate-500 line-clamp-2"><%= t.excerpt %></p>
+          <% } %>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+<% } else { %>
+  <div class="text-xs text-slate-500">featuredTopics.length = <%= (featuredTopics && featuredTopics.length) || 0 %></div>
+<% } %>
 
     <!-- FRÅGA (eget kort, visas bara om detta är ett svar på en fråga) -->
     <% if (sourceQuestion) { %>

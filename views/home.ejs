@@ -300,7 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   <% if (_topics.length) { %>
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
-      <% _topics.slice(0,4).forEach(function(t){ %>
+      <% _topics.slice(0,6).forEach(function(t){ %>
         <article class="group rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
           <div class="mb-3">
             <i class="ti <%= t.icon || 'ti-file-text' %> text-3xl text-sky-500"></i>
@@ -326,40 +326,94 @@ document.addEventListener("DOMContentLoaded", () => {
 </section>
   </div>
 
+
 <!-- Högerkolumn: Senaste frågor (sidebar) -->
-<% if (_latestQuestions.length) { %>
-<aside class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-fit">
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
-      <i class="ti ti-message-question text-sky-600"></i> Senaste frågor
-    </h2>
-    <a href="/explore?tab=questions" class="text-sky-600 hover:underline text-sm">Alla</a>
-  </div>
-  <ul class="divide-y divide-slate-200">
-<% _latestQuestions.filter(q => Number(q.hidden) !== 1).slice(0,8).forEach(q => { %>      <li class="py-3">
-        <a href="/questions/<%= q.id %>" class="text-slate-800 hover:text-sky-700 font-medium block truncate">
-          <%= q.title %>
-        </a>
-        <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
-          <span><%= new Date(q.created_at).toLocaleDateString('sv-SE') %></span>
-          <% const lbl = q.status==='answered'?'Besvarad': q.status==='closed'?'Stängd':'Öppen'; %>
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full 
-                       <%= q.status==='answered'?'bg-emerald-100 text-emerald-700':
-                           q.status==='closed'?'bg-slate-100 text-slate-500':
-                           'bg-amber-100 text-amber-700' %>">
-            <%= lbl %>
-          </span>
-          <!-- Visa-knapp längst till höger -->
-          <a href="/questions/<%= q.id %>" 
-             class="ml-auto inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-0.5 text-xs text-slate-600 hover:border-sky-400 hover:text-sky-700">
-            Visa <i class="ti ti-arrow-right text-[10px]"></i>
+<%
+  // för sidebar
+  const _starred = Array.isArray(featuredTopics) ? featuredTopics
+                : (Array.isArray(starredTopics) ? starredTopics : []);
+  const _latestQuestionsSafe = Array.isArray(_latestQuestions) ? _latestQuestions : [];
+%>
+
+<!-- Högerkolumn (samlad container så båda boxarna stannar i samma kolumn) -->
+<aside class="space-y-8">
+
+  <% if (_starred.length) { %>
+  <!-- Stjärnmärkta ämnen (samma layout som "Senaste frågor") -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-fit">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+        <i class="ti ti-star text-amber-500"></i> Stjärnmärkta ämnen
+      </h2>
+      <a href="/explore?tab=topics&starred=1" class="text-sky-600 hover:underline text-sm">Visa alla</a>
+    </div>
+
+    <ul class="divide-y divide-slate-200">
+      <% _starred.slice(0,8).forEach(function(t){
+           const isRes   = Number(t.is_resource) === 1;
+           const href    = isRes ? `/resources/${encodeURIComponent(t.id)}` : `/topic/${encodeURIComponent(t.id)}`;
+           const badgeCls= isRes ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700';
+      %>
+        <li class="py-3">
+          <a href="<%= href %>" class="text-slate-800 hover:text-sky-700 font-medium block truncate">
+            <%= t.title %>
           </a>
-        </div>
-      </li>
-    <% }); %>
-  </ul>
+          <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+            <span><%= new Date(t.updated_at || t.created_at || Date.now()).toLocaleDateString('sv-SE') %></span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full <%= badgeCls %> border border-slate-200">
+              <%= isRes ? 'Resurs' : 'Ämne' %>
+            </span>
+            <a href="<%= href %>"
+               class="ml-auto inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-0.5 text-xs text-slate-600 hover:border-sky-400 hover:text-sky-700">
+              Visa <i class="ti ti-arrow-right text-[10px]"></i>
+            </a>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+  <% } %>
+
+  <% if (_latestQuestionsSafe.length) { %>
+  <!-- Senaste frågor (oförändrad layout) -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-fit">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
+        <i class="ti ti-message-question text-sky-600"></i> Senaste frågor
+      </h2>
+      <a href="/explore?tab=questions" class="text-sky-600 hover:underline text-sm">Alla</a>
+    </div>
+    <ul class="divide-y divide-slate-200">
+      <% _latestQuestionsSafe
+           .filter(q => Number(q.hidden) !== 1)
+           .slice(0,8)
+           .forEach(q => {
+             const lbl  = q.status==='answered' ? 'Besvarad' : (q.status==='closed' ? 'Stängd' : 'Öppen');
+             const tone = q.status==='answered' ? 'bg-emerald-100 text-emerald-700'
+                       : q.status==='closed'   ? 'bg-slate-100 text-slate-500'
+                                               : 'bg-amber-100 text-amber-700';
+      %>
+        <li class="py-3">
+          <a href="/questions/<%= q.id %>" class="text-slate-800 hover:text-sky-700 font-medium block truncate">
+            <%= q.title %>
+          </a>
+          <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+            <span><%= new Date(q.created_at).toLocaleDateString('sv-SE') %></span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full <%= tone %>">
+              <%= lbl %>
+            </span>
+            <a href="/questions/<%= q.id %>"
+               class="ml-auto inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-0.5 text-xs text-slate-600 hover:border-sky-400 hover:text-sky-700">
+              Visa <i class="ti ti-arrow-right text-[10px]"></i>
+            </a>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  </div>
+  <% } %>
+
 </aside>
-<% } %>
 </section>
 
 <!-- CTA (kompakt tvåkolumnslayout) -->

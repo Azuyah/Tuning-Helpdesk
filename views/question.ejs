@@ -7,43 +7,69 @@
   <div class="lg:col-span-2 space-y-8">
 
     <!-- Sidhuvud: Tillbaka + Admin-knappar -->
-    <div class="flex items-center justify-between">
-      <button type="button"
-              class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50"
-              onclick="if (history.length>1) history.back(); else location.href='/'">
-        <i class="ti ti-arrow-left"></i> Tillbaka
-      </button>
+<div class="flex items-center justify-between">
+  <button type="button"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50"
+          onclick="if (history.length>1) history.back(); else location.href='/'">
+    <i class="ti ti-arrow-left"></i> Tillbaka
+  </button>
 
-      <% if (user && (user.role === 'admin' || user.role === 'support')) { %>
+  <% if (user && (user.role === 'admin' || user.role === 'support')) { %>
 
-<div class="flex items-center gap-2">
-  <a href="/admin/questions/<%= q.id %>"
-     class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
-    <i class="ti ti-edit"></i> <%= q.is_answered ? 'Redigera svar' : 'Svara' %>
-  </a>
+    <% 
+      // Förbered topic för stjärnknappen
+      const _linked = Array.isArray(linked) ? linked : [];
+      const linkedTopic = _linked.length ? _linked[0] : null;
+      const isFeaturedTopic = linkedTopic ? Number(linkedTopic.is_featured) === 1 : false;
+    %>
 
-  <% const needsModeration = Number(q.flagged) === 1 && Number(q.hidden) === 1; %>
-  <% if (needsModeration) { %>
-    <form method="POST" action="/admin/questions/<%= q.id %>/approve">
-      <button type="submit"
-              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-semibold hover:bg-emerald-700">
-        <i class="ti ti-check"></i> Godkänn
-      </button>
-    </form>
-  <% } %>
+    <div class="flex items-center gap-2">
+      <a href="/admin/questions/<%= q.id %>"
+         class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
+        <i class="ti ti-edit"></i> <%= q.is_answered ? 'Redigera svar' : 'Svara' %>
+      </a>
 
+      <% const needsModeration = Number(q.flagged) === 1 && Number(q.hidden) === 1; %>
+      <% if (needsModeration) { %>
+        <form method="POST" action="/admin/questions/<%= q.id %>/approve">
+          <button type="submit"
+                  class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-semibold hover:bg-emerald-700">
+            <i class="ti ti-check"></i> Godkänn
+          </button>
+        </form>
+      <% } %>
+
+      <form method="POST"
+            action="/admin/questions/<%= q.id %>/delete"
+            data-del-form
+            data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
+          <i class="ti ti-trash"></i> Ta bort
+        </button>
+      </form>
+
+<% if (linkedTopic) { %>
   <form method="POST"
-        action="/admin/questions/<%= q.id %>/delete"
-        data-del-form
-        data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
+        action="/admin/topics/<%= encodeURIComponent(linkedTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
+    <% if (typeof csrfToken !== 'undefined') { %>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <% } %>
     <button type="submit"
-            class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
-      <i class="ti ti-trash"></i> Ta bort
+            class="inline-flex items-center gap-2 rounded-lg <%= isFeaturedTopic ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-700 hover:bg-slate-800' %> text-white px-3 py-2 text-sm font-semibold"
+            title="<%= isFeaturedTopic ? 'Avstjärnmärk detta ämne' : 'Stjärnmärk detta ämne' %>">
+      <i class="ti <%= isFeaturedTopic ? 'ti-star-filled' : 'ti-star' %>"></i>
+      <%= isFeaturedTopic ? 'Avstjärnmärk' : 'Stjärnmärk' %>
     </button>
   </form>
-</div>
-      <% } %>
-    </div>
+<% } else { %>
+  <button type="button"
+          class="inline-flex items-center gap-2 rounded-lg bg-slate-200 text-slate-500 px-3 py-2 text-sm font-semibold cursor-not-allowed"
+          title="Koppla först till ett ämne för att kunna stjärnmarkera">
+    <i class="ti ti-star"></i> Stjärnmärk
+  </button>
+<% } %>
+
     <div class="relative">
   <% if (showHiddenBanner) { %>
     <!-- Dim overlay -->

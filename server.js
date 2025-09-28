@@ -102,6 +102,34 @@ function addColumnIfMissing(table, col, ddl) {
     db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`).run();
   }
 }
+// 2) Se till att topics-tabellen finns
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS topics (
+    id           INTEGER PRIMARY KEY,
+    slug         TEXT UNIQUE,
+    title        TEXT NOT NULL,
+    body         TEXT,
+    is_resource  INTEGER NOT NULL DEFAULT 0,
+    is_featured  INTEGER NOT NULL DEFAULT 0,
+    sort_order   INTEGER,
+    created_at   TEXT DEFAULT (datetime('now')),
+    updated_at   TEXT
+  )
+`).run();
+
+// 3) Lägg bara till kolumnen om den saknas (om du kör mot äldre DB)
+const hasIsFeatured = db.prepare(`
+  SELECT 1
+  FROM pragma_table_info('topics')
+  WHERE name = 'is_featured'
+`).get();
+
+if (!hasIsFeatured) {
+  db.prepare(`ALTER TABLE topics ADD COLUMN is_featured INTEGER NOT NULL DEFAULT 0`).run();
+}
+
+// 4) Index
+db.prepare(`CREATE INDEX IF NOT EXISTS idx_topics_is_featured ON topics(is_featured)`).run();
 
 // --- Migrationer ---
 // topics_base.views
@@ -114,8 +142,7 @@ try { addColumnIfMissing('questions', 'answered_role', 'TEXT'); } catch (_) {}
 try { addColumnIfMissing('questions', 'answered_by',   'TEXT'); } catch (_) {}
 addColumnIfMissing('feedbacks', 'updated_at', 'TEXT');
 addColumnIfMissing('users', 'is_active', 'INTEGER DEFAULT 1');
-
-// Backfill: sätt default-värden där svar redan finns men fält saknas
+try { addColumnIfMissing('topics', 'is_starred', 'INTEGER DEFAULT 0'); } catch (_) {}
 try {
   db.prepare(`
     UPDATE questions
@@ -1259,6 +1286,20 @@ try {
       url: `/topic/${r.id}`
     }));
   }
+  let featuredTopics = [];
+try {
+  featuredTopics = db.prepare(`
+    SELECT t.id, t.title, t.is_resource, t.excerpt
+    FROM topics t
+    WHERE t.is_featured = 1
+    ORDER BY t.title COLLATE NOCASE
+    LIMIT 6
+  `).all();
+} catch (e) {
+  console.error('[topic] featuredTopics SELECT failed:', e);
+  featuredTopics = [];
+}
+
 
   res.locals.showHero = false;
   res.render('topic', {
@@ -1267,7 +1308,8 @@ try {
     sourceQuestion,
     relatedMixed,   // (taggar) oförändrat
     relatedTopics,  // (kategori) nu med korrekta {id, title, kind, is_resource, url}
-    user: getUser(req)
+    user: getUser(req),
+    featuredTopics
   });
 });
 
@@ -2628,6 +2670,15 @@ app.get('/', (req, res) => {
     LIMIT 8
   `).all();
 
+const featuredTopics = db.prepare(`
+  SELECT id, title, is_resource, excerpt
+  FROM topics
+  WHERE is_featured = 1
+  ORDER BY title COLLATE NOCASE
+  LIMIT 6
+`).all();
+
+console.log('[HOME] featuredTopics count:', featuredTopics.length, featuredTopics);
   // Senaste resurs (highlight)
   const latestResource = db.prepare(`
     SELECT t.id, t.title, IFNULL(t.excerpt, '') AS snippet
@@ -2710,7 +2761,8 @@ app.get('/', (req, res) => {
     latestResource,                 // -> _latestResource
     popularResources: latestSubjects, // -> _resources (grid med “Senaste ämnen”)
     popularTopics,                  // -> _popularTopics (taggar)
-    q: ''
+    q: '',
+    featuredTopics
   });
 });
 
@@ -3586,6 +3638,27 @@ function renderProfile(res, userId, { ok = null, err = null } = {}) {
     err
   });
 }
+
+app.post('/admin/topics/:id/feature', requireStaff, (req, res) => {
+  const id = String(req.params.id); // behåll som TEXT
+  db.prepare(`UPDATE topics SET is_featured = 1 WHERE id = ?`).run(id);
+  res.redirect(req.get('Referrer') || '/');
+});
+
+app.post('/admin/topics/:id/unfeature', requireStaff, (req, res) => {
+  const id = String(req.params.id);
+  db.prepare(`UPDATE topics SET is_featured = 0 WHERE id = ?`).run(id);
+  res.redirect(req.get('Referrer') || '/');
+});
+
+// (valfritt) toggle
+app.post('/admin/topics/:id/feature-toggle', requireStaff, (req, res) => {
+  const id = Number(req.params.id);
+  const row = db.prepare(`SELECT is_featured FROM topics WHERE id=?`).get(id);
+  const nextVal = row && Number(row.is_featured) === 1 ? 0 : 1;
+  db.prepare(`UPDATE topics SET is_featured=? WHERE id=?`).run(nextVal, id);
+  res.redirect('back');
+});
 
 // --- Uppdatera profil (namn/e-post) ---
 
