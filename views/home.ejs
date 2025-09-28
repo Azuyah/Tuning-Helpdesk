@@ -146,21 +146,23 @@ const _popularTopics   = (typeof popularTopics !== 'undefined' && Array.isArray(
                it.type==='resource' ? `/resources/${encodeURIComponent(it.id)}` :
                it.type==='question' ? `/questions/${encodeURIComponent(it.id)}` :
                                       `/topic/${encodeURIComponent(it.id)}`;
-
-             const badge =
-               it.type==='question'
-                 ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>'
-                 : (it.type==='resource'
-                     ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>'
-                     : '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>');
         %>
-          <li>
-            <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-600 text-sm">
-              <i class="ti ti-arrow-narrow-right text-slate-400 text-xs"></i>
-              <%- badge %>
-              <span class="truncate"><%= it.title %></span>
-            </a>
-          </li>
+<li>
+  <a href="<%= href %>" class="flex items-center gap-2 hover:text-sky-600">
+    <i class="ti ti-arrow-narrow-right text-slate-400 text-xs"></i>
+    <% if (it.type === 'resource') { %>
+      <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200
+                   dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">Resurs</span>
+    <% } else if (it.type === 'question') { %>
+      <span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200
+                   dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800">Fråga</span>
+    <% } else { %>
+      <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200
+                   dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800">Ämne</span>
+    <% } %>
+    <span class="truncate text-sm text-slate-700"><%= it.title %></span>
+  </a>
+</li>
         <% }) %>
       </ul>
 
