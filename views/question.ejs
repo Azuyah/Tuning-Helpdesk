@@ -16,22 +16,32 @@
 
       <% if (user && (user.role === 'admin' || user.role === 'support')) { %>
 
-        <div class="flex items-center gap-2">
-          <!-- Redigera/Ta bort fråga (alltid) -->
-          <a href="/admin/questions/<%= q.id %>"
-             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
-            <i class="ti ti-edit"></i> <%= q.is_answered ? 'Redigera svar' : 'Svara' %>
-          </a>
-          <form method="POST"
-                action="/admin/questions/<%= q.id %>/delete"
-                data-del-form
-                data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
-            <button type="submit"
-                    class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
-              <i class="ti ti-trash"></i> Ta bort
-            </button>
-          </form>
-        </div>
+<div class="flex items-center gap-2">
+  <a href="/admin/questions/<%= q.id %>"
+     class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
+    <i class="ti ti-edit"></i> <%= q.is_answered ? 'Redigera svar' : 'Svara' %>
+  </a>
+
+  <% const needsModeration = Number(q.flagged) === 1 && Number(q.hidden) === 1; %>
+  <% if (needsModeration) { %>
+    <form method="POST" action="/admin/questions/<%= q.id %>/approve">
+      <button type="submit"
+              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-sm font-semibold hover:bg-emerald-700">
+        <i class="ti ti-check"></i> Godkänn
+      </button>
+    </form>
+  <% } %>
+
+  <form method="POST"
+        action="/admin/questions/<%= q.id %>/delete"
+        data-del-form
+        data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
+    <button type="submit"
+            class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
+      <i class="ti ti-trash"></i> Ta bort
+    </button>
+  </form>
+</div>
       <% } %>
     </div>
     <div class="relative">
