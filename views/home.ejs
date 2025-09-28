@@ -336,7 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <a href="/explore?tab=questions" class="text-sky-600 hover:underline text-sm">Alla</a>
   </div>
   <ul class="divide-y divide-slate-200">
-    <% _latestQuestions.slice(0,7).forEach(q => { %>
+    <% _latestQuestions.slice(0,8).forEach(q => { %>
       <li class="py-3">
         <a href="/questions/<%= q.id %>" class="text-slate-800 hover:text-sky-700 font-medium block truncate">
           <%= q.title %>
