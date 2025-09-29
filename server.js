@@ -241,6 +241,43 @@ function initSchemaAndSeed() {
       FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE,
       FOREIGN KEY(topic_id) REFERENCES topics_base(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS user_favorites (
+  user_id    INTEGER NOT NULL,
+  topic_id   TEXT    NOT NULL,
+  created_at TEXT    DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, topic_id),
+  FOREIGN KEY(user_id)  REFERENCES users(id)        ON DELETE CASCADE,
+  FOREIGN KEY(topic_id) REFERENCES topics_base(id)  ON DELETE CASCADE
+);
+
+/* Index för listningar (profil-sida) */
+CREATE INDEX IF NOT EXISTS idx_user_favorites_user_created
+  ON user_favorites(user_id, created_at DESC);
+
+/* Index för existenskoll/toggla */
+CREATE INDEX IF NOT EXISTS idx_user_favorites_topic
+  ON user_favorites(topic_id);
+
+  CREATE TABLE IF NOT EXISTS user_favorites_questions (
+  user_id     INTEGER NOT NULL,
+  question_id INTEGER NOT NULL,
+  created_at  TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, question_id),
+  FOREIGN KEY(user_id)     REFERENCES users(id)      ON DELETE CASCADE,
+  FOREIGN KEY(question_id) REFERENCES questions(id)  ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_ufq_user_created ON user_favorites_questions(user_id, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS user_favorites_questions (
+    user_id    INTEGER NOT NULL,
+    question_id INTEGER NOT NULL,
+    created_at  TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, question_id),
+    FOREIGN KEY(user_id)   REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(question_id) REFERENCES questions(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_favq_user_created
+    ON user_favorites_questions(user_id, created_at DESC);
   `);
 
   // Extra kolumner
@@ -520,6 +557,16 @@ app.use((req, res, next) => {
 
   next();
 });
+
+function requireLogin(req, res, next) {
+  const me = getUser(req);   // du använder redan getUser(req) på andra ställen
+  if (!me) {
+    // Om ej inloggad → skicka till login
+    return res.redirect('/login');
+  }
+  req.user = me;
+  next();
+}
 
 // Upsert-statement för dealers
 const upsertDealerStmt = db.prepare(`
@@ -1065,6 +1112,14 @@ if (!topic) {
       `).get(topic.id);
     } catch (_) {}
   }
+  const me = getUser(req);
+let isFavorite = false;
+if (me) {
+  const row = db.prepare(`
+    SELECT 1 FROM user_favorites WHERE user_id=? AND topic_id=?
+  `).get(me.id, topic.id);
+  isFavorite = !!row;
+}
 
   // Sätt på topic-objektet så EJS kan visa
   if (category) {
@@ -1301,16 +1356,37 @@ try {
   featuredTopics = [];
 }
 
+const viewer = getUser(req); 
+let isFavorited = false;
+let favoriteCount = 0;
+
+try {
+  favoriteCount = db.prepare(`
+    SELECT COUNT(*) AS n FROM user_favorites WHERE topic_id = ?
+  `).get(topic.id).n || 0;
+
+  if (viewer) {
+    isFavorited = !!db.prepare(`
+      SELECT 1 FROM user_favorites WHERE user_id = ? AND topic_id = ?
+    `).get(viewer.id, topic.id);
+  }
+} catch (e) {
+  console.error('[topic] user_favorites check failed:', e);
+}
+
+
 
   res.locals.showHero = false;
   res.render('topic', {
     title: topic.title,
     topic,
     sourceQuestion,
-    relatedMixed,   // (taggar) oförändrat
-    relatedTopics,  // (kategori) nu med korrekta {id, title, kind, is_resource, url}
+    relatedMixed,
+    relatedTopics,
     user: getUser(req),
-    featuredTopics
+    featuredTopics,
+    isFavorited,
+    favoriteCount 
   });
 });
 
@@ -3147,6 +3223,13 @@ try {
 const machinesRows = db.prepare('SELECT machine FROM question_machines WHERE question_id=?').all(id);
 const machines = machinesRows.map(r => r.machine);
 
+  let isQFavorited = false;
+if (me) {
+  isQFavorited = !!db.prepare(`
+    SELECT 1 FROM user_favorites_questions WHERE user_id=? AND question_id=?
+  `).get(me.id, q.id);
+}
+
   res.locals.showHero = false;
   res.render('question', {
     title: `Fråga: ${q.title}`,
@@ -3157,7 +3240,8 @@ const machines = machinesRows.map(r => r.machine);
     linkedQuestion,       // så du kan visa blå länk till frågan om du vill
     relatedQuestions,     // blandat (fråga/ämne/resurs) på taggar
     relatedTopics,        // allt i samma kategori (ämnen + resurser + frågor)
-    user: me
+    user: me,
+    isQFavorited
   });
 });
 
@@ -3480,81 +3564,50 @@ app.post('/admin/feedback/:id/toggle', requireStaff, (req, res) => {
 
 // Visa en specifik resurs (separat layout från vanliga topics)
 app.get('/resources/:id', (req, res) => {
-  // Försök via topic_categories först
+  const me = getUser(req);
+  const id = String(req.params.id);
+
   const row = db.prepare(`
-    SELECT
-      b.id,
-      t.title,
-      t.excerpt,
-      t.body,
-      t.tags,
-      b.updated_at,
-      t.is_resource,
-      t.download_url,
-      t.downloads,
-      u.name AS author_name,
-
-      /* Kategori som SUBSELECT → funkar även om det finns flera, tar 1 st */
-      (
-        SELECT c.id
-        FROM topic_categories tc
-        JOIN categories c ON c.id = tc.category_id
-        WHERE tc.topic_id = t.id
-        LIMIT 1
-      ) AS category_id,
-      (
-        SELECT c.title
-        FROM topic_categories tc
-        JOIN categories c ON c.id = tc.category_id
-        WHERE tc.topic_id = t.id
-        LIMIT 1
-      ) AS category_title
-
+    SELECT b.id, t.title, t.excerpt, t.body, t.tags, b.updated_at,
+           t.is_resource, t.download_url, t.downloads,
+           u.name AS author_name,
+           (SELECT c.id   FROM topic_categories tc JOIN categories c ON c.id=tc.category_id WHERE tc.topic_id=t.id LIMIT 1) AS category_id,
+           (SELECT c.title FROM topic_categories tc JOIN categories c ON c.id=tc.category_id WHERE tc.topic_id=t.id LIMIT 1) AS category_title
     FROM topics_base b
     JOIN topics t ON t.id = b.id
     LEFT JOIN users u ON u.id = b.created_by
     WHERE b.id = ?
     LIMIT 1
-  `).get(req.params.id);
+  `).get(id);
 
-  // Fallback
   let resource = row;
   if (resource && !resource.category_id && !resource.category_title) {
     try {
       const alt = db.prepare(`
         SELECT
-          (
-            SELECT c.id
-            FROM topic_category tc
-            JOIN categories c ON c.id = tc.category_id
-            WHERE tc.topic_id = ?
-            LIMIT 1
-          ) AS category_id,
-          (
-            SELECT c.title
-            FROM topic_category tc
-            JOIN categories c ON c.id = tc.category_id
-            WHERE tc.topic_id = ?
-            LIMIT 1
-          ) AS category_title
-      `).get(req.params.id, req.params.id);
+          (SELECT c.id    FROM topic_category tc JOIN categories c ON c.id=tc.category_id WHERE tc.topic_id=? LIMIT 1) AS category_id,
+          (SELECT c.title FROM topic_category tc JOIN categories c ON c.id=tc.category_id WHERE tc.topic_id=? LIMIT 1) AS category_title
+      `).get(id, id);
       resource.category_id    = alt?.category_id ?? null;
       resource.category_title = alt?.category_title ?? null;
-    } catch (_) {/* ignore */}
+    } catch {}
   }
 
-if (!resource || !resource.is_resource) {
-  return res.status(404).render('404', {
-    title: 'Resurs saknas',
-    missingPath: req.originalUrl || req.url || ''
-  });
-}
+  if (!resource || !resource.is_resource) {
+    return res.status(404).render('404', { title: 'Resurs saknas', missingPath: req.originalUrl || req.url || '' });
+  }
+
+  let isFavorited = false;
+  if (me) {
+    isFavorited = !!db.prepare(`SELECT 1 FROM user_favorites WHERE user_id=? AND topic_id=?`).get(me.id, id);
+  }
 
   res.locals.showHero = false;
   res.render('resource-show', {
     title: resource.title,
     resource,
-    user: getUser(req)
+    user: me,
+    isFavorited
   });
 });
 
@@ -3656,6 +3709,118 @@ app.post('/admin/topics/:id/feature-toggle', requireStaff, (req, res) => {
   const nextVal = row && Number(row.is_featured) === 1 ? 0 : 1;
   db.prepare(`UPDATE topics SET is_featured=? WHERE id=?`).run(nextVal, id);
   res.redirect(req.get('Referrer') || `/topic/${encodeURIComponent(id)}`);
+});
+
+app.post('/topics/:id/favorite', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const topicId = String(req.params.id);
+
+  try {
+    db.prepare(`
+      INSERT OR IGNORE INTO user_favorites (user_id, topic_id) VALUES (?, ?)
+    `).run(user.id, topicId);
+  } catch (e) {
+    console.error('favorite insert failed', e);
+  }
+
+  res.redirect(req.get('Referrer') || '/');
+});
+
+app.post('/topics/:id/unfavorite', requireLogin, (req, res) => {
+  const user = getUser(req);
+  const topicId = String(req.params.id);
+
+  db.prepare(`DELETE FROM user_favorites WHERE user_id=? AND topic_id=?`)
+    .run(user.id, topicId);
+
+  res.redirect(req.get('Referrer') || '/');
+});
+
+app.get('/profile/favorites', requireLogin, (req, res) => {
+  const me = getUser(req);
+
+  // Ämnen + resurser
+  const favTopics = db.prepare(`
+    SELECT
+      'topic' AS kind,
+      b.id,
+      t.title,
+      t.excerpt,
+      IFNULL(t.is_resource,0) AS is_resource,
+      f.created_at
+    FROM user_favorites f
+    JOIN topics_base b ON b.id = f.topic_id
+    JOIN topics      t ON t.id = b.id
+    WHERE f.user_id = ?
+  `).all(me.id);
+
+  // Frågor
+  const favQuestions = db.prepare(`
+    SELECT
+      'question' AS kind,
+      q.id,
+      q.title,
+      NULL AS excerpt,
+      0    AS is_resource,
+      f.created_at
+    FROM user_favorites_questions f
+    JOIN questions q ON q.id = f.question_id
+    WHERE f.user_id = ?
+  `).all(me.id);
+
+  // Mixa och sortera (senast sparad först)
+  const favorites = [...favTopics, ...favQuestions]
+    .sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+
+  res.render('favorites', {
+    user: me,
+    favorites,
+  });
+});
+
+// kräver att du har requireLogin och getUser
+app.post('/questions/:id/favorite', requireLogin, (req, res) => {
+  const me = getUser(req);
+  const qid = Number(req.params.id);
+  db.prepare(`
+    INSERT OR IGNORE INTO user_favorites_questions (user_id, question_id)
+    VALUES (?, ?)
+  `).run(me.id, qid);
+  res.redirect(req.get('Referrer') || `/questions/${qid}`);
+});
+
+app.post('/questions/:id/unfavorite', requireLogin, (req, res) => {
+  const me = getUser(req);
+  const qid = Number(req.params.id);
+  db.prepare(`
+    DELETE FROM user_favorites_questions
+    WHERE user_id=? AND question_id=?
+  `).run(me.id, qid);
+  res.redirect(req.get('Referrer') || `/questions/${qid}`);
+});
+
+// Resurs → favorit
+app.post('/resources/:id/favorite', requireLogin, (req, res) => {
+  const me = getUser(req);
+  const id = String(req.params.id);
+  try {
+    db.prepare(`
+      INSERT OR IGNORE INTO user_favorites (user_id, topic_id)
+      VALUES (?, ?)
+    `).run(me.id, id);
+  } catch {}
+  res.redirect(req.get('Referrer') || `/resources/${encodeURIComponent(id)}`);
+});
+
+// Resurs → ta bort favorit
+app.post('/resources/:id/unfavorite', requireLogin, (req, res) => {
+  const me = getUser(req);
+  const id = String(req.params.id);
+  try {
+    db.prepare(`DELETE FROM user_favorites WHERE user_id=? AND topic_id=?`)
+      .run(me.id, id);
+  } catch {}
+  res.redirect(req.get('Referrer') || `/resources/${encodeURIComponent(id)}`);
 });
 
 // --- Uppdatera profil (namn/e-post) ---

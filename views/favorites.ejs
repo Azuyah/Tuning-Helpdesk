@@ -1,0 +1,68 @@
+<section class="mx-auto max-w-5xl px-4 py-10 space-y-8">
+  <!-- Rubrik -->
+  <header class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-slate-900">Mina favoriter</h1>
+    <p class="text-slate-500"><%= favorites.length %> sparade</p>
+  </header>
+
+  <% if (!favorites.length) { %>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center text-slate-500">
+      Du har inte lagt till några favoriter ännu.
+    </div>
+  <% } else { %>
+    <ul class="space-y-4">
+      <% favorites.forEach(fav => {
+           // Normalisera typ
+           const kindRaw = (fav.kind || fav.type || '').toString().toLowerCase();
+           const isRes   = Number(fav.is_resource) === 1 || kindRaw === 'resource';
+           const isQ     = kindRaw === 'question';
+           const href    = isQ ? `/questions/${encodeURIComponent(fav.id)}`
+                               : (isRes ? `/resources/${encodeURIComponent(fav.id)}`
+                                        : `/topic/${encodeURIComponent(fav.id)}`);
+           const removeAction = isQ ? `/questions/${encodeURIComponent(fav.id)}/unfavorite`
+                                    : (isRes ? `/resources/${encodeURIComponent(fav.id)}/unfavorite`
+                                             : `/topics/${encodeURIComponent(fav.id)}/unfavorite`);
+
+           // Badge HTML – samma stil som övriga sidor
+           let badgeHtml;
+           if (isQ) {
+             badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 border border-violet-200">Fråga</span>';
+           } else if (isRes) {
+             badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Resurs</span>';
+           } else {
+             badgeHtml = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 border border-sky-200">Ämne</span>';
+           }
+      %>
+        <li class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:border-sky-300">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <div class="mb-1"><%- badgeHtml %></div>
+              <a href="<%= href %>"
+                 class="text-lg font-semibold text-sky-600 hover:underline block truncate">
+                <%= fav.title %>
+              </a>
+              <% if (fav.excerpt || fav.snippet) { %>
+                <p class="text-slate-600 text-sm mt-1 line-clamp-2"><%= fav.excerpt || fav.snippet %></p>
+              <% } %>
+              <% if (fav.created_at) { %>
+                <div class="text-xs text-slate-500 mt-1">Sparad: <%= new Date(fav.created_at).toLocaleString('sv-SE') %></div>
+              <% } %>
+            </div>
+
+            <!-- Ta bort favorit -->
+            <form method="POST" action="<%= removeAction %>">
+              <% if (typeof csrfToken !== 'undefined') { %>
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <% } %>
+              <button type="submit"
+                      class="inline-flex items-center gap-1 px-3 py-1 text-xs rounded-md border
+                             border-red-300 text-red-600 hover:bg-red-50">
+                <i class="ti ti-trash"></i> Ta bort
+              </button>
+            </form>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</section>

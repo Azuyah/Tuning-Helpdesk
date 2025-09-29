@@ -5,7 +5,7 @@
   <!-- Vänsterkolumn -->
   <div class="lg:col-span-2 space-y-8">
 
-<!-- Sidhuvud: Tillbaka + Admin-knappar -->
+<!-- Sidhuvud: Tillbaka + verktyg -->
 <div class="flex items-center justify-between">
   <button type="button"
           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50"
@@ -13,14 +13,39 @@
     <i class="ti ti-arrow-left"></i> Tillbaka
   </button>
 
-  <% if (user && user.role === 'admin') { %>
-    <% const isFeatured = Number(topic.is_featured) === 1; %>
-    <div class="flex items-center gap-2">
+  <!-- Höger verktygsrad (favorit alltid för inloggade; admin ser fler) -->
+  <div class="flex items-center gap-2">
+    <% if (user) { %>
+      <!-- Favorit -->
+      <form method="POST"
+            action="/topics/<%= encodeURIComponent(topic.id) %>/<%= isFavorited ? 'unfavorite' : 'favorite' %>">
+        <% if (typeof csrfToken !== 'undefined') { %>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% } %>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold
+                       <%= isFavorited
+                            ? 'bg-amber-100 border-amber-300 text-amber-700'
+                            : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' %>">
+          <i class="ti <%= isFavorited ? 'ti-bookmark-filled text-amber-500' : 'ti-bookmark text-slate-400' %>"></i>
+          <%= isFavorited ? 'Favorit' : 'Lägg till favorit' %>
+        </button>
+      </form>
+    <% } else { %>
+      <a href="/login"
+         class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+        <i class="ti ti-bookmark"></i> Spara som favorit
+      </a>
+    <% } %>
+
+    <% if (user && user.role === 'admin') { %>
+      <!-- Admin: Redigera -->
       <a href="/admin/edit-topic/<%= encodeURIComponent(topic.id) %>"
          class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
         <i class="ti ti-edit"></i> Redigera
       </a>
 
+      <!-- Admin: Ta bort -->
       <form method="POST"
             action="/admin/topics/<%= encodeURIComponent(topic.id) %>/delete"
             data-del-form
@@ -34,30 +59,26 @@
         </button>
       </form>
 
-      <%
-const currentTopic = (typeof topic !== 'undefined' && topic)
-  ? topic
-  : ((Array.isArray(linked) && linked.length) ? linked[0] : null);
-
-const isFeaturedTopic = currentTopic ? Number(currentTopic.is_featured) === 1 : false;
-%>
-
-      <!-- Stjärnknapp -->
-<% if (currentTopic) { %>
-<form method="POST"
-      action="/admin/topics/<%= encodeURIComponent(currentTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
-  <% if (typeof csrfToken !== 'undefined') { %>
-    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <% } %>
-  <button type="submit"
-          class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold bg-white text-slate-900 hover:bg-slate-50">
-    <i class="ti <%= isFeaturedTopic ? 'ti-star-filled text-amber-400' : 'ti-star text-slate-400' %>"></i>
-    <%= isFeaturedTopic ? 'Stjärnmarkerat' : 'Stjärnmarkera' %>
-  </button>
-</form>
-<% } %>
-    </div>
-  <% } %>
+      <% 
+        const currentTopic = topic || ((Array.isArray(linked) && linked.length) ? linked[0] : null);
+        const isFeaturedTopic = currentTopic ? Number(currentTopic.is_featured) === 1 : false;
+      %>
+      <% if (currentTopic) { %>
+        <!-- Admin: Stjärnmarkera -->
+        <form method="POST"
+              action="/admin/topics/<%= encodeURIComponent(currentTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
+          <% if (typeof csrfToken !== 'undefined') { %>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <% } %>
+          <button type="submit"
+                  class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold bg-white text-slate-900 hover:bg-slate-50">
+            <i class="ti <%= isFeaturedTopic ? 'ti-star-filled text-amber-400' : 'ti-star text-slate-400' %>"></i>
+            <%= isFeaturedTopic ? 'Stjärnmarkerat' : 'Stjärnmarkera' %>
+          </button>
+        </form>
+      <% } %>
+    <% } %>
+  </div>
 </div>
 
     <!-- FRÅGA (eget kort, visas bara om detta är ett svar på en fråga) -->
@@ -68,6 +89,7 @@ const isFeaturedTopic = currentTopic ? Number(currentTopic.is_featured) === 1 : 
         <h1 class="text-2xl font-bold text-slate-900 mb-2">
           Fråga: <%= sourceQuestion.title %>
         </h1>
+        
 
         <% if (sourceQuestion.body) { %>
           <p class="text-slate-700 whitespace-pre-line"><%= sourceQuestion.body %></p>

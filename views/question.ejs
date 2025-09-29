@@ -6,7 +6,7 @@
   <!-- Vänsterkolumn -->
   <div class="lg:col-span-2 space-y-8">
 
-<!-- Sidhuvud: Tillbaka + Admin-knappar -->
+<!-- Sidhuvud: Tillbaka + verktyg -->
 <div class="flex items-center justify-between">
   <button type="button"
           class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50"
@@ -14,14 +14,37 @@
     <i class="ti ti-arrow-left"></i> Tillbaka
   </button>
 
-  <% if (user && (user.role === 'admin' || user.role === 'support')) { %>
+  <div class="flex items-center gap-2">
+<% if (user) { %>
+  <form method="POST"
+        action="/questions/<%= encodeURIComponent(q.id) %>/<%= isQFavorited ? 'unfavorite' : 'favorite' %>">
+    <% if (typeof csrfToken !== 'undefined') { %>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <% } %>
+    <button type="submit"
+            class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold
+                   <%= isQFavorited
+                        ? 'bg-amber-100 border-amber-300 text-amber-700'
+                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' %>">
+      <i class="ti <%= isQFavorited ? 'ti-bookmark-filled text-amber-500' : 'ti-bookmark text-slate-400' %>"></i>
+      <%= isQFavorited ? 'Favorit' : 'Lägg till favorit' %>
+    </button>
+  </form>
+<% } else { %>
+  <a href="/login"
+     class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+    <i class="ti ti-bookmark"></i> Spara som favorit
+  </a>
+<% } %>
 
-    <div class="flex items-center gap-2">
+    <% if (user && (user.role === 'admin' || user.role === 'support')) { %>
+      <!-- Admin/support: Redigera -->
       <a href="/admin/questions/<%= q.id %>"
          class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
         <i class="ti ti-edit"></i> <%= q.is_answered ? 'Redigera svar' : 'Svara' %>
       </a>
 
+      <!-- Admin/support: Godkänn (vid behov) -->
       <% const needsModeration = Number(q.flagged) === 1 && Number(q.hidden) === 1; %>
       <% if (needsModeration) { %>
         <form method="POST" action="/admin/questions/<%= q.id %>/approve">
@@ -32,18 +55,22 @@
         </form>
       <% } %>
 
+      <!-- Admin/support: Ta bort -->
       <form method="POST"
             action="/admin/questions/<%= q.id %>/delete"
             data-del-form
             data-title="<%- (q.title || '').replace(/\"/g,'&quot;') %>">
+        <% if (typeof csrfToken !== 'undefined') { %>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% } %>
         <button type="submit"
                 class="inline-flex items-center gap-2 rounded-lg bg-red-600 text-white px-3 py-2 text-sm font-semibold hover:bg-red-700">
           <i class="ti ti-trash"></i> Ta bort
         </button>
       </form>
-    </div>
-  <% } %> 
-</div>             
+    <% } %>
+  </div>
+</div>        
 
 <div class="relative">
   <% if (showHiddenBanner) { %>
