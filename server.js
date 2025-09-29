@@ -1021,6 +1021,7 @@ app.get('/topic/:id', (req, res) => {
            t.body,
            t.tags,
            t.is_resource,
+           IFNULL(t.is_featured, 0) AS is_featured,
            t.download_url,
            u.name AS author_name
     FROM topics_base b
@@ -3637,24 +3638,24 @@ function renderProfile(res, userId, { ok = null, err = null } = {}) {
 }
 
 app.post('/admin/topics/:id/feature', requireStaff, (req, res) => {
-  const id = String(req.params.id); // behåll som TEXT
+  const id = String(req.params.id);
   db.prepare(`UPDATE topics SET is_featured = 1 WHERE id = ?`).run(id);
-  res.redirect(req.get('Referrer') || '/');
+  res.redirect(req.get('Referrer') || `/topic/${encodeURIComponent(id)}`);
 });
 
 app.post('/admin/topics/:id/unfeature', requireStaff, (req, res) => {
   const id = String(req.params.id);
   db.prepare(`UPDATE topics SET is_featured = 0 WHERE id = ?`).run(id);
-  res.redirect(req.get('Referrer') || '/');
+  res.redirect(req.get('Referrer') || `/topic/${encodeURIComponent(id)}`);
 });
 
-// (valfritt) toggle
+// (om du vill ha toggle, gör också String här)
 app.post('/admin/topics/:id/feature-toggle', requireStaff, (req, res) => {
-  const id = Number(req.params.id);
-  const row = db.prepare(`SELECT is_featured FROM topics WHERE id=?`).get(id);
+  const id = String(req.params.id);
+  const row = db.prepare(`SELECT IFNULL(is_featured,0) AS is_featured FROM topics WHERE id=?`).get(id);
   const nextVal = row && Number(row.is_featured) === 1 ? 0 : 1;
   db.prepare(`UPDATE topics SET is_featured=? WHERE id=?`).run(nextVal, id);
-  res.redirect('back');
+  res.redirect(req.get('Referrer') || `/topic/${encodeURIComponent(id)}`);
 });
 
 // --- Uppdatera profil (namn/e-post) ---
