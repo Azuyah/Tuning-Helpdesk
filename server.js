@@ -2908,6 +2908,11 @@ app.post('/admin/topics/:id/delete', requireAdmin, (req, res) => {
 app.get('/questions/:id', (req, res) => {
   const id = Number(req.params.id);
   const me = getUser(req);
+    if (!me) {
+    // Skicka tillbaka till startsidan och trigga modalen via queryflagga
+    return res.redirect(`/?loginModal=1`);
+  }
+
 
   // Finns kolumnen answer_tags?
   let hasAnswerTagsCol = false;

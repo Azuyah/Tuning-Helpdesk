@@ -65,5 +65,85 @@
 
   <!-- Din gemensamma front-end (om du använder den) -->
   <script src="/public/home.js"></script>
+
+  <% if (!user) { %>
+<!-- Login-modal -->
+<div id="loginModal" class="fixed inset-0 z-[9999] hidden">
+  <!-- backdrop -->
+  <div class="absolute inset-0 bg-black/40" data-login-close></div>
+
+  <!-- dialog -->
+  <div class="relative mx-auto mt-28 w-[92%] max-w-md rounded-2xl bg-white shadow-xl border border-slate-200">
+    <div class="p-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h3 class="text-lg font-semibold text-slate-900">Logga in för att läsa frågor</h3>
+          <p class="mt-1 text-sm text-slate-600">
+            Du måste vara medlem för att kunna läsa frågor.
+          </p>
+        </div>
+        <button class="rounded-lg p-2 text-slate-500 hover:bg-slate-100" data-login-close>
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+
+      <div class="mt-6 flex flex-col sm:flex-row gap-3">
+        <a id="loginGo"
+           class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2.5 font-semibold hover:bg-sky-700">
+          <i class="ti ti-login-2"></i> Logga in
+        </a>
+        <a id="registerGo"
+           class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-50">
+          <i class="ti ti-user-plus"></i> Skapa konto
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const modal = document.getElementById('loginModal');
+  if (!modal) return;
+
+  let nextHref = '/';
+  function openModal(href){ nextHref = href || '/'; modal.classList.remove('hidden'); }
+  function closeModal(){ modal.classList.add('hidden'); }
+
+  // Stäng med backdrop/knapp/ESC
+modal.addEventListener('click', (e) => {
+  if (e.target.closest('[data-login-close]')) {
+    closeModal();
+  }
+});
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  // Fånga klick på frågor
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="/questions/"]');
+    if (!a) return;
+    // blockera navigation och visa modal
+    e.preventDefault();
+    openModal(a.getAttribute('href'));
+  }, true);
+
+  // Knappar → skicka med next
+  const loginGo = document.getElementById('loginGo');
+  const registerGo = document.getElementById('registerGo');
+  const go = (base) => {
+    const url = new URL(base, location.origin);
+    url.searchParams.set('next', nextHref);
+    location.href = url.toString();
+  };
+  loginGo?.addEventListener('click', () => go('/login'));
+  registerGo?.addEventListener('click', () => go('/register'));
+
+  // Autoöppna om server satte flagga (?loginModal=1)
+  if (new URLSearchParams(location.search).get('loginModal') === '1') {
+    openModal('/');
+  }
+})();
+</script>
+<% } %>
 </body>
 </html>
