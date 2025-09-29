@@ -16,13 +16,6 @@
 
   <% if (user && (user.role === 'admin' || user.role === 'support')) { %>
 
-    <% 
-      // Förbered topic för stjärnknappen
-      const _linked = Array.isArray(linked) ? linked : [];
-      const linkedTopic = _linked.length ? _linked[0] : null;
-      const isFeaturedTopic = linkedTopic ? Number(linkedTopic.is_featured) === 1 : false;
-    %>
-
     <div class="flex items-center gap-2">
       <a href="/admin/questions/<%= q.id %>"
          class="inline-flex items-center gap-2 rounded-lg bg-sky-600 text-white px-3 py-2 text-sm font-semibold hover:bg-sky-700">
@@ -48,30 +41,9 @@
           <i class="ti ti-trash"></i> Ta bort
         </button>
       </form>
-
-      <% if (linkedTopic) { %>
-        <form method="POST"
-              action="/admin/topics/<%= encodeURIComponent(linkedTopic.id) %>/<%= isFeaturedTopic ? 'unfeature' : 'feature' %>">
-          <% if (typeof csrfToken !== 'undefined') { %>
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <% } %>
-          <button type="submit"
-                  class="inline-flex items-center gap-2 rounded-lg <%= isFeaturedTopic ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-700 hover:bg-slate-800' %> text-white px-3 py-2 text-sm font-semibold"
-                  title="<%= isFeaturedTopic ? 'Avstjärnmärk detta ämne' : 'Stjärnmärk detta ämne' %>">
-            <i class="ti <%= isFeaturedTopic ? 'ti-star-filled' : 'ti-star' %>"></i>
-            <%= isFeaturedTopic ? 'Avstjärnmärk' : 'Stjärnmärk' %>
-          </button>
-        </form>
-      <% } else { %>
-        <button type="button"
-                class="inline-flex items-center gap-2 rounded-lg bg-slate-200 text-slate-500 px-3 py-2 text-sm font-semibold cursor-not-allowed"
-                title="Koppla först till ett ämne för att kunna stjärnmarkera">
-          <i class="ti ti-star"></i> Stjärnmärk
-        </button>
-      <% } %>
     </div>
-  <% } %>
-</div> 
+  <% } %> 
+</div>             
 
 <div class="relative">
   <% if (showHiddenBanner) { %>
