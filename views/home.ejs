@@ -1,3 +1,5 @@
+<main class="overflow-x-hidden">
+
 <script>
 (() => {
   const $q = document.getElementById('q');
@@ -130,9 +132,9 @@ const _popularTopics   = (typeof popularTopics !== 'undefined' && Array.isArray(
   </div>
 
 <!-- Första 3 synliga -->
-<div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" id="catGridPrimary">
+<div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 max-w-full" id="catGridPrimary">
   <% _categoriesSafe.slice(0,6).forEach(function(cat){ %>
-    <article class="group rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 transform hover:-translate-y-1 p-6 relative overflow-hidden">
+    <article class="group rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 transform hover:-translate-y-1 p-6 relative overflow-hidden min-w-0">
       <div class="absolute inset-0 bg-gradient-to-tr from-sky-50 to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300"></div>
 
       <div class="mb-4 relative z-10 flex items-center gap-3">
@@ -238,7 +240,7 @@ const _popularTopics   = (typeof popularTopics !== 'undefined' && Array.isArray(
 <section class="mx-auto max-w-6xl px-4 py-12 grid lg:grid-cols-3 gap-10">
 
   <!-- Vänsterkolumn: Resurser -->
-  <div class="lg:col-span-2">
+  <div class="lg:col-span-2 min-w-0">
     <!-- Senaste resurs (highlight) -->
     <section class="mb-10">
       <div class="bg-gradient-to-r from-sky-50 to-sky-100 rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col md:flex-row items-center gap-6">
@@ -336,7 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
 %>
 
 <!-- Högerkolumn (samlad container så båda boxarna stannar i samma kolumn) -->
-<aside class="space-y-8">
+<aside class="space-y-8 min-w-0">
 
   <% if (_starred.length) { %>
   <!-- Stjärnmärkta ämnen (samma layout som "Senaste frågor") -->
@@ -470,3 +472,4 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+</main>
