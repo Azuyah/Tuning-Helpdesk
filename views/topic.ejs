@@ -1,9 +1,9 @@
 <link rel="stylesheet" href="/css/style.css">
 
 
-<section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-10">
+<section class="mx-auto max-w-6xl px-4 py-10 grid lg:grid-cols-3 gap-10 overflow-x-clip">
   <!-- Vänsterkolumn -->
-  <div class="lg:col-span-2 space-y-8">
+  <div class="lg:col-span-2 space-y-8 min-w-0">
 
 <!-- Sidhuvud: Tillbaka + verktyg -->
 <div class="flex items-center justify-between">
@@ -116,7 +116,7 @@
 <% } %>
 </div>
 
-<div class="prose prose-slate dark:prose-invert max-w-none mb-6">
+<div class="prose prose-slate dark:prose-invert max-w-none mb-6 overflow-x-auto">
   <%- include('partials/richtext', { id: 'topic-' + topic.id, html: topic.body }) %>
 </div>
       <div class="text-sm text-slate-500">
@@ -133,7 +133,7 @@
   </div>
 
 <!-- Högerkolumn -->
-<aside class="space-y-8">
+<aside class="space-y-8 min-w-0">
   <!-- Information -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
     <h2 class="text-lg font-semibold text-slate-900 mb-4">Information</h2>
@@ -202,7 +202,7 @@
          }
     %>
       <li>
-        <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700">
+        <a href="<%= href %>" class="flex items-center gap-2 text-slate-700 hover:text-sky-700 min-w-0">
           <%- badgeHtml %>
           <span class="truncate"><%= it.title %></span>
         </a>
