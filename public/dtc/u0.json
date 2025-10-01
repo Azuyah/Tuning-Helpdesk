@@ -1,0 +1,2577 @@
+[
+  {
+    "code": "U0001",
+    "short": "High Speed CAN Communication Bus",
+    "description": "ECM/ECU har registrerat ett fel på hög­hastighets-CAN nätverket.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott eller kortslutning i CAN-härvan",
+      "Lös eller korroderad kontakt i CAN-noder",
+      "Störd spänningsmatning eller jord till styrenhet",
+      "ECU på nätverket defekt och drar ner bussen"
+    ],
+    "symptoms": [
+      "Kommunikationsfel mellan flera styrdon",
+      "Lampor för ABS/ESP/Check Engine kan tändas samtidigt",
+      "Oförklarliga felkoder i olika moduler"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera fysisk härva mellan CAN-H och CAN-L",
+      "Mät resistans mellan CAN-H och CAN-L (≈ 60 Ω)",
+      "Oscilloskopera busaktivitet – bör ligga runt 2.5 V med differens",
+      "Koppla ur moduler en i taget för att isolera felaktig nod"
+    ]
+  },
+  {
+    "code": "U0002",
+    "short": "High Speed CAN Communication Bus Performance",
+    "description": "Hastighet eller prestanda på CAN-kommunikation avviker från förväntat.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Störningar på CAN-bussen",
+      "Defekt CAN-transceiver i någon modul",
+      "Felaktig terminering",
+      "Otillräcklig jordning"
+    ],
+    "symptoms": [
+      "Intermittenta kommunikationsfel",
+      "Lampor tänds sporadiskt",
+      "Koder i flera nätverksrelaterade styrdon"
+    ],
+    "diagnostic_steps": [
+      "Oscilloskopmätning av CAN-H/CAN-L vågform",
+      "Kontrollera termineringar (60 Ω totalt)",
+      "Kontrollera jordpunkter",
+      "Identifiera och byt misstänkt modul"
+    ]
+  },
+  {
+    "code": "U0003",
+    "short": "High Speed CAN Bus (Open)",
+    "description": "CAN-hög­hastighetsbussen öppen krets.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i CAN-L eller CAN-H ledning",
+      "Kontakt urdragen eller korroderad",
+      "Kabelbrott i härva"
+    ],
+    "symptoms": [
+      "Ingen kommunikation med flera moduler",
+      "Totalt systemfel",
+      "MIL/ABS/ESP lampor tända samtidigt"
+    ],
+    "diagnostic_steps": [
+      "Mät kontinuitet i CAN-ledningar",
+      "Kontrollera kontakter och härva",
+      "Reparera eller ersätt defekt kabel"
+    ]
+  },
+  {
+    "code": "U0004",
+    "short": "High Speed CAN Bus (Low)",
+    "description": "CAN-bussen signalnivå låg (kortslutning mot jord).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-L eller CAN-H kortsluten till jord",
+      "Skadad kabel eller kontakt",
+      "Defekt modul som drar ner bussen"
+    ],
+    "symptoms": [
+      "Avbruten kommunikation",
+      "Flera styrdon rapporterar fel",
+      "Lampor för ABS/ESP/Check Engine tända"
+    ],
+    "diagnostic_steps": [
+      "Isolera sektioner av bussen",
+      "Mät motstånd mot jord",
+      "Byt eller reparera felaktig kabel/modul"
+    ]
+  },
+  {
+    "code": "U0005",
+    "short": "High Speed CAN Bus (High)",
+    "description": "CAN-bussen signalnivå hög (kortslutning mot spänning).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-L eller CAN-H kortsluten till +12 V",
+      "Kontakt skadad eller vattenintrång",
+      "ECU-fel som matar felaktig spänning"
+    ],
+    "symptoms": [
+      "Ingen eller störd kommunikation",
+      "Styrdon går i failsafe",
+      "Lampor tänds på flera system"
+    ],
+    "diagnostic_steps": [
+      "Mät spänning på CAN-H och CAN-L",
+      "Kontrollera kablage och kontakter för kortslutning",
+      "Koppla ur misstänkta moduler tills bussen återhämtar sig"
+    ]
+  },
+  {
+    "code": "U0006",
+    "short": "High Speed CAN Communication Bus A",
+    "description": "Fel i CAN-bus A på hög hastighet.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i nätverk A",
+      "Defekt modul ansluten på bus A",
+      "Felaktig terminering"
+    ],
+    "symptoms": [
+      "Delvis kommunikationsbortfall",
+      "Specifika moduler rapporterar fel"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage för CAN-A",
+      "Mät resistans",
+      "Koppla ur moduler på CAN-A en i taget"
+    ]
+  },
+  {
+    "code": "U0007",
+    "short": "High Speed CAN Communication Bus B",
+    "description": "Fel i CAN-bus B på hög hastighet.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i nätverk B",
+      "Defekt modul ansluten på bus B",
+      "Kortslutning i härva"
+    ],
+    "symptoms": [
+      "Kommunikationsproblem i delsystem (t.ex. komfort)",
+      "Lampor för ABS/ESP kan tändas"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage för CAN-B",
+      "Isolera noder",
+      "Mät resistans/oscilloskopera signalerna"
+    ]
+  },
+  {
+    "code": "U0008",
+    "short": "High Speed CAN Bus C",
+    "description": "Fel på CAN-bus C.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i CAN-C ledning",
+      "Felaktig jordning eller matning till moduler",
+      "Kortslutning i CAN-C nätverket"
+    ],
+    "symptoms": [
+      "Kommunikationsfel i drivline-relaterade system",
+      "Oförklarliga felkoder i ECM/TCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera ledningar på CAN-C",
+      "Mät resistans mellan CAN-C H/L",
+      "Koppla ur moduler stegvis"
+    ]
+  },
+  {
+    "code": "U0010",
+    "short": "Medium Speed CAN Communication Bus",
+    "description": "Fel på medium speed CAN (MS-CAN).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "MS-CAN kabelbrott eller kortslutning",
+      "Felaktig terminering",
+      "Defekt modul på MS-CAN"
+    ],
+    "symptoms": [
+      "Problem med komfort/infotainment-system",
+      "Delvis kommunikationsbortfall"
+    ],
+    "diagnostic_steps": [
+      "Mät resistans och spänning på MS-CAN",
+      "Oscilloskopera vågform",
+      "Koppla ur misstänkta noder"
+    ]
+  },
+  {
+    "code": "U0011",
+    "short": "Medium Speed CAN Performance",
+    "description": "MS-CAN nätverket fungerar men med dålig prestanda.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Störningar på MS-CAN",
+      "Felaktig modul",
+      "Otillräcklig jord eller matning"
+    ],
+    "symptoms": [
+      "Intermittenta infotainment- eller klimatanläggningsfel",
+      "Felkoder i BCM eller liknande"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera matningar/jord",
+      "Oscilloskopera MS-CAN",
+      "Byt ut misstänkt modul"
+    ]
+  },
+  {
+    "code": "U0012",
+    "short": "Medium Speed CAN Bus (Open)",
+    "description": "Avbrott i medium speed CAN-bussen.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kabelbrott i MS-CAN härva",
+      "Urdragen eller oxiderad kontakt",
+      "Defekt modul som inte svarar"
+    ],
+    "symptoms": [
+      "Ingen kommunikation med komfortsystem",
+      "Lampor i kombiinstrumentet tänds",
+      "Flera felkoder i BCM/ICM"
+    ],
+    "diagnostic_steps": [
+      "Mät kontinuitet i MS-CAN",
+      "Visuell inspektion av härva/kontakter",
+      "Koppla bort moduler för att isolera felet"
+    ]
+  },
+  {
+    "code": "U0013",
+    "short": "Medium Speed CAN Bus (Low)",
+    "description": "MS-CAN signalnivå låg (kortslutning mot jord).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning i MS-CAN H/L mot jord",
+      "Skadat kablage",
+      "Felaktig modul på bussen"
+    ],
+    "symptoms": [
+      "Ingen kommunikation i komfortsystem",
+      "Flera lampor tänds samtidigt"
+    ],
+    "diagnostic_steps": [
+      "Mät spänning på MS-CAN H/L",
+      "Isolera sektioner av bussen",
+      "Byt ut eller reparera felaktig modul/kabel"
+    ]
+  },
+  {
+    "code": "U0014",
+    "short": "Medium Speed CAN Bus (High)",
+    "description": "MS-CAN signalnivå hög (kortslutning mot +12 V).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kabel kortsluten till spänning",
+      "Vattenintrång i kontaktstycke",
+      "ECU med intern kortslutning"
+    ],
+    "symptoms": [
+      "Kommunikationsbortfall",
+      "Lampor för ABS/ESP/Check Engine kan tändas"
+    ],
+    "diagnostic_steps": [
+      "Mät spänning på MS-CAN",
+      "Kontrollera kablage/kontakter för vatten och skador",
+      "Koppla ur misstänkta moduler tills bussen återgår"
+    ]
+  },
+  {
+    "code": "U0015",
+    "short": "Medium Speed CAN Bus C",
+    "description": "Fel på MS-CAN C nätverket.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott eller kortslutning i MS-CAN C",
+      "Felaktig modul på nätverket",
+      "Otillräcklig jord"
+    ],
+    "symptoms": [
+      "Fel i komfortsystem eller telematik",
+      "Koder i flera styrdon"
+    ],
+    "diagnostic_steps": [
+      "Oscilloskopera MS-CAN C",
+      "Kontrollera termineringar",
+      "Isolera noder tills fel försvinner"
+    ]
+  },
+  {
+    "code": "U0020",
+    "short": "Low Speed CAN Communication Bus",
+    "description": "Fel på låg­hastighets-CAN (LS-CAN).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "LS-CAN kabelbrott",
+      "Kortslutning i härva",
+      "Defekt modul i komfortnätverket"
+    ],
+    "symptoms": [
+      "Problem med dörrmoduler, säten, speglar",
+      "Intermittenta kommunikationsfel"
+    ],
+    "diagnostic_steps": [
+      "Mät resistans mellan LS-CAN H/L",
+      "Kontrollera kablage och kontakter",
+      "Oscilloskopera vågform"
+    ]
+  },
+  {
+    "code": "U0021",
+    "short": "Low Speed CAN Bus Performance",
+    "description": "LS-CAN fungerar men långsamt eller med felaktig timing.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Otillräcklig matning till moduler",
+      "Felaktig modul som sänder brus",
+      "Korrosion i kontakter"
+    ],
+    "symptoms": [
+      "Långa svarstider från komfortmoduler",
+      "Felkoder i BCM/CCM"
+    ],
+    "diagnostic_steps": [
+      "Oscilloskopera signaler",
+      "Mät spänning och jord vid moduler",
+      "Koppla bort en modul i taget"
+    ]
+  },
+  {
+    "code": "U0022",
+    "short": "Low Speed CAN Bus (Open)",
+    "description": "LS-CAN nätverket öppet (avbrott i ledning).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kabelbrott",
+      "Lös kontakt",
+      "Modul inte ansluten"
+    ],
+    "symptoms": [
+      "Ingen kommunikation med komfortmoduler",
+      "Lampor tänds eller funktioner slutar fungera"
+    ],
+    "diagnostic_steps": [
+      "Kontinuitetsmätning i kablage",
+      "Visuell inspektion",
+      "Återanslut eller byt modul"
+    ]
+  },
+  {
+    "code": "U0023",
+    "short": "Low Speed CAN Bus (Low)",
+    "description": "Signalnivå på LS-CAN låg (kortslutning mot jord).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning i kablage",
+      "Skadad modul",
+      "Intrång av vatten/fukt i kontakt"
+    ],
+    "symptoms": [
+      "Ingen eller störd kommunikation",
+      "System går i failsafe"
+    ],
+    "diagnostic_steps": [
+      "Mät spänning LS-CAN H/L",
+      "Isolera sektioner",
+      "Byt defekt modul/kabel"
+    ]
+  },
+  {
+    "code": "U0024",
+    "short": "Low Speed CAN Bus (High)",
+    "description": "Signalnivå på LS-CAN hög (kortslutning mot +12 V).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning i härva mot matning",
+      "Felaktig ECU som matar bussen",
+      "Skadad kontakt"
+    ],
+    "symptoms": [
+      "Kommunikationsfel i komfortsystem",
+      "Lampor för lås/speglar kan bete sig fel"
+    ],
+    "diagnostic_steps": [
+      "Mät spänning LS-CAN",
+      "Kontrollera kablage",
+      "Byt defekt modul"
+    ]
+  },
+  {
+    "code": "U0030",
+    "short": "FlexRay Communication Bus",
+    "description": "FlexRay-nätverk felaktigt eller ej synkroniserat.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt FlexRay-modul",
+      "Kabelbrott eller kortslutning",
+      "Felaktig synkronisering"
+    ],
+    "symptoms": [
+      "Kommunikationsfel i avancerade system (t.ex. aktiva chassi)",
+      "Lampor och felkoder i DSC/ESP"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera FlexRay kablage",
+      "Mät resistans",
+      "Byt defekt modul"
+    ]
+  },
+  {
+    "code": "U0031",
+    "short": "FlexRay Bus Performance",
+    "description": "Prestanda på FlexRay-nätverk utanför specifikation.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Störningar eller brus",
+      "Felaktig modul",
+      "Matningsproblem"
+    ],
+    "symptoms": [
+      "Oregelbundna kommunikationsfel",
+      "Fel i chassi- eller ADAS-system"
+    ],
+    "diagnostic_steps": [
+      "Oscilloskopera vågform",
+      "Kontrollera matning och jord",
+      "Byt misstänkt modul"
+    ]
+  },
+  {
+    "code": "U0032",
+    "short": "FlexRay Bus (Open)",
+    "description": "FlexRay nätverk öppet, ingen slinga.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i kabel",
+      "Kontakt ej ansluten",
+      "Defekt nod"
+    ],
+    "symptoms": [
+      "Ingen kommunikation i system",
+      "Fordonet kan gå i limp mode"
+    ],
+    "diagnostic_steps": [
+      "Mät kontinuitet i FlexRay",
+      "Inspektera kontakter",
+      "Återanslut/byta modul"
+    ]
+  },
+  {
+    "code": "U0033",
+    "short": "FlexRay Bus (Low)",
+    "description": "FlexRay signalnivå låg (kortslutning mot jord).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning i FlexRay-kabel",
+      "Vattenintrång i kontakt",
+      "Defekt styrenhet som drar ner signalen"
+    ],
+    "symptoms": [
+      "Total eller intermittent kommunikationsförlust",
+      "Flera moduler rapporterar nätverksfel"
+    ],
+    "diagnostic_steps": [
+      "Mät signal mot jord",
+      "Kontrollera härva för skador",
+      "Koppla ur noder tills felet försvinner"
+    ]
+  },
+  {
+    "code": "U0034",
+    "short": "FlexRay Bus (High)",
+    "description": "FlexRay signalnivå hög (kortslutning mot spänning).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "FlexRay-kabel kortsluten till +12 V",
+      "Fel i modul som matar felaktig spänning",
+      "Skadad kontakt eller kabelskav"
+    ],
+    "symptoms": [
+      "Kommunikationsavbrott i FlexRay-nätverket",
+      "Styrdon går i failsafe-läge"
+    ],
+    "diagnostic_steps": [
+      "Mät spänning på FlexRay-linjer",
+      "Inspektera kablage och kontakter",
+      "Koppla ur misstänkta moduler"
+    ]
+  },
+  {
+    "code": "U0100",
+    "short": "Lost Communication with ECM/PCM A",
+    "description": "Ingen kommunikation med motorstyrdon (ECM/PCM A).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i CAN-buss mellan ECM och övriga moduler",
+      "Urdragen/korroderad kontakt",
+      "ECM strömlös eller defekt"
+    ],
+    "symptoms": [
+      "Motorn startar ej eller går i limp mode",
+      "Flera felkoder i andra moduler",
+      "MIL/Check Engine lyser"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera matning och jord till ECM",
+      "Mät CAN-H/L signaler vid ECM",
+      "Kontrollera säkringar/reläer",
+      "Byt ECM vid bekräftat fel"
+    ]
+  },
+  {
+    "code": "U0101",
+    "short": "Lost Communication with TCM",
+    "description": "Ingen kommunikation med växellådsstyrdon (TCM).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kabelbrott eller kortslutning i CAN mellan TCM och ECM",
+      "Ingen matning/jord till TCM",
+      "Defekt TCM-enhet"
+    ],
+    "symptoms": [
+      "Växellådan går i failsafe (fast växel)",
+      "MIL och växellådslampa tänd",
+      "Kraftigt försämrad körbarhet"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera TCM säkringar och matning",
+      "Mät CAN-signaler vid TCM",
+      "Kontrollera jordpunkter",
+      "Byt eller programmera om TCM vid behov"
+    ]
+  },
+  {
+    "code": "U0102",
+    "short": "Lost Communication with Transfer Case Control Module",
+    "description": "Ingen kommunikation med fördelningsväxelsmodul (4WD/AWD).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott till TCCM",
+      "Defekt TCCM",
+      "Ingen matning/jord till modulen"
+    ],
+    "symptoms": [
+      "4WD/AWD fungerar ej",
+      "Lampor för drivlina tänds",
+      "Felkoder i ECM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera TCCM kablage och kontakter",
+      "Kontrollera säkringar",
+      "Mät CAN-signal vid TCCM"
+    ]
+  },
+  {
+    "code": "U0103",
+    "short": "Lost Communication with Gear Shift Module",
+    "description": "Ingen kommunikation med växelväljarens modul.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott mellan gear shifter och TCM/ECM",
+      "Urdragen eller defekt växelväljarmodul",
+      "Ingen strömförsörjning"
+    ],
+    "symptoms": [
+      "Växel väljs ej eller fel visas i display",
+      "Fordonet kan fastna i neutral eller park",
+      "MIL/Transmission-lampa kan tändas"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera matning till gear shifter",
+      "Inspektera kablage",
+      "Mät CAN-signal vid gear shift modul"
+    ]
+  },
+  {
+    "code": "U0104",
+    "short": "Lost Communication with Cruise Control Module",
+    "description": "Ingen kommunikation med farthållarmodulen.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott eller störning till cruise control",
+      "Ingen matning/jord till modulen",
+      "Defekt modul"
+    ],
+    "symptoms": [
+      "Farthållare fungerar ej",
+      "Felkoder i ECM/BCM",
+      "MIL kan tändas"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till farthållare",
+      "Mät CAN-signal",
+      "Byt modul om ingen kommunikation återfås"
+    ]
+  },
+  {
+    "code": "U0105",
+    "short": "Lost Communication with Fuel Injector Control Module",
+    "description": "Ingen kommunikation med bränslespridarens styrmodul.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott mellan FICM och ECM",
+      "Urdragen/korroderad kontakt",
+      "Ingen matning till FICM"
+    ],
+    "symptoms": [
+      "Motorn startar ej",
+      "Injektorer styrs inte korrekt",
+      "Felkoder i ECM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera matning och jord till FICM",
+      "Mät CAN-signaler",
+      "Kontrollera kontaktdon",
+      "Byt FICM vid behov"
+    ]
+  },
+  {
+    "code": "U0106",
+    "short": "Lost Communication with Glow Plug Control Module",
+    "description": "Ingen kommunikation med glödstiftsmodulen.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott till glödstiftsmodulen",
+      "Defekt modul",
+      "Ingen matning/jord"
+    ],
+    "symptoms": [
+      "Startsvårigheter vid kallstart",
+      "MIL/Glow plug-lampa blinkar",
+      "Felkoder i ECM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till glödstiftsmodul",
+      "Mät CAN-signaler",
+      "Byt modul om nödvändigt"
+    ]
+  },
+  {
+    "code": "U0107",
+    "short": "Lost Communication with Throttle Actuator Control Module",
+    "description": "Ingen kommunikation med gasspjällsmodulen.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott till TACM",
+      "Defekt modul",
+      "Ingen matning/jord"
+    ],
+    "symptoms": [
+      "Motor i limp mode",
+      "Dålig gasrespons",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till TACM",
+      "Kontrollera säkringar",
+      "Mät CAN-signal"
+    ]
+  },
+  {
+    "code": "U0108",
+    "short": "Lost Communication with Alternative Fuel Control Module",
+    "description": "Ingen kommunikation med styrmodul för alternativa bränslen (ex. gas/etanol).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott till bränslemodulen",
+      "Ingen strömförsörjning till modulen",
+      "Fel i modulen själv"
+    ],
+    "symptoms": [
+      "Motorn kan inte växla bränslekälla",
+      "MIL tänd",
+      "Felkoder i ECM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar och matning till modulen",
+      "Mät CAN-signaler vid kontakten",
+      "Byt alternativ bränslemodul om den inte svarar"
+    ]
+  },
+  {
+    "code": "U0109",
+    "short": "Lost Communication with Fuel Pump Control Module",
+    "description": "Ingen kommunikation med bränslepumpens styrmodul.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott mellan FPCM och ECM",
+      "Ingen matning/jord till FPCM",
+      "Defekt FPCM"
+    ],
+    "symptoms": [
+      "Motorn startar ej",
+      "Ingen bränsletrycksreglering",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera bränslepumpens relä/säkring",
+      "Mät CAN-signal vid FPCM",
+      "Kontrollera jordpunkt",
+      "Byt modul om ingen respons"
+    ]
+  },
+  {
+    "code": "U0110",
+    "short": "Lost Communication with Drive Motor Control Module",
+    "description": "Ingen kommunikation med eldriftens styrmodul (hybrid/EV).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott mellan DMCM och ECM/BCM",
+      "Ingen matning till modulen",
+      "Intern moduldefekt"
+    ],
+    "symptoms": [
+      "Elmotordrift ur funktion",
+      "Hybrid/EV går endast på ICE eller limp mode",
+      "Felkoder i ECM/HVB"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera HV och 12V matning",
+      "Inspektera CAN-ledningar",
+      "Mät kommunikationssignal",
+      "Byt/uppdatera DMCM"
+    ]
+  },
+  {
+    "code": "U0111",
+    "short": "Lost Communication with Battery Energy Control Module A",
+    "description": "Ingen kommunikation med batteriets energihanteringsmodul A.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i CAN till BECM-A",
+      "Ingen strömförsörjning till BECM",
+      "BECM defekt"
+    ],
+    "symptoms": [
+      "Batterihantering ej aktiv",
+      "Fel i hybrid/EV laddning",
+      "MIL/EV lampor tänds"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera BECM matning och jord",
+      "Mät CAN-kommunikation",
+      "Byt modul om fel bekräftas"
+    ]
+  },
+  {
+    "code": "U0112",
+    "short": "Lost Communication with Battery Energy Control Module B",
+    "description": "Ingen kommunikation med batteriets energihanteringsmodul B.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott mellan BECM-B och övriga noder",
+      "Ingen matning/jord till modulen",
+      "Intern moduldefekt"
+    ],
+    "symptoms": [
+      "Felaktig batteriövervakning",
+      "Hybrid/EV-funktion reducerad",
+      "Lampor för batterisystemet tänds"
+    ],
+    "diagnostic_steps": [
+      "Inspektera BECM-B kablage",
+      "Mät spänning och jord",
+      "Testa CAN-signal",
+      "Byt modul om ingen respons"
+    ]
+  },
+  {
+    "code": "U0113",
+    "short": "Lost Communication with Emissions Control Module",
+    "description": "Ingen kommunikation med utsläpps-/efterbehandlingsmodul.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Defekt utsläppsmodul (t.ex. SCR/AdBlue)",
+      "Ingen matning/jord"
+    ],
+    "symptoms": [
+      "Fel på avgasrening",
+      "SCR/DPF-funktion inaktiv",
+      "MIL/Emissions-lampa tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till SCR/DPF modul",
+      "Mät CAN-signal",
+      "Testa spänningsmatning",
+      "Byt modul om den inte svarar"
+    ]
+  },
+  {
+    "code": "U0114",
+    "short": "Lost Communication with Four-Wheel Drive Clutch Control Module",
+    "description": "Ingen kommunikation med 4WD kopplingsmodul.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen ström till modulen",
+      "Defekt 4WD clutch control unit"
+    ],
+    "symptoms": [
+      "4WD/AWD ur funktion",
+      "Lampor för drivlina tänds",
+      "Koder i ECM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och säkringar",
+      "Mät CAN H/L signaler",
+      "Byt modul vid bekräftat fel"
+    ]
+  },
+  {
+    "code": "U0115",
+    "short": "Lost Communication with ECM/PCM B",
+    "description": "Ingen kommunikation med motorstyrdon B.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott mellan PCM-B och övriga moduler",
+      "PCM-B utan matning",
+      "Fel i PCM-B"
+    ],
+    "symptoms": [
+      "Motor i failsafe",
+      "MIL tänd",
+      "Koder i andra styrdon"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar för PCM-B",
+      "Mät CAN H/L",
+      "Kontrollera jordpunkter",
+      "Byt PCM-B om ingen kommunikation återfås"
+    ]
+  },
+  {
+    "code": "U0116",
+    "short": "Lost Communication with Glow Plug Control Module B",
+    "description": "Ingen kommunikation med glödstiftsmodul B.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen matning till modulen",
+      "Defekt glödstiftsmodul"
+    ],
+    "symptoms": [
+      "Svår kallstart",
+      "MIL/Glow plug indikator blinkar",
+      "Koder i ECM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och säkringar",
+      "Mät CAN-signal",
+      "Byt modul om ingen respons"
+    ]
+  },
+  {
+    "code": "U0117",
+    "short": "Lost Communication with Torque Control Module",
+    "description": "Ingen kommunikation med vridmomentsstyrningsmodulen.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott till TCM",
+      "Defekt modul",
+      "Ingen matning/jord"
+    ],
+    "symptoms": [
+      "Drivlinan går i limp mode",
+      "Onormal växling/acceleration",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät CAN H/L",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0118",
+    "short": "Lost Communication with Fuel Control Module",
+    "description": "Ingen kommunikation med bränslestyrmodulen.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott mellan FCM och ECM",
+      "Ingen strömförsörjning till modulen",
+      "Defekt FCM"
+    ],
+    "symptoms": [
+      "Bränslepump/bränslesystem ej styrt",
+      "Motor startar ej eller stannar",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till FCM",
+      "Mät CAN H/L vid modulen",
+      "Kontrollera jordpunkter",
+      "Byt FCM vid bekräftat fel"
+    ]
+  },
+  {
+    "code": "U0119",
+    "short": "Lost Communication with Fuel Rail Pressure Sensor Module",
+    "description": "Ingen kommunikation med bränsletryckssensorns modul.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i CAN-buss till FRP-modul",
+      "Ingen matning/jord",
+      "Defekt sensor/modul"
+    ],
+    "symptoms": [
+      "Felaktiga railtrycksvärden",
+      "Motor går ojämnt eller startar ej",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera bränsletrycksdata i livedata",
+      "Mät CAN-signal vid FRP-modul",
+      "Kontrollera kablage och kontakter"
+    ]
+  },
+  {
+    "code": "U0120",
+    "short": "Lost Communication with Starter/Generator Control Module",
+    "description": "Ingen kommunikation med start-/generatorstyrmodul (ISG).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott mellan ISG och ECM/BCM",
+      "Fel i ISG-modul",
+      "Ingen matning/jord"
+    ],
+    "symptoms": [
+      "Start/Stop-funktion ur bruk",
+      "Laddningssystem felaktigt",
+      "MIL/Batterilampa tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till ISG",
+      "Mät CAN-signal vid modulen",
+      "Byt modul om ingen respons"
+    ]
+  },
+  {
+    "code": "U0121",
+    "short": "Lost Communication with ABS Control Module",
+    "description": "Ingen kommunikation med ABS/ESP-modulen.",
+    "system": "brakes",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott mellan ABS och ECM/BCM",
+      "Ingen strömförsörjning",
+      "Defekt ABS-modul"
+    ],
+    "symptoms": [
+      "ABS/ESP ur funktion",
+      "Lampor för ABS/ESP tänds",
+      "Koder i flera styrdon"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera matning och jord till ABS-modul",
+      "Mät CAN-signaler",
+      "Inspektera säkringar/reläer"
+    ]
+  },
+  {
+    "code": "U0122",
+    "short": "Lost Communication with Vehicle Dynamics Control Module",
+    "description": "Ingen kommunikation med stabilitets-/dynamikkontrollmodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen strömförsörjning",
+      "Defekt VDC-modul"
+    ],
+    "symptoms": [
+      "ESP/DSC fungerar ej",
+      "Varningslampor i klustret",
+      "Felkoder i ECM/BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät CAN-signal",
+      "Byt modul om fel kvarstår"
+    ]
+  },
+  {
+    "code": "U0123",
+    "short": "Lost Communication with Yaw Rate Sensor Module",
+    "description": "Ingen kommunikation med girhastighetssensormodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i CAN-buss till yaw sensor",
+      "Ingen strömförsörjning",
+      "Defekt sensor"
+    ],
+    "symptoms": [
+      "ESP/DSC ur funktion",
+      "Lampor för stabilitetskontroll tänds",
+      "Felaktiga data i ABS-modulen"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till yaw sensor",
+      "Mät matning och jord",
+      "Testa CAN-kommunikation"
+    ]
+  },
+  {
+    "code": "U0124",
+    "short": "Lost Communication with Lateral Acceleration Sensor Module",
+    "description": "Ingen kommunikation med sidacceleration-sensormodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen matning/jord",
+      "Defekt sensor"
+    ],
+    "symptoms": [
+      "ESP/DSC system fungerar ej korrekt",
+      "Lampor för antisladd tänds",
+      "Felaktiga sensordata i ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till sensorn",
+      "Mät spänning och jord",
+      "Testa CAN-signal vid kontakten"
+    ]
+  },
+  {
+    "code": "U0125",
+    "short": "Lost Communication with Multi-axis Acceleration Sensor Module",
+    "description": "Ingen kommunikation med multiaxlig accelerationssensor.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen matning",
+      "Defekt sensor"
+    ],
+    "symptoms": [
+      "ESP/ABS ur funktion",
+      "Lampor för stabilitetssystem tänds",
+      "Koder i ABS/VDC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät matning/jord",
+      "Byt sensor vid behov"
+    ]
+  },
+  {
+    "code": "U0126",
+    "short": "Lost Communication with Steering Angle Sensor Module",
+    "description": "Ingen kommunikation med rattvinkelgivarmodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Defekt rattvinkelgivare",
+      "Ingen matning/jord"
+    ],
+    "symptoms": [
+      "ESP/ABS fel",
+      "Rattvinkelvärden ej tillgängliga",
+      "Lampor för stabilitetssystem"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till sensorn",
+      "Kontrollera ström och jord",
+      "Byt sensor vid behov"
+    ]
+  },
+  {
+    "code": "U0127",
+    "short": "Lost Communication with Tire Pressure Monitor Module",
+    "description": "Ingen kommunikation med TPMS-modul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott mellan TPMS och BCM",
+      "Ingen strömförsörjning",
+      "Defekt TPMS-modul"
+    ],
+    "symptoms": [
+      "Däcktrycksvarning fungerar ej",
+      "Lampor för TPMS tänds",
+      "Koder i BCM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera TPMS antenn och modul",
+      "Mät CAN-signaler",
+      "Byt modul om ingen kommunikation återfås"
+    ]
+  },
+  {
+    "code": "U0128",
+    "short": "Lost Communication with Park Brake Control Module",
+    "description": "Ingen kommunikation med elektronisk parkeringsbromsmodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott till PBM",
+      "Ingen ström/jord till modulen",
+      "Defekt parkeringsbromsmodul"
+    ],
+    "symptoms": [
+      "Elektronisk parkeringsbroms fungerar ej",
+      "Varningslampa för broms tänds",
+      "Felkoder i BCM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till PBM",
+      "Mät matning och jord",
+      "Testa CAN H/L signaler",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0129",
+    "short": "Lost Communication with Brake System Control Module",
+    "description": "Ingen kommunikation med bromssystemets styrenhet.",
+    "system": "brakes",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen ström/jord till modulen",
+      "Defekt bromsstyrenhet"
+    ],
+    "symptoms": [
+      "ABS/ESP ur funktion",
+      "Bromsvarningslampa lyser",
+      "Flera koder i nätverket"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar/reläer",
+      "Mät CAN H/L vid modulen",
+      "Byt modul om ingen respons"
+    ]
+  },
+  {
+    "code": "U0130",
+    "short": "Lost Communication with Steering Effort Control Module",
+    "description": "Ingen kommunikation med styrservomodulen (EPS).",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott till EPS",
+      "Ingen matning eller jord",
+      "Defekt EPS-modul"
+    ],
+    "symptoms": [
+      "Styrservon fungerar ej",
+      "Styrningsvarning i klustret",
+      "Koder i ABS/BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera strömförsörjning",
+      "Mät CAN-signal",
+      "Byt EPS-modul vid behov"
+    ]
+  },
+  {
+    "code": "U0131",
+    "short": "Lost Communication with Power Steering Control Module",
+    "description": "Ingen kommunikation med styrmodul för elektrisk servostyrning.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Defekt PSCM",
+      "Ingen strömförsörjning"
+    ],
+    "symptoms": [
+      "Tung styrning",
+      "Styrservolampa lyser",
+      "Koder i BCM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till PSCM",
+      "Mät CAN H/L",
+      "Byt PSCM om ingen respons"
+    ]
+  },
+  {
+    "code": "U0132",
+    "short": "Lost Communication with Ride Level Control Module",
+    "description": "Ingen kommunikation med nivåregleringsmodul (luftfjädring).",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen ström/jord till modulen",
+      "Defekt nivåregleringsmodul"
+    ],
+    "symptoms": [
+      "Fordonet höjs/sänks ej",
+      "Lampor för chassihöjd tänds",
+      "Koder i BCM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och ventiler",
+      "Mät CAN-signal",
+      "Byt modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0133",
+    "short": "Lost Communication with Active Roll Control Module",
+    "description": "Ingen kommunikation med aktiv krängningshämmarmodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen strömförsörjning",
+      "Defekt ARCM"
+    ],
+    "symptoms": [
+      "Minskad stabilitet vid kurvtagning",
+      "Varningslampor i klustret",
+      "Koder i ABS/VDC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och jord",
+      "Mät CAN-signal",
+      "Byt modul om fel kvarstår"
+    ]
+  },
+  {
+    "code": "U0134",
+    "short": "Lost Communication with Suspension Control Module",
+    "description": "Ingen kommunikation med stötdämpar-/fjädringsmodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Defekt modul",
+      "Ingen matning/jord"
+    ],
+    "symptoms": [
+      "Adaptiv dämpning ur funktion",
+      "Chassivarning i display",
+      "Koder i BCM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till SCM",
+      "Mät CAN H/L",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0135",
+    "short": "Lost Communication with Differential Control Module",
+    "description": "Ingen kommunikation med diffspärr-/differentialmodul.",
+    "system": "driveline",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Defekt DCM",
+      "Ingen strömförsörjning"
+    ],
+    "symptoms": [
+      "Diffspärr fungerar ej",
+      "Lampor för drivlina tänds",
+      "Koder i ECM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till DCM",
+      "Mät CAN-signal",
+      "Byt modul vid bekräftat fel"
+    ]
+  },
+  {
+    "code": "U0136",
+    "short": "Lost Communication with Exhaust Gas Sensor Module",
+    "description": "Ingen kommunikation med avgassensor-/NOx-modul.",
+    "system": "emissions",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen ström/jord",
+      "Defekt NOx-sensormodul"
+    ],
+    "symptoms": [
+      "Fel på utsläppskontroll",
+      "MIL tänd",
+      "Reducerad motoreffekt"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till NOx-modul",
+      "Mät CAN H/L",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0137",
+    "short": "Lost Communication with Trailer Brake Control Module",
+    "description": "Ingen kommunikation med släpvagnens bromsmodul.",
+    "system": "trailer",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen strömförsörjning",
+      "Defekt trailer brake modul"
+    ],
+    "symptoms": [
+      "Trailerbroms fungerar ej",
+      "Trailer warning lamp tänds",
+      "Koder i BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera släpvagnskontakt och kablage",
+      "Mät CAN H/L",
+      "Byt modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0138",
+    "short": "Lost Communication with All-Wheel Drive Control Module",
+    "description": "Ingen kommunikation med AWD-styrenhet.",
+    "system": "driveline",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott till AWD-modul",
+      "Ingen ström/jord",
+      "Defekt AWD-modul"
+    ],
+    "symptoms": [
+      "AWD ur funktion",
+      "Drivlinevarning i klustret",
+      "Koder i ECM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till AWD-modul",
+      "Mät CAN-signal",
+      "Byt modul om ingen respons"
+    ]
+  },
+  {
+    "code": "U0139",
+    "short": "Lost Communication with Suspension Control Module B",
+    "description": "Ingen kommunikation med sekundär stötdämpar-/fjädringsmodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen strömförsörjning",
+      "Defekt suspension modul B"
+    ],
+    "symptoms": [
+      "Adaptiv dämpning ur funktion",
+      "Varningslampa för chassi tänd",
+      "Koder i BCM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät matning/jord",
+      "Testa CAN H/L"
+    ]
+  },
+  {
+    "code": "U0140",
+    "short": "Lost Communication with Body Control Module",
+    "description": "Ingen kommunikation med karossmodul (BCM).",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen ström/jord",
+      "Defekt BCM"
+    ],
+    "symptoms": [
+      "Central-lås/belysning ur funktion",
+      "Flera varningar i klustret",
+      "MIL/BCM lampor tänds"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar/reläer",
+      "Mät CAN-signal vid BCM",
+      "Byt modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0141",
+    "short": "Lost Communication with Body Control Module A",
+    "description": "Ingen kommunikation med BCM-A.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen matning/jord",
+      "Defekt BCM-A"
+    ],
+    "symptoms": [
+      "Karossfunktioner ur funktion",
+      "Varningslampor för dörrar/lås",
+      "Koder i ECM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till BCM-A",
+      "Mät spänning och jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0142",
+    "short": "Lost Communication with Body Control Module B",
+    "description": "Ingen kommunikation med BCM-B.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen strömförsörjning",
+      "Defekt BCM-B"
+    ],
+    "symptoms": [
+      "Karossrelaterade funktioner ur funktion",
+      "Koder i övriga moduler",
+      "Varningslampor tänds"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät matning/jord",
+      "Byt BCM-B om ingen respons"
+    ]
+  },
+  {
+    "code": "U0143",
+    "short": "Lost Communication with Body Control Module C",
+    "description": "Ingen kommunikation med BCM-C.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen matning/jord",
+      "Defekt BCM-C"
+    ],
+    "symptoms": [
+      "Del av karossfunktion ur funktion",
+      "Varningslampor i klustret",
+      "Koder i BCM/ECM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till BCM-C",
+      "Mät CAN H/L",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0144",
+    "short": "Lost Communication with Body Control Module D",
+    "description": "Ingen kommunikation med BCM-D.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen strömförsörjning",
+      "Defekt BCM-D"
+    ],
+    "symptoms": [
+      "Specifika karossfunktioner ur funktion",
+      "Flera varningar",
+      "Koder i BCM/ABS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till BCM-D",
+      "Mät matning/jord",
+      "Byt modul om fel kvarstår"
+    ]
+  },
+  {
+    "code": "U0145",
+    "short": "Lost Communication with Body Control Module E",
+    "description": "Ingen kommunikation med BCM-E.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Defekt BCM-E",
+      "Ingen strömförsörjning"
+    ],
+    "symptoms": [
+      "Karossrelaterade funktioner ur funktion",
+      "Koder i övriga moduler",
+      "Varningslampor tänds"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät CAN H/L",
+      "Byt BCM-E vid behov"
+    ]
+  },
+  {
+    "code": "U0146",
+    "short": "Lost Communication with Gateway Module",
+    "description": "Ingen kommunikation med gatewaymodul (nätverksförbindelse).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-brott",
+      "Ingen strömförsörjning",
+      "Defekt gateway"
+    ],
+    "symptoms": [
+      "Flera moduler tappar kommunikation",
+      "System ur funktion",
+      "Varningslampor i klustret"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera gateway kablage",
+      "Mät CAN-signal",
+      "Byt gateway om ingen respons"
+    ]
+  },
+  {
+    "code": "U0147",
+    "short": "Lost Communication with Gateway B",
+    "description": "Ingen kommunikation med gateway-modul B.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen strömförsörjning",
+      "Defekt gateway B"
+    ],
+    "symptoms": [
+      "Vissa moduler tappar kontakt",
+      "System felar i nätverket",
+      "Lampor i instrumentkluster"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät signal på CAN/LIN",
+      "Byt modul om ingen respons"
+    ]
+  },
+  {
+    "code": "U0148",
+    "short": "Lost Communication with Gateway C",
+    "description": "Ingen kommunikation med gateway-modul C.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i CAN/LIN-buss",
+      "Ingen ström eller jord till modulen",
+      "Defekt gateway C"
+    ],
+    "symptoms": [
+      "Delvis bortfall av nätverkskommunikation",
+      "Flera system ur funktion",
+      "Varningslampor i klustret"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och anslutningar",
+      "Mät CAN H/L och LIN-signal",
+      "Byt gateway-modul vid behov"
+    ]
+  },
+  {
+    "code": "U0149",
+    "short": "Lost Communication with Gateway D",
+    "description": "Ingen kommunikation med gateway-modul D.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt gateway D"
+    ],
+    "symptoms": [
+      "Kommunikationsbortfall för vissa moduler",
+      "Fel i infotainment eller säkerhetssystem",
+      "Varningslampor aktiveras"
+    ],
+    "diagnostic_steps": [
+      "Inspektera kablage till gateway D",
+      "Kontrollera spänning och jord",
+      "Byt modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0150",
+    "short": "Lost Communication with Gateway E",
+    "description": "Ingen kommunikation med gateway-modul E.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-brott",
+      "Fel på modulens strömförsörjning",
+      "Defekt gateway E"
+    ],
+    "symptoms": [
+      "Flera moduler saknar data",
+      "Nätverksfel i BCM/ECM",
+      "Varningslampor i instrumentklustret"
+    ],
+    "diagnostic_steps": [
+      "Mät CAN H/L",
+      "Kontrollera matning/jord",
+      "Byt gateway-modul vid bekräftat fel"
+    ]
+  },
+  {
+    "code": "U0151",
+    "short": "Lost Communication with Restraints Control Module",
+    "description": "Ingen kommunikation med krockkudds-/SRS-modulen.",
+    "system": "safety",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott till SRS-modulen",
+      "Ingen strömförsörjning",
+      "Defekt SRS-modul"
+    ],
+    "symptoms": [
+      "Airbag-lampan lyser",
+      "Säkerhetssystem ur funktion",
+      "Koder i BCM/ECM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till SRS",
+      "Mät CAN H/L vid modulen",
+      "Byt modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0152",
+    "short": "Lost Communication with Side Restraints Control Module",
+    "description": "Ingen kommunikation med sidokrockskuddsmodul.",
+    "system": "safety",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen ström/jord till modulen",
+      "Defekt sidokrockkuddsmodul"
+    ],
+    "symptoms": [
+      "Airbag-lampan lyser",
+      "Sidokrockkuddar ur funktion",
+      "Koder i SRS/BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till sidomodulen",
+      "Mät matning och jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0153",
+    "short": "Lost Communication with Side Restraints Control Module B",
+    "description": "Ingen kommunikation med sidokrockskuddsmodul B.",
+    "system": "safety",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Defekt sidomodul B",
+      "Ingen strömförsörjning"
+    ],
+    "symptoms": [
+      "Airbag-lampan lyser",
+      "Delvis bortfall av sidokrockkuddar",
+      "Koder i BCM/SRS"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och jordning",
+      "Mät CAN H/L",
+      "Byt modul vid bekräftat fel"
+    ]
+  },
+  {
+    "code": "U0154",
+    "short": "Lost Communication with Body Control Module F",
+    "description": "Ingen kommunikation med BCM-F.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen ström/jord",
+      "Defekt BCM-F"
+    ],
+    "symptoms": [
+      "Specifika karossfunktioner ur funktion",
+      "Lampor för komfortsystem lyser",
+      "Koder i BCM/ECM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till BCM-F",
+      "Mät matning/jord",
+      "Byt modul om ingen respons"
+    ]
+  },
+  {
+    "code": "U0155",
+    "short": "Lost Communication with Instrument Panel Cluster (IPC)",
+    "description": "Ingen kommunikation med instrumentklustret.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott till IPC",
+      "Ingen strömförsörjning",
+      "Defekt IPC-modul"
+    ],
+    "symptoms": [
+      "Instrumentkluster mörkt/ur funktion",
+      "Flera lampor felaktiga",
+      "Ingen data visas"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till IPC",
+      "Mät CAN H/L",
+      "Byt IPC-modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0156",
+    "short": "Lost Communication with Information Center A",
+    "description": "Ingen kommunikation med informationsdisplay A.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen matning/jord",
+      "Defekt informationsdisplay A"
+    ],
+    "symptoms": [
+      "Ingen information i displayen",
+      "Varningsmeddelanden saknas",
+      "Koder i BCM/IPC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät ström och jord",
+      "Byt displaymodul vid behov"
+    ]
+  },
+  {
+    "code": "U0157",
+    "short": "Lost Communication with Information Center B",
+    "description": "Ingen kommunikation med informationsdisplay B.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt displaymodul B"
+    ],
+    "symptoms": [
+      "Ingen information i displayen",
+      "Felmeddelanden saknas",
+      "Koder i BCM/IPC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät signaler",
+      "Byt modul om fel kvarstår"
+    ]
+  },
+  {
+    "code": "U0158",
+    "short": "Lost Communication with Head-Up Display",
+    "description": "Ingen kommunikation med HUD-modul.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN- eller LIN-avbrott till HUD",
+      "Ingen matning eller jord",
+      "Defekt HUD-modul"
+    ],
+    "symptoms": [
+      "HUD fungerar inte",
+      "Ingen projektion i rutan",
+      "Koder i IPC/BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och kontakter",
+      "Mät matning och jord",
+      "Byt HUD-modul vid behov"
+    ]
+  },
+  {
+    "code": "U0159",
+    "short": "Lost Communication with Parking Assist Control Module",
+    "description": "Ingen kommunikation med parkeringsassistansmodul.",
+    "system": "chassis",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen spänning/jord till modulen",
+      "Defekt parkeringsassistansmodul"
+    ],
+    "symptoms": [
+      "P-sensorer fungerar inte",
+      "Backvarning saknas",
+      "Varningslampor i klustret"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till P-modulen",
+      "Mät spänning/jord",
+      "Byt modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0160",
+    "short": "Lost Communication with Audible Alert Control Module",
+    "description": "Ingen kommunikation med ljud-/varningsmodul.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Defekt varningsmodul",
+      "Ingen ström/jord"
+    ],
+    "symptoms": [
+      "Inga ljudvarningar (bältespåminnare, dörrvarning etc.)",
+      "Varningslampor fungerar men inget ljud",
+      "Koder i BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät spänning och jord",
+      "Byt ljudmodul vid behov"
+    ]
+  },
+  {
+    "code": "U0161",
+    "short": "Lost Communication with Compass Module",
+    "description": "Ingen kommunikation med kompassmodul.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt kompassmodul"
+    ],
+    "symptoms": [
+      "Kompass visar ej riktning",
+      "Felmeddelande i infotainment",
+      "Koder i BCM/IPC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Verifiera matning/jord",
+      "Byt kompassmodul vid behov"
+    ]
+  },
+  {
+    "code": "U0162",
+    "short": "Lost Communication with Navigation Display Module",
+    "description": "Ingen kommunikation med navigationsdisplaymodul.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt navigationsmodul"
+    ],
+    "symptoms": [
+      "Ingen navigationsbild",
+      "Navigation ur funktion",
+      "Koder i BCM/IPC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och kontakter",
+      "Mät matning och jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0163",
+    "short": "Lost Communication with Navigation Display Module B",
+    "description": "Ingen kommunikation med sekundär navigationsmodul (B).",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Defekt navigationsmodul B",
+      "Ingen ström/jord"
+    ],
+    "symptoms": [
+      "Navigationsbild saknas",
+      "Koder i infotainment",
+      "Funktion delvis urkopplad"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät spänning/jord",
+      "Byt modul vid bekräftat fel"
+    ]
+  },
+  {
+    "code": "U0164",
+    "short": "Lost Communication with HVAC Control Module",
+    "description": "Ingen kommunikation med klimatanläggningens styrenhet.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott till HVAC",
+      "Ingen ström/jord",
+      "Defekt HVAC-modul"
+    ],
+    "symptoms": [
+      "Ingen reglering av värme/kylning",
+      "Fläkt eller AC ur funktion",
+      "Koder i BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar",
+      "Mät CAN H/L",
+      "Byt HVAC-modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0165",
+    "short": "Lost Communication with HVAC Control Module B",
+    "description": "Ingen kommunikation med HVAC-modul B.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Defekt HVAC-modul B",
+      "Ingen strömförsörjning"
+    ],
+    "symptoms": [
+      "Klimatkontroll ur funktion",
+      "Delvis bortfall av AC/värme",
+      "Koder i BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och kontakter",
+      "Verifiera ström/jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0166",
+    "short": "Lost Communication with Auxiliary Heater Control Module",
+    "description": "Ingen kommunikation med tillsatsvärmarens styrenhet.",
+    "system": "HVAC",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt värmarstyrmodul"
+    ],
+    "symptoms": [
+      "Ingen kupévärme via tillsatsvärmare",
+      "Felmeddelande i display",
+      "Koder i BCM/HVAC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till värmaren",
+      "Mät CAN/LIN-signal",
+      "Byt modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0167",
+    "short": "Lost Communication with Vehicle Immobilizer Control Module",
+    "description": "Ingen kommunikation med startspärrmodul.",
+    "system": "security",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen strömförsörjning",
+      "Defekt immobilizer-modul"
+    ],
+    "symptoms": [
+      "Bilen startar ej",
+      "Immobilizer-lampa blinkar",
+      "Koder i BCM/ECM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera nyckel/transponder",
+      "Kontrollera kablage",
+      "Byt immobilizer-modul vid behov"
+    ]
+  },
+  {
+    "code": "U0168",
+    "short": "Lost Communication with Vehicle Security Control Module",
+    "description": "Ingen kommunikation med bilens säkerhets-/larmsystem.",
+    "system": "security",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott till larmsystem",
+      "Ingen spänning/jord",
+      "Defekt säkerhetsmodul"
+    ],
+    "symptoms": [
+      "Larm aktiveras ej",
+      "Fjärrlås fungerar inte",
+      "Varningslampor för säkerhetssystem"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till larmmodulen",
+      "Mät spänning/jord",
+      "Byt modul vid bekräftat fel"
+    ]
+  },
+  {
+    "code": "U0169",
+    "short": "Lost Communication with Sunroof Control Module",
+    "description": "Ingen kommunikation med soltakets styrenhet.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen ström/jord",
+      "Defekt soltakmodul"
+    ],
+    "symptoms": [
+      "Soltaket fungerar inte",
+      "Felmeddelande i karosskontroll",
+      "Koder i BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till soltak",
+      "Inspektera kablage och kontakter",
+      "Byt modul om den ej svarar"
+    ]
+  },
+  {
+    "code": "U0170",
+    "short": "Lost Communication with Rear Sunroof Control Module",
+    "description": "Ingen kommunikation med bakre soltakets styrenhet.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt bakre soltakmodul"
+    ],
+    "symptoms": [
+      "Bakre soltak fungerar inte",
+      "Fel i komfortsystem",
+      "Koder i BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät matning/jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0171",
+    "short": "Lost Communication with Control Module A",
+    "description": "Ingen kommunikation med styrmodul A (okänd typ).",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen strömförsörjning",
+      "Defekt styrmodul A"
+    ],
+    "symptoms": [
+      "System bortfall beroende på modul",
+      "Fel i nätverket",
+      "Varningslampor i klustret"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till modulen",
+      "Mät CAN H/L",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0172",
+    "short": "Lost Communication with Control Module B",
+    "description": "Ingen kommunikation med styrmodul B.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen ström/jord",
+      "Defekt styrmodul B"
+    ],
+    "symptoms": [
+      "System bortfall kopplat till modul B",
+      "Felmeddelanden i klustret",
+      "Koder i övriga moduler"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Verifiera ström/jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0173",
+    "short": "Lost Communication with Control Module C",
+    "description": "Ingen kommunikation med styrmodul C.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt styrmodul C"
+    ],
+    "symptoms": [
+      "Relaterat system ur funktion",
+      "Fel i nätverkskommunikationen",
+      "Koder i ECM/BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät CAN H/L",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0174",
+    "short": "Lost Communication with Control Module D",
+    "description": "Ingen kommunikation med styrmodul D.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen strömförsörjning",
+      "Defekt styrmodul D"
+    ],
+    "symptoms": [
+      "System associerat till modul D fungerar inte",
+      "Felmeddelanden i andra moduler",
+      "Varningslampor aktiva"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och anslutningar",
+      "Mät CAN-signal",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0175",
+    "short": "Lost Communication with Control Module E",
+    "description": "Ingen kommunikation med styrmodul E.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen matning/jord",
+      "Defekt styrmodul E"
+    ],
+    "symptoms": [
+      "Tillhörande system fungerar ej",
+      "Koder i övriga moduler",
+      "Lampor i instrumentkluster"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät spänning/jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0176",
+    "short": "Lost Communication with Control Module F",
+    "description": "Ingen kommunikation med styrmodul F.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen ström/jord",
+      "Defekt styrmodul F"
+    ],
+    "symptoms": [
+      "Relaterat system ur funktion",
+      "Felmeddelande i nätverket",
+      "Koder i ECM/BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät CAN H/L",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0177",
+    "short": "Lost Communication with Control Module G",
+    "description": "Ingen kommunikation med styrmodul G.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen matning/jord",
+      "Defekt styrmodul G"
+    ],
+    "symptoms": [
+      "System associerat till modul G fungerar inte",
+      "Fel i nätverket",
+      "Lampor i klustret"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och anslutningar",
+      "Mät matning och jord",
+      "Byt modul om fel kvarstår"
+    ]
+  },
+  {
+    "code": "U0178",
+    "short": "Lost Communication with Control Module H",
+    "description": "Ingen kommunikation med styrmodul H.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen ström/jord till modulen",
+      "Defekt styrmodul H"
+    ],
+    "symptoms": [
+      "Relaterat system ur funktion",
+      "Fel i nätverkskommunikation",
+      "Koder i ECM/BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage och anslutningar",
+      "Mät CAN H/L",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0179",
+    "short": "Lost Communication with Control Module I",
+    "description": "Ingen kommunikation med styrmodul I.",
+    "system": "network",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen matning/jord",
+      "Defekt styrmodul I"
+    ],
+    "symptoms": [
+      "System associerat till modul I fungerar ej",
+      "Felmeddelanden i andra moduler",
+      "Lampor i instrumentklustret"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Verifiera matning/jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0180",
+    "short": "Lost Communication with Automatic Lighting Control Module",
+    "description": "Ingen kommunikation med automatisk ljusstyrningsmodul.",
+    "system": "body",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen ström/jord",
+      "Defekt ljusstyrningsmodul"
+    ],
+    "symptoms": [
+      "Automatiskt ljus fungerar inte",
+      "Fel i yttre belysning",
+      "Varningslampor i IPC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar",
+      "Inspektera kablage",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0181",
+    "short": "Lost Communication with Headlamp Control Module",
+    "description": "Ingen kommunikation med strålkastarmodulen.",
+    "system": "lighting",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen matning/jord",
+      "Defekt strålkastarmodul"
+    ],
+    "symptoms": [
+      "Strålkastare fungerar ej eller felaktigt",
+      "Automatisk nivåreglering ur funktion",
+      "Koder i BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till strålkastarna",
+      "Verifiera ström/jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0182",
+    "short": "Lost Communication with Lamp Control Module A",
+    "description": "Ingen kommunikation med lampkontrollmodul A.",
+    "system": "lighting",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt lampkontrollmodul A"
+    ],
+    "symptoms": [
+      "Delvis bortfall av lampor",
+      "Felmeddelande i IPC",
+      "Koder i BCM"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar och kablage",
+      "Mät CAN-signal",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0183",
+    "short": "Lost Communication with Lamp Control Module B",
+    "description": "Ingen kommunikation med lampkontrollmodul B.",
+    "system": "lighting",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-brott",
+      "Ingen strömförsörjning",
+      "Defekt lampkontrollmodul B"
+    ],
+    "symptoms": [
+      "Belysning bak/fram fungerar ej",
+      "Varningslampor aktiveras",
+      "Felmeddelande i IPC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät matning/jord",
+      "Byt modul vid behov"
+    ]
+  },
+  {
+    "code": "U0184",
+    "short": "Lost Communication with Radio",
+    "description": "Ingen kommunikation med radion.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt radiomodul"
+    ],
+    "symptoms": [
+      "Ingen ljudutgång",
+      "Skärm släckt",
+      "Koder i BCM/IPC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar till radion",
+      "Inspektera kablage",
+      "Byt radiomodul om nödvändigt"
+    ]
+  },
+  {
+    "code": "U0185",
+    "short": "Lost Communication with Antenna Control Module",
+    "description": "Ingen kommunikation med antennkontrollmodul.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-avbrott",
+      "Ingen spänning/jord",
+      "Defekt antennmodul"
+    ],
+    "symptoms": [
+      "Ingen radio-/GPS-signal",
+      "Fel i infotainment",
+      "Koder i BCM/IPC"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera antennkablage",
+      "Mät spänning/jord",
+      "Byt antennmodul vid behov"
+    ]
+  },
+  {
+    "code": "U0186",
+    "short": "Lost Communication with Audio Amplifier A",
+    "description": "Ingen kommunikation med ljudförstärkare A.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN-brott",
+      "Ingen ström/jord",
+      "Defekt förstärkarmodul A"
+    ],
+    "symptoms": [
+      "Ingen ljudutgång i högtalare",
+      "Distorsion eller tyst system",
+      "Koder i BCM/infotainment"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera säkringar och kablage",
+      "Mät CAN-signal",
+      "Byt förstärkarmodul vid behov"
+    ]
+  },
+  {
+    "code": "U0187",
+    "short": "Lost Communication with Audio Amplifier B",
+    "description": "Ingen kommunikation med ljudförstärkare B.",
+    "system": "infotainment",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "CAN/LIN-brott",
+      "Ingen ström/jord",
+      "Defekt förstärkarmodul B"
+    ],
+    "symptoms": [
+      "Ingen ljudutgång i vissa högtalare",
+      "Fel i infotainment",
+      "Koder i BCM/infotainment"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage till förstärkaren",
+      "Verifiera matning/jord",
+      "Byt förstärkarmodul vid behov"
+    ]
+  }
+]
+
+
+
