@@ -1,6 +1,7 @@
 {
   "version": 1,
   "shards": [
-    { "file": "/public/dtc/p0-powertrain-common.json", "count": 36, "range": "P0100–P0456" }
+    { "file": "/public/dtc/p0-powertrain-common.json", "count": 36, "range": "P0100–P0456" },
+    { "file": "/public/dtc/u-network-common.json", "count": 93, "range": "U0001–U0199" }
   ]
 }
