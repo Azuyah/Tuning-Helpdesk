@@ -2533,6 +2533,54 @@
   "diagnostic_steps": ["Spänningslogg", "Uppdatera/omprogrammera", "Byt ECM vid behov"]
 },
 {
+  "code": "P0600",
+  "short": "Serial Communication Link",
+  "description": "Kommunikationsfel på seriell buss mellan styrenheter (t.ex. K-line/CAN gateway).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Störning/avbrott i bussledning",
+    "Jord/strömmatning saknas på modul",
+    "Korrosion i kontaktdon",
+    "Eftermonterad utrustning som stör bussen"
+  ],
+  "symptoms": [
+    "Multipla lampor/koder",
+    "Startspärrproblem",
+    "Intermittent kommunikation"
+  ],
+  "diagnostic_steps": [
+    "Kontrollera matning/jord till moduler",
+    "Mät bussintegritet (terminering, resistans)",
+    "Isolera störkällor/eftermonteringar",
+    "Reparera kabel/skarvar"
+  ]
+},
+{
+  "code": "P0573",
+  "short": "Brake Switch A – High",
+  "description": "Hög ingångsnivå från bromskontakt A när annat förväntas.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Kort till matning",
+    "Feljusterad kontakt",
+    "Kontakt fastnar mekaniskt"
+  ],
+  "symptoms": [
+    "Farthållare ur funktion",
+    "MIL/ESC varning",
+    "Bromsljus beter sig fel"
+  ],
+  "diagnostic_steps": [
+    "Verifiera logik i livedata",
+    "Justera/byt kontakt",
+    "Åtgärda kortslutning i kablage"
+  ]
+},
+{
   "code": "P0602",
   "short": "Control Module Programming Error",
   "description": "Fel i programmering/kalibrering av ECM/PCM.",
