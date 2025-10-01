@@ -63,7 +63,7 @@
   Feedback
 </a>
 
-<% if (me && (me.role === 'admin' || me.role === 'support')) { %>
+<% if (me.role === 'support'){ %>
   <a href="/support-questions"
      class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/5 relative after:pointer-events-none after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded after:bg-amber-500 after:scale-x-0 hover:after:scale-x-100 after:transition">
     Support
