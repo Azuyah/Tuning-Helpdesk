@@ -1,0 +1,327 @@
+<!-- DTC SEARCH -->
+<section id="dtc-app" style="padding:40px 16px;background:#f3f4f6;">
+  <div style="max-width:880px;margin:0 auto;">
+    <!-- Kort / Container -->
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 12px 28px rgba(0,0,0,.06);padding:26px 28px;">
+      
+      <!-- Header -->
+      <header style="margin-bottom:16px;">
+        <h1 style="margin:0 0 8px;font-size:28px;line-height:1.25;font-weight:800;color:#0f172a;">
+          Felkods­uppslag
+        </h1>
+        <p style="color:#475569;font-size:14px;margin:0;">
+          Skriv en kod (t.ex. <code>P0301</code>) eller ett sökord. Databas: generiska SAE + utökningar.
+        </p>
+      </header>
+
+      <!-- Sökfält -->
+      <form id="dtcForm" role="search" aria-label="Sök felkod">
+        <div style="display:flex;gap:10px;align-items:stretch;margin:10px 0 14px;">
+          <input id="dtcInput" type="search" placeholder="P0XXX, B1XXX, U0XXX …"
+                 autocomplete="off" aria-label="Felkod eller sökord"
+                 style="flex:1;padding:12px 14px;border:1px solid #d1d5db;border-radius:12px;font-size:16px;outline:none;box-shadow:inset 0 1px 2px rgba(0,0,0,.03);" />
+          <button type="submit"
+                  style="background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;height:44px;padding:0 18px;">
+            Sök
+          </button>
+          <button type="button" id="clearBtn"
+                  style="background:#f8fafc;border:1px solid #d1d5db;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;height:44px;padding:0 14px;">
+            Rensa
+          </button>
+        </div>
+
+        <!-- Snabbval -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+          <button type="button" class="chip" data-sample="P0420"
+                  style="padding:6px 12px;border:1px solid #d1d5db;border-radius:999px;font-size:13px;background:#f8fafc;cursor:pointer;">
+            P0420
+          </button>
+          <button type="button" class="chip" data-sample="P0171"
+                  style="padding:6px 12px;border:1px solid #d1d5db;border-radius:999px;font-size:13px;background:#f8fafc;cursor:pointer;">
+            P0171
+          </button>
+          <button type="button" class="chip" data-sample="P0301"
+                  style="padding:6px 12px;border:1px solid #d1d5db;border-radius:999px;font-size:13px;background:#f8fafc;cursor:pointer;">
+            P0301
+          </button>
+          <button type="button" class="chip" data-sample="U0100"
+                  style="padding:6px 12px;border:1px solid #d1d5db;border-radius:999px;font-size:13px;background:#f8fafc;cursor:pointer;">
+            U0100
+          </button>
+          <button type="button" class="chip" data-sample="B1201"
+                  style="padding:6px 12px;border:1px solid #d1d5db;border-radius:999px;font-size:13px;background:#f8fafc;cursor:pointer;">
+            B1201
+          </button>
+        </div>
+      </form>
+
+      <!-- Resultat -->
+      <div id="dtcResult" aria-live="polite" style="margin-top:16px;">
+        <div style="text-align:center;color:#64748b;padding:22px;">
+          <div style="font-size:28px;margin-bottom:6px;">🔎</div>
+          <p style="margin:4px 0 0;font-size:14px;">Sök efter en felkod för att se detaljer.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ---------------------------
+//   Databas-laddning (shards)
+// ---------------------------
+let DTC_DB = [];
+let DTC_INDEX = new Map();
+
+async function loadShards() {
+  if (DTC_DB.length) return;
+  const idxRes = await fetch('/public/dtc/index.json', { headers: { 'Accept': 'application/json' }});
+  if (!idxRes.ok) throw new Error('Kunde inte ladda /public/dtc/index.json');
+  const idx = await idxRes.json();
+
+  for (const shard of (idx.shards || [])) {
+    const r = await fetch(shard.file, { headers: { 'Accept': 'application/json' }});
+    if (!r.ok) continue;
+    const arr = await r.json();
+    if (Array.isArray(arr)) DTC_DB.push(...arr);
+  }
+  DTC_INDEX = new Map(DTC_DB.map(r => [String(r.code).toUpperCase(), r]));
+}
+
+function lookup(code) {
+  if (!code) return null;
+  const key = String(code).toUpperCase().trim();
+  return DTC_INDEX.get(key) || DTC_INDEX.get(key.replace(/[^A-Z0-9]/g, '')) || null;
+}
+
+function searchLoose(q) {
+  const s = String(q).toLowerCase().trim();
+  if (!s) return [];
+  return DTC_DB.filter(r =>
+    String(r.code).toLowerCase().includes(s) ||
+    String(r.short||'').toLowerCase().includes(s) ||
+    String(r.description||'').toLowerCase().includes(s) ||
+    (r.possible_causes||[]).some(c => String(c).toLowerCase().includes(s)) ||
+    (r.symptoms||[]).some(c => String(c).toLowerCase().includes(s))
+  ).slice(0, 50);
+}
+
+// ----------------------------------------------------
+//   Lätta regler för att fylla orsaker/symtom/steg
+//   (för er SAE-grunddata som saknar dessa fält)
+// ----------------------------------------------------
+const COMMON_RULES = [
+  {
+    re: /fuel\s+(level|sender)\s+circuit/i,
+    causes: [
+      'Avbrott/korrosion i ledningsnät eller kontakt vid tankgivaren',
+      'Defekt bränslenivågivare',
+      'Dålig jordpunkt vid tank/chassi',
+      'Fel referensspänning från instrument/ECU'
+    ],
+    symptoms: ['Felaktig nivåvisning', 'Intermittent nivå', 'MIL kan tändas'],
+    steps: [
+      'Visuell kontroll av kontakt och jord vid tank',
+      'Mät givarmotstånd genom hela slaget (ohm)',
+      'Backproba 5V/signal/jord vid ECU/kluster',
+      'Kontinuitets-/spänningsfallstest i härvan'
+    ]
+  },
+  {
+    re: /system\s+too\s+lean\s*\(bank\s*1\)/i,
+    causes: [
+      'Vakuumläckage/falskluft',
+      'Smutsig eller felkalibrerad MAF',
+      'Lågt bränsletryck/igensatt filter',
+      'Avgasläckage före O2'
+    ],
+    symptoms: ['Ryckig tomgång/gång', 'Trim nära gräns', 'MIL tänd'],
+    steps: ['Rökprov intag', 'Kontrollera/rengör MAF', 'Mät bränsletryck', 'Kontrollera O2 och läckage']
+  },
+  {
+    re: /catalyst.*below\s+threshold/i,
+    causes: ['Nedsatt katalysatoreffektivitet', 'Misständningar/trim-historik', 'Trög post-O2', 'Avgaslcckage före kat'],
+    symptoms: ['MIL tänd', 'Ibland lukt/ökad förbrukning'],
+    steps: ['Jämför pre/post O2', 'Kontroll av trim/misständning/läckage', 'Tempdifferens över kat vid last']
+  },
+  {
+    re: /\b(o2|oxygen)\s*sensor\b/i,
+    causes: ['Åldrad/förorenad O2', 'Heater-krets avbrott', 'Kabelskada nära grenrör'],
+    symptoms: ['Trim fladdrar', 'MIL tänd'],
+    steps: ['Mät heater-motstånd/matning', 'Inspektera kabel', 'Waveformtest gaspådrag/decel']
+  },
+  {
+    re: /\b(maf|mass air flow)\b/i,
+    causes: ['Smutsig MAF', 'Falskluft efter MAF', 'Matnings-/jordproblem'],
+    symptoms: ['Trög gasrespons', 'Trim gränsar', 'MIL tänd'],
+    steps: ['Rengör/byt MAF', 'Rökprov intag', 'Spänningsfallstest matning/jord']
+  },
+  {
+    re: /\bmisfire|cyl(inder)?\s*\d+\s*misfire\b/i,
+    causes: ['Defekt tändspole/stift', 'Smutsig/defekt spridare', 'Kompressionsproblem'],
+    symptoms: ['Skakningar', 'MIL kan blinka vid kraftig misständning'],
+    steps: ['Byt plats på spole/stift', 'Injektorbalans', 'Kompressions-/läcktest']
+  }
+];
+
+function inferFromRules(hit){
+  const txt = ((hit.short||'') + ' ' + (hit.description||'')).toLowerCase();
+  const add = { causes:[], symptoms:[], steps:[] };
+  for (const r of COMMON_RULES){
+    if (r.re.test(txt)){
+      if (r.causes)   add.causes.push(...r.causes);
+      if (r.symptoms) add.symptoms.push(...r.symptoms);
+      if (r.steps)    add.steps.push(...r.steps);
+    }
+  }
+  const uniq = a => Array.from(new Set(a.map(s => String(s).trim()).filter(Boolean)));
+  return { causes: uniq(add.causes), symptoms: uniq(add.symptoms), steps: uniq(add.steps) };
+}
+
+function normalizeDtc(hit){
+  const h = JSON.parse(JSON.stringify(hit || {}));
+  // Om databasen redan har arrayer – behåll dem
+  h.possible_causes  = Array.isArray(h.possible_causes)  ? h.possible_causes  : [];
+  h.symptoms         = Array.isArray(h.symptoms)         ? h.symptoms         : [];
+  h.diagnostic_steps = Array.isArray(h.diagnostic_steps) ? h.diagnostic_steps : [];
+
+  // Fyll på med heuristik/regler om saknas
+  if (!h.possible_causes.length && !h.symptoms.length && !h.diagnostic_steps.length){
+    const inf = inferFromRules(h);
+    h.possible_causes  = inf.causes;
+    h.symptoms         = inf.symptoms;
+    h.diagnostic_steps = inf.steps;
+  }
+
+  if (!h.short && h.description) h.short = h.description;
+  return h;
+}
+
+// ---------------------------------------
+//   Render helpers (INLINE-styled rubriker)
+// ---------------------------------------
+function arrBlock(title, arr){
+  if (!arr || !arr.length) return '';
+  return `
+    <section style="margin-top:18px;">
+      <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px;">
+        <div style="width:6px;height:18px;background:#2563eb;border-radius:3px;"></div>
+        <h3 style="margin:0;font-weight:800;font-size:18px;line-height:1.25;color:#0f172a;">${escapeHtml(title)}</h3>
+      </div>
+      <ul style="list-style:disc;padding-left:1.25rem;margin:0;">
+        ${arr.map(x => `<li style="margin:4px 0;color:#111827;">${escapeHtml(x)}</li>`).join('')}
+      </ul>
+    </section>`;
+}
+
+function badge(code){
+  return `
+    <div style="
+      display:inline-flex;align-items:center;gap:10px;
+      background:#0ea5e9;color:#fff;border-radius:14px;
+      padding:10px 14px;box-shadow:0 2px 6px rgba(14,165,233,.35);
+      margin-bottom:10px;
+    ">
+      <span style="font:700 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;">KOD</span>
+      <code style="font:800 18px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;letter-spacing:.5px;">
+        ${escapeHtml(code)}
+      </code>
+    </div>`;
+}
+
+function renderResult(el, hit, query, looseList=[]) {
+  if (hit) {
+    const H = normalizeDtc(hit);
+
+    el.innerHTML = `
+      <article style="background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:18px 20px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+        <header style="margin-bottom:6px;">
+          ${badge(H.code || '')}
+          ${H.short ? `<div style="font-weight:800;font-size:18px;color:#0f172a;margin-top:2px;">${escapeHtml(H.short)}</div>` : ''}
+        </header>
+
+        ${H.description ? `
+          <section style="margin-top:10px;">
+            <div style="display:flex;align-items:center;gap:10px;margin:0 0 6px;">
+              <div style="width:6px;height:18px;background:#10b981;border-radius:3px;"></div>
+              <h3 style="margin:0;font-weight:800;font-size:18px;line-height:1.25;color:#0f172a;">Beskrivning</h3>
+            </div>
+            <p style="margin:6px 0 0;color:#334155;font-size:15px;line-height:1.6;">${escapeHtml(H.description)}</p>
+          </section>` : ''}
+
+        ${arrBlock('Möjliga orsaker', H.possible_causes)}
+        ${arrBlock('Symptom', H.symptoms)}
+        ${arrBlock('Felsökningssteg', H.diagnostic_steps)}
+      </article>
+    `;
+    return;
+  }
+
+  if (looseList.length) {
+    el.innerHTML = `
+      <article style="background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+        <p style="margin:0 0 8px;color:#334155;">Inga exakta träffar för <strong>${escapeHtml(query)}</strong>. Liknande koder:</p>
+        <ul style="list-style:none;margin:0;padding:0;border-top:1px solid rgba(0,0,0,.06);">
+          ${looseList.map(r => `
+            <li data-code="${r.code}" style="display:flex;gap:12px;align-items:center;padding:10px 6px;border-bottom:1px solid rgba(0,0,0,.06);cursor:pointer;">
+              <span style="min-width:90px;font-weight:800;color:#0f172a;">${escapeHtml(r.code)}</span>
+              <span style="color:#334155;">${escapeHtml(r.short || '')}</span>
+            </li>`).join('')}
+        </ul>
+      </article>
+    `;
+    el.querySelectorAll('li[data-code]').forEach(li => {
+      li.addEventListener('click', () => {
+        const code = li.getAttribute('data-code');
+        renderResult(el, lookup(code), code, []);
+      });
+    });
+    return;
+  }
+
+  el.innerHTML = `
+    <article style="background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+      <p style="margin:0 0 6px;">Ingen träff för <strong>${escapeHtml(query)}</strong>.</p>
+      <p style="margin:0;color:#64748b;font-size:13px;">Tips: skriv exakt kod (t.ex. <code>P0301</code>) eller ett ord ur beskrivningen.</p>
+    </article>`;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
+  ));
+}
+
+// ---------------------------
+//   Boot
+// ---------------------------
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadShards();
+
+  const form   = document.getElementById('dtcForm');
+  const input  = document.getElementById('dtcInput');
+  const result = document.getElementById('dtcResult');
+  const clearBtn = document.getElementById('clearBtn');
+  document.querySelectorAll('.chip').forEach(ch => {
+    ch.addEventListener('click', () => { input.value = ch.dataset.sample || ''; input.focus(); });
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    const hit = lookup(q);
+    const loose = hit ? [] : searchLoose(q);
+    renderResult(result, hit, q, loose);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    result.innerHTML = `
+      <div style="text-align:center;color:#64748b;padding:22px;">
+        <div style="font-size:28px;margin-bottom:6px;">🔎</div>
+        <p style="margin:4px 0 0;font-size:14px;">Sök efter en felkod för att se detaljer.</p>
+      </div>`;
+    input.focus();
+  });
+});
+</script>

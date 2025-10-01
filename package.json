@@ -5,7 +5,8 @@
     "dev": "node server.js",
     "start": "node server.js",
     "dev:css": "tailwindcss -i ./public/src/input.css -o ./public/css/style.css --watch",
-    "build:css": "tailwindcss -i ./public/src/input.css -o ./public/css/style.css --minify"
+    "build:css": "tailwindcss -i ./public/src/input.css -o ./public/css/style.css --minify",
+    "build:dtc": "node scripts/build-dtc-db.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

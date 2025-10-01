@@ -1,0 +1,3151 @@
+[
+  {
+    "code": "P0100",
+    "short": "MAF Circuit Malfunction",
+    "description": "Mass Air Flow (MAF) circuit malfunction detected by ECM.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Smutsig/förorenad MAF-sensor",
+      "Läckage efter MAF (falskluft)",
+      "Avbrott/kortslutning i MAF-signalkrets",
+      "Dålig matning/jord till MAF",
+      "Igensatt luftfilter eller felmonterat insug"
+    ],
+    "symptoms": [
+      "Ryckig gång, dålig gasrespons",
+      "Hög/låg bränsletrim (LTFT/STFT)",
+      "Ökad bränsleförbrukning",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Läs livedata: MAF g/s vid tomgång och 2500 rpm – rimliga värden?",
+      "Inspektera och rengör MAF med avsedd MAF-cleaner",
+      "Rökprov insug för att hitta falskluft efter MAF",
+      "Kontrollera 5V referens, signal och jord med backprobning",
+      "Kontinuitetstest av ledningsnät mellan MAF och ECM"
+    ]
+  },
+  {
+    "code": "P0101",
+    "short": "MAF Performance/Range",
+    "description": "MAF signal out of expected range versus engine load and RPM.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Smutsig/åldrad MAF eller felaktig montering i flödesriktning",
+      "Falskluft efter MAF eller läckande PCV",
+      "Avgasläckage före O2 som lurar trim",
+      "Lågt bränsletryck som påverkar beräknad last",
+      "ECM-programvaruversion som behöver uppdateras"
+    ],
+    "symptoms": [
+      "Oregelbunden tomgång",
+      "Dålig acceleration, ibland stannar",
+      "Förhöjd förbrukning",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Verifera MAF värden mot tabell (g/s ≈ 1.0 × motorvolym i liter vid tomgång)",
+      "Röktest av insug och PCV-slangar",
+      "Kontrollera bränsletryck under belastning",
+      "Jämför beräknad last (Calculated Load) mot MAF",
+      "Uppdatera ECM om TSB/kalibrering finns"
+    ]
+  },
+  {
+    "code": "P0102",
+    "short": "MAF Circuit Low",
+    "description": "MAF sensor signal voltage too low.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i signalledning eller dålig jord",
+      "MAF-sensorn defekt",
+      "Smutsig sensortråd som ger låg respons",
+      "Felaktig 5V referens",
+      "Luftläckage före MAF (otät luftburk)"
+    ],
+    "symptoms": [
+      "Mager gång eller tvekan vid gas",
+      "Låg MAF g/s i livedata",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät referens, signal och jord – wiggle test på härva",
+      "Rengör/byt MAF",
+      "Kontrollera luftburk/filter och tätning",
+      "Provkör och följ MAF-kurva vid olika varv"
+    ]
+  },
+  {
+    "code": "P0103",
+    "short": "MAF Circuit High",
+    "description": "MAF sensor signal voltage too high.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning signal till matning",
+      "MAF-sensor felaktig",
+      "Objekt/turbulens direkt vid sensorn",
+      "ECM inlärningsdata felaktig efter batteriav"
+    ],
+    "symptoms": [
+      "Rik gång, sotig avgas",
+      "Hög MAF g/s på tomgång",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Inspektera kablage för skav/kortslutning",
+      "Mät signalnivå tomgång vs. 2500 rpm",
+      "Återställ bränsletrim och kör inlärning",
+      "Byt MAF om värden ej rimliga"
+    ]
+  },
+  {
+    "code": "P0128",
+    "short": "Coolant Thermostat (Below Regulating Temperature)",
+    "description": "Engine coolant temperature below thermostat regulating temperature.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Termostat hänger öppen",
+      "Felaktig ECT-sensor",
+      "Låg kylvätskenivå eller luft i systemet"
+    ],
+    "symptoms": [
+      "Lång uppvärmningstid",
+      "Hög förbrukning, svag kupévärme",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Observera tempökning från kallstart (livedata)",
+      "Känn på övre slang – blir den varm för tidigt?",
+      "Byt termostat vid bekräftad felfunktion",
+      "Kontrollera ECT-signal och nivå/luftning"
+    ]
+  },
+  {
+    "code": "P0135",
+    "short": "O2 Sensor Heater Circuit (Bank 1 Sensor 1)",
+    "description": "Heater circuit malfunction for upstream O2 sensor B1S1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i heaterkrets",
+      "Defekt O2-heater",
+      "Säkring/matning för heater saknas",
+      "Kabelskada nära heta delar"
+    ],
+    "symptoms": [
+      "Lång closed-loop tid",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät heater-motstånd och spänningsmatning",
+      "Kontrollera säkring/relä",
+      "Inspektera kablage och kontaktdon",
+      "Byt sensor om heater defekt"
+    ]
+  },
+  {
+    "code": "P0301",
+    "short": "Cylinder 1 Misfire Detected",
+    "description": "Misfire detected on cylinder 1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt tändspole eller tändstift cyl 1",
+      "Spridarproblem cyl 1",
+      "Kompressionsfel cyl 1",
+      "Vakuumläckage nära runners för cyl 1",
+      "Oljefyllt tändstiftshål (ventilkåpspackning)"
+    ],
+    "symptoms": [
+      "Skakningar, särskilt på tomgång",
+      "MIL blinkar vid hård misständning"
+    ],
+    "diagnostic_steps": [
+      "Flytta spole/stift till annan cylinder, se om koden flyttar med",
+      "Injektorbalans eller byta plats spridare",
+      "Kompressions-/läcktest cyl 1",
+      "Inspektera tändstiftsschakt för olja/vatten"
+    ]
+  },
+  {
+    "code": "P0441",
+    "short": "EVAP Incorrect Purge Flow",
+    "description": "Incorrect purge flow detected by ECM.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Purge-ventil hänger öppen eller stängd",
+      "Blockerad EVAP-ledning",
+      "Felaktig styrning eller elektriskt fel i ventilen"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Ibland svår varmstart efter tankning"
+    ],
+    "diagnostic_steps": [
+      "Aktivera purge i aktuatortest och känn/lyssna",
+      "Vakuumtest av ledningar",
+      "Mät ventilens resistans och matning",
+      "Inspektera canister för mättnad"
+    ]
+  },
+  {
+    "code": "P0325",
+    "short": "Knock Sensor Circuit Malfunction",
+    "description": "ECM saknar rimlig signal från knackningssensor.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt knock-sensor",
+      "Fel åtdragning eller dålig kontakt mot motorblock",
+      "Kabelbrott/kortslutning i knock-sensorkrets"
+    ],
+    "symptoms": [
+      "Förändrad tändningsvinkel (ECM retarderar)",
+      "Förlust av kraft/acceleration",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera sensormontage och momentdragning",
+      "Mät resistans och signalspänning",
+      "Inspektera härva för skav/kortslutning",
+      "Jämför live knock-retard mot normal motor"
+    ]
+  },
+  {
+    "code": "P0500",
+    "short": "Vehicle Speed Sensor (VSS) Malfunction",
+    "description": "Ingen eller orimlig hastighetssignal mottas av ECM/TCU.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt VSS-sensor",
+      "Avbrott/kabelbrott i kretsen",
+      "Problem i instrument/ABS-modul som matar signal",
+      "Metallspån på givare/magnetring"
+    ],
+    "symptoms": [
+      "Ingen hastighetsvisning",
+      "Felaktig växlingslogik i automat",
+      "ABS/ESP-lampor kan tändas",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Läs livedata för VSS – visar det 0 även i rörelse?",
+      "Mät sensorresistans och signal med oscilloskop",
+      "Inspektera givare och magnetring för smuts/skador",
+      "Kontrollera härva/kontakter"
+    ]
+  },
+  {
+    "code": "P0700",
+    "short": "Transmission Control System Malfunction",
+    "description": "TCM har loggat fel och flaggat ECM att tända MIL.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Internt fel i TCM",
+      "Kommunikationsproblem CAN",
+      "Specifika transmissionkoder lagrade i TCM (måste läsas separat)"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Ev. nödläge (limp mode)",
+      "Dålig växling"
+    ],
+    "diagnostic_steps": [
+      "Läs ut felkoder från TCM separat",
+      "Kontrollera CAN-kommunikation",
+      "Verifiera matningsspänningar/jord till TCM",
+      "Uppdatera TCM-mjukvara om tillgänglig"
+    ]
+  },
+  {
+    "code": "P0104",
+    "short": "MAF Circuit Intermittent",
+    "description": "Intermittenta avbrott/variationer i MAF-signal.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Glapp i kontakt eller kabelbrott nära MAF",
+      "Vibrationer som påverkar sensor/härva",
+      "Smuts/olja på sensorelement"
+    ],
+    "symptoms": [
+      "Ryckig gång vid gaspådrag",
+      "Trimvärden hoppar",
+      "MIL tänd/intermittent"
+    ],
+    "diagnostic_steps": [
+      "Wiggle-test på kontakt/härva under live-data",
+      "Inspektera och rengör MAF-element",
+      "Kontinuitetstest och avlastning av kabeldragning"
+    ]
+  },
+  {
+    "code": "P0105",
+    "short": "MAP/Baro Circuit Malfunction",
+    "description": "Fel i MAP/Baro-signalkrets detekterat av ECM.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt MAP-sensor",
+      "Slang till MAP läcker/blockerad (om extern slang)",
+      "Avbrott/kortslutning i signal- eller matningskrets"
+    ],
+    "symptoms": [
+      "Dålig acceleration",
+      "Ologisk last i livedata",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Jämför MAP mot barometer/laddtryck (rimlighet)",
+      "Kontrollera slangar och anslutningar",
+      "Mät 5V, signal och jord; oscilloskop vid gaspådrag"
+    ]
+  },
+  {
+    "code": "P0106",
+    "short": "MAP/Baro Range/Performance",
+    "description": "MAP-signal utanför förväntat område jämfört med motorlast/varv.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Läckage i insug/vakuum",
+      "MAP-sensor åldrad/fel",
+      "Avgasläckage före turbin på turbo (felaktig laddbild)"
+    ],
+    "symptoms": [
+      "Oregelbunden tomgång",
+      "Trög gasrespons",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Rökprov intag för falskluft",
+      "Jämför MAP med förväntad kPa vid tomgång/last",
+      "Byt MAP efter verifiering av kablage och värden"
+    ]
+  },
+  {
+    "code": "P0107",
+    "short": "MAP Circuit Low",
+    "description": "För låg MAP-signalsv (möjligt kort mot jord/avbrott).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i signalkabel",
+      "Kortslutning till jord",
+      "Defekt MAP-sensor"
+    ],
+    "symptoms": [
+      "Mager gång/ryck",
+      "Felaktig lastberäkning",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Backproba signal och 5V referens",
+      "Kontrollera kontaktdon och härva",
+      "Provbyte av MAP efter elsäkring"
+    ]
+  },
+  {
+    "code": "P0108",
+    "short": "MAP Circuit High",
+    "description": "För hög MAP-signalsv (kort mot matning).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning signal→5V",
+      "Defekt MAP-sensor",
+      "Inträngning i kontakt/härva"
+    ],
+    "symptoms": [
+      "Rik gång/dålig tomgång",
+      "Onormalt hög kPa i live-data",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Inspektera kablage för skav",
+      "Mät signal mot 5V/jord",
+      "Byt sensor om felet kvarstår"
+    ]
+  },
+  {
+    "code": "P0110",
+    "short": "IAT Circuit Malfunction",
+    "description": "Fel i insugstemp-sensorns krets.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt IAT-sensor",
+      "Avbrott/kortslutning i kretsen",
+      "Kontaktproblem"
+    ],
+    "symptoms": [
+      "Orimlig IAT i live-data",
+      "Trim påverkas",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Jämför IAT mot omgivning",
+      "Mät resistanskurva/5V-signal",
+      "Reparera härva/kontakt"
+    ]
+  },
+  {
+    "code": "P0112",
+    "short": "IAT Circuit Low Input",
+    "description": "Låg signal (kalltemp) från IAT, ofta kortslutning mot jord.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning mot jord",
+      "Defekt IAT",
+      "Kontakt med fukt/korrosion"
+    ],
+    "symptoms": [
+      "Extremt låg IAT i live-data",
+      "Rik kallstart, MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät signal och jord",
+      "Ohm-test sensorn",
+      "Reparera kabel/byt sensor"
+    ]
+  },
+  {
+    "code": "P0113",
+    "short": "IAT Circuit High Input",
+    "description": "Hög signal (varmtemp) från IAT, ofta öppen krets/avbrott.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i signalkabel",
+      "Urdragen kontakt",
+      "Defekt sensor"
+    ],
+    "symptoms": [
+      "Orimligt hög IAT",
+      "Trim påverkas/MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kontakt/härva",
+      "Mät spänning/resistans",
+      "Byt IAT vid behov"
+    ]
+  },
+  {
+    "code": "P0115",
+    "short": "ECT Circuit Malfunction",
+    "description": "Fel i motortempsensorns (ECT) krets.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt ECT-sensor",
+      "Avbrott/kortslutning i härva",
+      "Kontaktproblem/korrosion"
+    ],
+    "symptoms": [
+      "Orimlig ECT i live-data",
+      "Svår kallstart/överbränning",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Jämför ECT mot verklig temp",
+      "Mät 5V, signal, jord",
+      "Byt sensor/reparera kablage"
+    ]
+  },
+  {
+    "code": "P0120",
+    "short": "TPS/Pedal Position Sensor A Circuit",
+    "description": "Fel i trottelpositionssensor (TPS) krets A.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt TPS/APP-sensor",
+      "Avbrott/kortslutning",
+      "Fel i spjällhus/kolning som stör"
+    ],
+    "symptoms": [
+      "Nödläge (reducerad effekt)",
+      "Ryckig gasrespons",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Oscilloskop: jämn stigande kurva vid gas",
+      "Mät 5V, signal, jord",
+      "Rengör/kalibrera/by t spjällhus"
+    ]
+  },
+  {
+    "code": "P0121",
+    "short": "TPS A Range/Performance",
+    "description": "TPS A signal utanför förväntad range mot RPM/MAF/MAP.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Slitage/”dead spots” i TPS",
+      "Kolat spjällhus",
+      "Kabelproblem"
+    ],
+    "symptoms": [
+      "Hesitation vid gaspådrag",
+      "Ibland nödläge",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Oscilloskopera signal vid långsam gas",
+      "Rengör spjällhus",
+      "Kontrollera kablage/kontakt"
+    ]
+  },
+  {
+    "code": "P0122",
+    "short": "TPS A Low Input",
+    "description": "TPS A låg signal (möjlig kortslutning mot jord).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kort mot jord",
+      "Avbrott i 5V/Signal",
+      "Defekt sensor"
+    ],
+    "symptoms": [
+      "Trög gas",
+      "Nödläge",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät spänningar",
+      "Inspektera kontakt",
+      "Byt sensor efter verifikation"
+    ]
+  },
+  {
+    "code": "P0123",
+    "short": "TPS A High Input",
+    "description": "TPS A hög signal (kort mot 5V).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning signal→5V",
+      "Defekt TPS",
+      "Kablage/nedböjda stift"
+    ],
+    "symptoms": [
+      "Hög trottel i live-data",
+      "Nödläge/ojämn gång",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Spänningsmätning & wiggle-test",
+      "Reparera kablage",
+      "Byt TPS/spjällhus"
+    ]
+  },
+  {
+    "code": "P0125",
+    "short": "Insufficient Coolant Temperature for Closed Loop",
+    "description": "Motorn blir inte varm nog för closed loop inom förväntad tid.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Termostat hänger öppen",
+      "Felaktig ECT-signal",
+      "Låg kylvätskenivå/luft i system"
+    ],
+    "symptoms": [
+      "Hög förbrukning/kall drift",
+      "Sen closed loop",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Observera tempkurva från kallstart",
+      "Byt termostat vid bekräftelse",
+      "Kontrollera ECT och lufta system"
+    ]
+  },
+  {
+    "code": "P0130",
+    "short": "O2 Sensor Circuit (Bank 1 Sensor 1)",
+    "description": "Fel i upstream O2-krets B1S1 detekterat.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt sensor",
+      "Kabelskada/heaterfel",
+      "Avgaslåcka före sensor"
+    ],
+    "symptoms": [
+      "Lång closed-loop tid",
+      "Trim pendlar onormalt",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera heater och matning",
+      "Inspektera kabeln",
+      "Waveformtest vid gas/decel"
+    ]
+  },
+  {
+    "code": "P0131",
+    "short": "O2 Sensor Low Voltage (Bank 1 Sensor 1)",
+    "description": "O2 signal låg (mager läsning) på B1S1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Falskluft/avg läcka",
+      "Lågt bränsletryck",
+      "Defekt sensor"
+    ],
+    "symptoms": [
+      "Mager gång/ryck",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Rökprov/avgaskontroll",
+      "Bränsletryckstest",
+      "Sensorbyte efter mätning"
+    ]
+  },
+  {
+    "code": "P0132",
+    "short": "O2 Sensor High Voltage (Bank 1 Sensor 1)",
+    "description": "O2 signal hög (rik läsning) på B1S1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Läckande spridare",
+      "Överbränning/MAF som överläser",
+      "Defekt O2-sensor"
+    ],
+    "symptoms": [
+      "Rik gång/sot",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera fuel trim & injektorer",
+      "MAF-värden",
+      "Byt sensor efter verifiering"
+    ]
+  },
+  {
+    "code": "P0133",
+    "short": "O2 Sensor Slow Response (Bank 1 Sensor 1)",
+    "description": "O2 B1S1 svarar trögt på blandningsändring.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Åldrad sensor",
+      "Förorening på element",
+      "Avgaslack före sensor"
+    ],
+    "symptoms": [
+      "Seg closed-loop kontroll",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Snap-throttle test, se response time",
+      "Kontrollera läckage",
+      "Byt sensor vid bekräftelse"
+    ]
+  },
+  {
+    "code": "P0134",
+    "short": "O2 Sensor No Activity Detected (B1S1)",
+    "description": "Ingen aktivitet från upstream O2 B1S1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Sensor/heater död",
+      "Kabel av/kort",
+      "ECM-driver fel (sällsynt)"
+    ],
+    "symptoms": [
+      "Öppen loop",
+      "Stabila men felaktiga trim",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera heater och matning",
+      "Oscilloskop – helt platt signal?",
+      "Byt sensor"
+    ]
+  },
+  {
+    "code": "P0137",
+    "short": "O2 Sensor Low Voltage (Bank 1 Sensor 2)",
+    "description": "Låg spänning/lean-läsning på nedströms O2 B1S2.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avgaslack före kat/B1S2",
+      "Defekt sensor",
+      "Kabelskada"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Ev. felbedömd kat-effektivitet"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera läckage/anslutningar",
+      "Mät sensoraktivitet",
+      "Byt sensor vid behov"
+    ]
+  },
+  {
+    "code": "P0140",
+    "short": "O2 Sensor No Activity (Bank 1 Sensor 2)",
+    "description": "Nedströms O2 B1S2 visar ingen aktivitet.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt sensor/heater",
+      "Avbrott i härva",
+      "ECM-fel (ovanligt)"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Kat-övervakning påverkas"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera heater och ledningsnät",
+      "Oscilloskop-test",
+      "Byt sensor"
+    ]
+  },
+  {
+    "code": "P0141",
+    "short": "O2 Heater Circuit Malfunction (B1S2)",
+    "description": "Heater-kretsfel på nedströms O2 B1S2.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i heater",
+      "Säkring/relä problem",
+      "Kabelskada nära avgas"
+    ],
+    "symptoms": [
+      "Lång uppvärmningstid",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät heater-resistans och matning",
+      "Kontrollera säkring/relä",
+      "Byt sensor vid fel"
+    ]
+  },
+  {
+    "code": "P0171",
+    "short": "System Too Lean (Bank 1)",
+    "description": "Bränslesystem för magert på bank 1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Falskluft/PCV-läckage",
+      "Smutsig/underläsande MAF",
+      "Lågt bränsletryck eller läckage före O2"
+    ],
+    "symptoms": [
+      "Ryckig gång",
+      "Positiva trims",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Rökprov intag",
+      "MAF-kontroll/rengöring",
+      "Bränsletryckstest under last"
+    ]
+  },
+  {
+    "code": "P0172",
+    "short": "System Too Rich (Bank 1)",
+    "description": "Bränslesystem för rikt på bank 1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Läckande spridare",
+      "Högt bränsletryck",
+      "MAF överläser/defekt O2"
+    ],
+    "symptoms": [
+      "Sotig avgas/lukt",
+      "Negativa trims",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Trycktest & läcktest spridare",
+      "Kontrollera MAF",
+      "O2-respons test"
+    ]
+  },
+  {
+    "code": "P0300",
+    "short": "Random/Multiple Misfire",
+    "description": "Slumpmässig/flera misständningar detekterade.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Tändkomponenter slitna",
+      "Bränsletryck/försörjning",
+      "Vakuumläckage/EGR-kärvning",
+      "Mekaniska problem (kompression/timing)"
+    ],
+    "symptoms": [
+      "Skakningar",
+      "MIL blink vid kraftig misständning"
+    ],
+    "diagnostic_steps": [
+      "Läs misfire-räknare",
+      "Byt plats spole/stift",
+      "Bränsletryck & injektorbalans",
+      "Kompressions-/läcktest"
+    ]
+  },
+  {
+    "code": "P0302",
+    "short": "Cylinder 2 Misfire",
+    "description": "Misständning på cylinder 2.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Spole/stift cyl 2",
+      "Spridare cyl 2",
+      "Kompression cyl 2"
+    ],
+    "symptoms": [
+      "Skakningar tomgång",
+      "MIL blink vid hård belastning"
+    ],
+    "diagnostic_steps": [
+      "Byt plats komponenter mellan cylindrar",
+      "Injektorbalans",
+      "Kompressions-/läcktest"
+    ]
+  },
+  {
+    "code": "P0328",
+    "short": "Knock Sensor 1 Circuit High",
+    "description": "För hög signal från knock-sensor 1 (möjl. kort mot 5V).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kabel kortad mot 5V",
+      "Defekt sensor",
+      "Fel jordning/montering"
+    ],
+    "symptoms": [
+      "Tändning retarderad",
+      "Effektförlust",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Kontrollera kablage",
+      "Mät signal/ohm",
+      "Verifiera montage/moment"
+    ]
+  },
+  {
+    "code": "P0335",
+    "short": "Crankshaft Position Sensor A Circuit",
+    "description": "Fel i vevaxelgivare (CKP) krets A detekterat.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt CKP-sensor",
+      "Metallspån/skadad triggerring",
+      "Kabelavbrott/kortslutning"
+    ],
+    "symptoms": [
+      "Ingen start/avstannar",
+      "MIL tänd",
+      "Missfire/ojämn gång"
+    ],
+    "diagnostic_steps": [
+      "Oscilloskopera CKP-signal",
+      "Inspektera ring/givare",
+      "Kontinuitetsprov kablage"
+    ]
+  },
+  {
+    "code": "P0340",
+    "short": "Camshaft Position Sensor Circuit",
+    "description": "Fel i kamaxelgivare (CMP) krets detekterat.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt CMP",
+      "Kabelbrott/kortslutning",
+      "Timingproblem (kedja/rem)"
+    ],
+    "symptoms": [
+      "Svårstart/ingen start",
+      "Ojämn gång",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Oscilloskop CMP/CKP korrelation",
+      "Kontrollera kablage",
+      "Verifiera timing-märkningar"
+    ]
+  },
+  {
+    "code": "P0401",
+    "short": "EGR Flow Insufficient",
+    "description": "Otillräckligt EGR-flöde uppmätt av ECM.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Igensatt EGR-kanal/ventil",
+      "EGR-styrning/solenoidfel",
+      "Differenstryckgivare fel (DPFE)"
+    ],
+    "symptoms": [
+      "Klingande/knack vid last",
+      "Hög NOx, MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Aktivera EGR i aktuatortest",
+      "Rengör kanal/ventil",
+      "Kontrollera sensorer/styrning"
+    ]
+  },
+  {
+    "code": "P0402",
+    "short": "EGR Flow Excessive",
+    "description": "För högt EGR-flöde detekterat.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "EGR fastnar öppen",
+      "Fel DPFE-sensor",
+      "Styrfel/solenoid läcker"
+    ],
+    "symptoms": [
+      "Dålig tomgång/stall",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Stäng EGR i aktuatortest – ändras tomgång?",
+      "Rengör/byt ventil",
+      "Kontrollera sensordata"
+    ]
+  },
+  {
+    "code": "P0420",
+    "short": "Catalyst Efficiency Below Threshold (B1)",
+    "description": "Nedsatt katalysatoreffektivitet bank 1 enligt O2-feedback.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Katalysator utmattad/förgiftad",
+      "Historisk misständning/rik gång",
+      "Trög post-O2 eller avg läckage"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Ibland ökad förbrukning/lukt"
+    ],
+    "diagnostic_steps": [
+      "Jämför pre/post O2 (post dämpad)",
+      "Kontrollera misfire/trim och läckage",
+      "Tempdiff över kat vid last"
+    ]
+  },
+  {
+    "code": "P0421",
+    "short": "Warm Up Catalyst Efficiency Below Threshold (B1)",
+    "description": "Katalysatorns warm-up-effektivitet låg under uppvärmningsfönster.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Sliten warm-up-sektion",
+      "Rik kallstart/misständning",
+      "Trög O2 eller avg läckage"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Återkommer efter kallstarter"
+    ],
+    "diagnostic_steps": [
+      "Studera O2 under kallstart",
+      "Fixa misfire/trim",
+      "Kontrollera läckage & kat-temp"
+    ]
+  },
+  {
+    "code": "P0440",
+    "short": "EVAP System – General Malfunction",
+    "description": "Allmänt EVAP-fel i läck-/flödesdiagnostik.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Otätt tanklock",
+      "Sprucken slang/ventil",
+      "Defekt purge/vent-ventil"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Sällan körbarhetssymptom"
+    ],
+    "diagnostic_steps": [
+      "Visuell kontroll lock/slangar",
+      "Rökprov EVAP",
+      "Aktivera ventiler och observera tryck"
+    ]
+  },
+  {
+    "code": "P0441",
+    "short": "EVAP Incorrect Purge Flow",
+    "description": "Felaktigt purge-flöde detekterat av ECM.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Purge-ventil fast öppen/stängd",
+      "Blockerad ledning",
+      "Elfel i ventilstyrning"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Ibland svår varmstart efter tankning"
+    ],
+    "diagnostic_steps": [
+      "Aktuatortest purge – känn/lyssna",
+      "Vakuumtest ledningar",
+      "Mät ventilens resistans/matning"
+    ]
+  },
+  {
+    "code": "P0442",
+    "short": "EVAP Small Leak",
+    "description": "Litet EVAP-läckage detekterat.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Otätt lock",
+      "Sprucken slang",
+      "Packning/vent-ventil läcker"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Oftast inga körbarhetsproblem"
+    ],
+    "diagnostic_steps": [
+      "Noggrant rökprov",
+      "Byt packningar/ventiler som läcker",
+      "Verifiera efter drive cycle"
+    ]
+  },
+  {
+    "code": "P0455",
+    "short": "EVAP Gross Leak",
+    "description": "Stort läck/no-vacuum i EVAP-system.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Lock saknas/grovt otätt",
+      "Slang av eller stor spricka",
+      "Ventil helt öppen/stängd felaktigt"
+    ],
+    "symptoms": [
+      "MIL tänd",
+      "Ev. bränslelukt"
+    ],
+    "diagnostic_steps": [
+      "Visuell kontroll först",
+      "Rökprov hela systemet",
+      "Funktionsprov purge/vent"
+    ]
+  },
+  {
+    "code": "P0456",
+    "short": "EVAP Very Small Leak",
+    "description": "Mycket litet EVAP-läckage detekterat.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Mikroläck i slang/koppling",
+      "Packning i lock/vent",
+      "Sprickor i canister"
+    ],
+    "symptoms": [
+      "MIL tänd – ofta intermittent",
+      "Körbarhet normalt"
+    ],
+    "diagnostic_steps": [
+      "Rökprov med låg flöde/tryck",
+      "Byt packningar",
+      "Kontrollera vent-ventil stänger tätt"
+    ]
+  },
+  {
+    "code": "P0109",
+    "short": "MAP/Baro Circuit Intermittent",
+    "description": "Intermittenta avbrott eller brus i MAP/Baro-signalen.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Glapp kontakt eller kabelbrott",
+      "MAP-sensor påverkas av vibrationer/fukt",
+      "Sprucken vakuumslang (om slangmatad MAP)"
+    ],
+    "symptoms": [
+      "Ryckig gång vid övergång last/tomgång",
+      "Hoppig beräknad last i livedata",
+      "MIL tänd/intermittent"
+    ],
+    "diagnostic_steps": [
+      "Wiggle-test på kontakt/härva under live-data",
+      "Inspektera slangar och tätningar",
+      "Byt MAP efter verifiering av el och värden"
+    ]
+  },
+  {
+    "code": "P0155",
+    "short": "O2 Heater Circuit (Bank 2 Sensor 1)",
+    "description": "Heaterkretsfel på uppströms O2-sensor B2S1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i heater-element",
+      "Säkring/relä/matningsfel",
+      "Kabelskada nära avgasrör"
+    ],
+    "symptoms": [
+      "Lång closed-loop tid bank 2",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät heater-resistans och matning/jord",
+      "Kontrollera säkring/relä",
+      "Byt sensor vid bekräftat heaterfel"
+    ]
+  },
+  {
+    "code": "P0191",
+    "short": "Fuel Rail Pressure Sensor Range/Performance",
+    "description": "FRP-signal utanför förväntad range under last/varv.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Felaktig FRP-sensor",
+      "Svag pump/regulator",
+      "Restriktion i filter/ledning",
+      "Kablage/kontaktfel till FRP"
+    ],
+    "symptoms": [
+      "Tvekan/stall under belastning",
+      "Svår start",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Jämför faktisk railtryck mot specifikation",
+      "Trycktest och volymtest pump",
+      "Kontrollera sensor 5V/signal/jord"
+    ]
+  },
+  {
+    "code": "P0234",
+    "short": "Engine Overboost Condition",
+    "description": "Överboost detekterad över gränsvärde under last.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Wastegate fastnar stängd",
+      "Fel N75/boost-solenoid",
+      "Slangar/actuator felmonterade",
+      "ECM styrning/kalibrering problem"
+    ],
+    "symptoms": [
+      "Nödläge/reducerad effekt",
+      "Övertrycksknack",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Tryck/vakuumtest actuator",
+      "Prova N75 via aktuatortest",
+      "Inspektera slangdragning och WG-rörelse"
+    ]
+  },
+  {
+    "code": "P0325",
+    "short": "Knock Sensor 1 Circuit Malfunction (Bank 1)",
+    "description": "Fel i knackningssensor 1 krets bank 1.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt sensor",
+      "Felaktigt åtdragningsmoment/montering",
+      "Kablage/kontaktfel"
+    ],
+    "symptoms": [
+      "Retarderad tändning",
+      "Effektförlust",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Visuell inspektion kabel/anslutning",
+      "Mät sensor/ohm enligt spec",
+      "Verifiera montering/moment"
+    ]
+  },
+  {
+    "code": "P0403",
+    "short": "EGR Control Circuit",
+    "description": "Elektriskt fel i EGR-styrningskrets (solenoid/ventil).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Defekt EGR-solenoid/ventil",
+      "Kabelbrott/kortslutning",
+      "ECM-driverfel (sällsynt)"
+    ],
+    "symptoms": [
+      "Hesitation/ojämn tomgång",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Aktivera EGR, bekräfta rörelse/ändring",
+      "Mät resistans och matning",
+      "Rengör/byt komponent"
+    ]
+  },
+  {
+    "code": "P0505",
+    "short": "Idle Control System Malfunction",
+    "description": "Fel i tomgångskontroll (IAC/spjäll) – avvikande varvtal.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Smutsigt spjällhus/IAC fastnar",
+      "Vakuumläckage",
+      "Elfel i IAC/spjällmotor"
+    ],
+    "symptoms": [
+      "Hög/låg/pendlande tomgång",
+      "Stall vid stopp",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Rengör spjällhus/IAC",
+      "Rökprov för falskluft",
+      "Adaptionsreset/kalibrering, kontroll av styrning"
+    ]
+  },
+  {
+    "code": "P0507",
+    "short": "Idle Control System RPM Higher Than Expected",
+    "description": "Tomgångsvarvtal högre än målvärde över tid.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Falskluft",
+      "Kolat spjällhus som står lite öppet",
+      "Fel IAC/spjällmotor/adaption"
+    ],
+    "symptoms": [
+      "Hög tomgång",
+      "Ryck vid växling",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Rökprov",
+      "Rengör spjällhus och reset adaption",
+      "Kontrollera IAC/spjällmotor position"
+    ]
+  },
+  {
+    "code": "P0513",
+    "short": "Incorrect Immobilizer Key",
+    "description": "Felaktig eller icke-parad transpondernyckel upptäckt av ECM/IMM.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Ej inlärd nyckel",
+      "Antennring/immobilizerfel",
+      "ECM/IMM synkproblem"
+    ],
+    "symptoms": [
+      "Startspärr aktiv – ingen start",
+      "MIL/IMM-lampa blinkar"
+    ],
+    "diagnostic_steps": [
+      "Läs antal inlärda nycklar",
+      "Testa reservnyckel",
+      "Immobilizer/ECM synk i diagnosverktyg"
+    ]
+  },
+  {
+    "code": "P0522",
+    "short": "Engine Oil Pressure Sensor/Switch Low Voltage",
+    "description": "Låg insignal från oljetryckssensor (öppen krets sannolik).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Sensor avbrott",
+      "Kablage/kontakt fel",
+      "Verkligt lågt oljetryck (kontrollera akut!)"
+    ],
+    "symptoms": [
+      "Varningslampa olja/MIL",
+      "Möjlig ventiltrassel vid lågt tryck"
+    ],
+    "diagnostic_steps": [
+      "Mät verkligt oljetryck med manometer",
+      "Kontrollera sensor och kablage",
+      "Åtgärda mekaniskt fel om lågt tryck bekräftas"
+    ]
+  },
+  {
+    "code": "P0523",
+    "short": "Engine Oil Pressure Sensor/Switch High Voltage",
+    "description": "Hög insignal från oljetryckssensor (kort mot 5V).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kortslutning signal→5V",
+      "Sensor felaktig",
+      "Kablageproblem"
+    ],
+    "symptoms": [
+      "Onormalt högt oljetryck i live-data",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Verifiera med manometer",
+      "Inspektera kablage/sensor",
+      "Byt sensor vid behov"
+    ]
+  },
+  {
+    "code": "P0560",
+    "short": "System Voltage Malfunction",
+    "description": "Ladd-/systemspänning utanför normal intervall under drift.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Generator/regulatorproblem",
+      "Batterifel/anslutningar",
+      "Jordningsproblem"
+    ],
+    "symptoms": [
+      "Fladdrande lampor/elektronik",
+      "Startproblem",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät laddspänning tomgång/belastning",
+      "Kontrollera kablar/jordpunkter",
+      "Belastningstest batteri/generator"
+    ]
+  },
+  {
+    "code": "P0562",
+    "short": "System Voltage Low",
+    "description": "Systemspänning för låg under drift.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Svag generator",
+      "Batteri urladdat",
+      "Dåliga anslutningar/jord"
+    ],
+    "symptoms": [
+      "Elektroniska fel, nödlägen",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät spänning/last",
+      "Åtgärda kablage/jord",
+      "Ladda/byt batteri, generatorprov"
+    ]
+  },
+  {
+    "code": "P0563",
+    "short": "System Voltage High",
+    "description": "Systemspänning för hög (överladdning).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Regulator fel",
+      "Felaktig generator",
+      "Jordfel som lurar regulator"
+    ],
+    "symptoms": [
+      "Lampor brinner starkt",
+      "Elektronikvarningar",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät laddspänning (bör ~13.5–14.8V)",
+      "Kontrollera jord/matning",
+      "Byt/reglera generator"
+    ]
+  },
+  {
+    "code": "P0597",
+    "short": "Thermostat Heater Control Circuit/Open",
+    "description": "Elektriskt värmd termostat – öppen krets/kontrollfel.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Avbrott i termostatens värmeelement",
+      "Kablage/kontaktproblem",
+      "Relä/driverfel"
+    ],
+    "symptoms": [
+      "Avvikande arbetstemp",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Mät resistans/ström i värmeelement",
+      "Kontrollera styrning och kablage",
+      "Byt termostatmodul vid fel"
+    ]
+  },
+  {
+    "code": "P0627",
+    "short": "Fuel Pump Control Circuit/Open",
+    "description": "Öppen krets i bränslepumpskontroll (modul/relä/driver).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Relä/modul defekt",
+      "Kabelbrott/kontaktproblem",
+      "ECM-driverfel (sällsynt)"
+    ],
+    "symptoms": [
+      "Ingen start/slocknar",
+      "Lågt railtryck",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Lyssna efter pump priming",
+      "Mät matning vid pump/modul",
+      "Kontrollera relä/PCM-styrning"
+    ]
+  },
+  {
+    "code": "P0628",
+    "short": "Fuel Pump Control Circuit Low",
+    "description": "Låg signal/spänning i bränslepumpskontrollkrets.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Spänningsfall i härva",
+      "Svag jord",
+      "Defekt modul"
+    ],
+    "symptoms": [
+      "Lågt bränsletryck",
+      "Tvekan/stall",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Spänningsfallstest + belastningsprov",
+      "Kontrollera jordpunkter",
+      "Byt modul vid bekräftelse"
+    ]
+  },
+  {
+    "code": "P0629",
+    "short": "Fuel Pump Control Circuit High",
+    "description": "Hög signal/spänning i bränslepumpskontrollkrets.",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Kort mot 12V",
+      "Driver låst hög",
+      "Kablageskada"
+    ],
+    "symptoms": [
+      "Övertryck/brus i rail",
+      "MIL tänd"
+    ],
+    "diagnostic_steps": [
+      "Inspektera härva för skav",
+      "Mät styrsignal",
+      "Verifiera modul/PCM"
+    ]
+  },
+  {
+    "code": "P0650",
+    "short": "Malfunction Indicator Lamp (MIL) Control Circuit",
+    "description": "Fel i MIL-lampans kontrollkrets (instrument/PCM).",
+    "system": "powertrain",
+    "generic": true,
+    "source": "SAE J2012",
+    "possible_causes": [
+      "Lampkrets öppen/kortsluten",
+      "Klusterfel",
+      "PCM-driver fel"
+    ],
+    "symptoms": [
+      "MIL lyser ej/konstant fel",
+      "Emissionskontroll kan påverkas"
+    ],
+    "diagnostic_steps": [
+      "Aktivera MIL via diagnosverktyg",
+      "Mät krets mot kluster",
+      "Reparera kablage/kluster/PCM efter test"
+    ]
+  },
+  {
+  "code": "P0106",
+  "short": "MAP Sensor Range/Performance",
+  "description": "MAP-signalen stämmer inte mot förväntade värden (last/RPM).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Sprucken/otät vakuumslang (om slangmatad MAP)",
+    "Smuts/fukt i givaren",
+    "Kablage/kontaktfel",
+    "Felaktiga motorparametrar (kam-/tändtiming) som påverkar MAP"
+  ],
+  "symptoms": [
+    "Ryckig gång, tvekan",
+    "Felaktig beräknad last",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Jämför MAP mot baro och MAF-beräknad last",
+    "Inspektera slangar/tätningar",
+    "Oscilloskopera MAP-signal vid gaspådrag/decel",
+    "Kontrollera 5V/signal/jord"
+  ]
+},
+{
+  "code": "P0117",
+  "short": "ECT Sensor Circuit Low",
+  "description": "Låg insignal från kylvätsketemperaturgivaren (kort mot jord/öppen).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Öppen krets i ECT",
+    "Urdragen/korroderad kontakt",
+    "Defekt givare"
+  ],
+  "symptoms": [
+    "ECM tror att motorn är mycket kall",
+    "Ökad bränsleförbrukning, rik kallstart",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Jämför ECT mot omgivning kall motor",
+    "Mät resistans/kurva på givaren",
+    "Kontrollera 5V/jord/signal och härva"
+  ]
+},
+{
+  "code": "P0118",
+  "short": "ECT Sensor Circuit High",
+  "description": "Hög insignal från ECT (kort mot 5V).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Kortslutning signal→5V",
+    "Defekt givare",
+    "Kablageskada"
+  ],
+  "symptoms": [
+    "ECM tror att motorn är överhettad",
+    "Fläkt går tidigt, nödlägen",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Jämför med infraröd mätning",
+    "Ohm-mät givare, inspektera kablage",
+    "Reparera kortslutning/byt sensor"
+  ]
+},
+{
+  "code": "P0125",
+  "short": "Insufficient Coolant Temperature for Closed Loop",
+  "description": "Motorn når inte tillräcklig temp för closed loop inom rimlig tid.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Termostat hänger öppen",
+    "Felaktig ECT-signal",
+    "Låg kylvätskenivå/luftfickor"
+  ],
+  "symptoms": [
+    "Lång uppvärmning",
+    "Hög förbrukning",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Övervaka tempkurva från kallstart",
+    "Byt termostat vid avvikelse",
+    "Lufta system, kontrollera nivå"
+  ]
+},
+{
+  "code": "P0130",
+  "short": "O2 Sensor Circuit (Bank 1 Sensor 1)",
+  "description": "Kretsfel i uppströms lambdasensor B1S1.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Sensor åldrad/förorenad",
+    "Kablage/kontaktfel",
+    "Avgasläckage före sensor"
+  ],
+  "symptoms": [
+    "Långsam trimsvar",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Waveformtest O2 vid gaspådrag/decel",
+    "Inspektera kablage nära heta delar",
+    "Åtgärda läckage/byt sensor"
+  ]
+},
+{
+  "code": "P0136",
+  "short": "O2 Sensor Circuit (Bank 1 Sensor 2)",
+  "description": "Kretsfel i nedströms lambdasensor B1S2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Sensor trög/defekt",
+    "Kablage/kontaktfel",
+    "Avgasläckage efter kat"
+  ],
+  "symptoms": [
+    "Felaktig katalysatormonitor",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Kontrollera O2 B1S2 respons (ska vara dämpad)",
+    "Inspektera kablage",
+    "Byt sensor vid behov"
+  ]
+},
+{
+  "code": "P0141",
+  "short": "O2 Sensor Heater Circuit (Bank 1 Sensor 2)",
+  "description": "Heaterkretsfel för B1S2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Avbrott i heater",
+    "Säkring/matning saknas",
+    "Kablage skadat"
+  ],
+  "symptoms": [
+    "Långsam monitorering",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Mät heater-resistans och spänning",
+    "Kontrollera säkring/relä",
+    "Reparera/byt sensor"
+  ]
+},
+{
+  "code": "P0150",
+  "short": "O2 Sensor Circuit (Bank 2 Sensor 1)",
+  "description": "Kretsfel i uppströms O2 B2S1.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Sensor defekt",
+    "Kablagefel",
+    "Avgasläckage"
+  ],
+  "symptoms": [
+    "Bank 2 trims problem",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Waveform B2S1",
+    "Inspektera kablage",
+    "Åtgärda läckage/byt"
+  ]
+},
+{
+  "code": "P0161",
+  "short": "O2 Sensor Heater Circuit (Bank 2 Sensor 2)",
+  "description": "Heaterkretsfel för nedströms B2S2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Heater-element avbrott",
+    "Matning/jord saknas",
+    "Kablage fel"
+  ],
+  "symptoms": [
+    "Monitorer fördröjs",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Resistans/spänningstest heater",
+    "Kontroll av säkring/relä",
+    "Byt sensor"
+  ]
+},
+{
+  "code": "P0335",
+  "short": "Crankshaft Position Sensor A Circuit",
+  "description": "Kretsfel i vevaxelgivare A.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt CKP-givare",
+    "Skadad triggerkrans",
+    "Kablage/avståndsproblem"
+  ],
+  "symptoms": [
+    "Ingen start/intermittent död",
+    "Felaktig tändtiming",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Oscilloskopera CKP-signal",
+    "Inspektera krans/avstånd",
+    "Byt givare efter verifiering"
+  ]
+},
+{
+  "code": "P0340",
+  "short": "Camshaft Position Sensor Circuit",
+  "description": "Kretsfel i kamaxelgivare (CMP).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt CMP",
+    "Kablage/kontaktfel",
+    "Felaktig timing"
+  ],
+  "symptoms": [
+    "Svårstart/ojämn gång",
+    "Synkfel",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Mät CMP-signal och korrelation mot CKP",
+    "Kontrollera kontakt/härva",
+    "Verifiera kamtiming"
+  ]
+},
+{
+  "code": "P0401",
+  "short": "EGR Flow Insufficient",
+  "description": "För låg EGR-genomströmning detekterad.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Igensatt EGR-kanal/ventil",
+    "Felaktig styrning eller positionssensor",
+    "Vakuumproblem (pneumatisk EGR)"
+  ],
+  "symptoms": [
+    "Knackningar/NOx-ökning",
+    "Hesitation",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Aktivera EGR och observera RPM/MAF-fall",
+    "Rengör EGR/kanaler",
+    "Kontrollera styrning/positionsfeedback"
+  ]
+},
+{
+  "code": "P0402",
+  "short": "EGR Flow Excessive",
+  "description": "För hög EGR-flöde (läckande eller fastnad öppen EGR).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "EGR fastnar öppen",
+    "Felaktig kontroll/positionssignal",
+    "Avlagringar som hindrar stängning"
+  ],
+  "symptoms": [
+    "Stall på tomgång",
+    "Dålig körbarhet",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Inspektera/renovera EGR",
+    "Verifiera position/kommando",
+    "Provkör och kontrollera MAF/idle-reaktion"
+  ]
+},
+{
+  "code": "P0412",
+  "short": "Secondary Air Injection Switching Valve A Circuit",
+  "description": "Kretsfel i sekundärluftens switchventil A.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt ventil/solenoid",
+    "Kablage/kontaktfel",
+    "Styrrelä/PCM-driverfel"
+  ],
+  "symptoms": [
+    "Emissionsmonitor fallerar",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Aktivera ventilen med verktyg",
+    "Mät resistans/matning",
+    "Byt ventil om fel bekräftas"
+  ]
+},
+{
+  "code": "P0452",
+  "short": "EVAP Pressure Sensor Low Input",
+  "description": "Låg insignal från EVAP-tryckgivare (öppen krets).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Avbrott i givarkrets",
+    "Defekt sensor",
+    "Kablage/kontaktfel"
+  ],
+  "symptoms": [
+    "Felaktiga EVAP-tester",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Kontrollera 5V/signal/jord",
+    "Byt sensor efter test",
+    "Kontrollera slanganslutningar"
+  ]
+},
+{
+  "code": "P0453",
+  "short": "EVAP Pressure Sensor High Input",
+  "description": "Hög insignal från EVAP-tryckgivare (kort mot 5V).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Kortslutning signal→5V",
+    "Sensor felaktig",
+    "Kablageskada"
+  ],
+  "symptoms": [
+    "EVAP-monitor fel",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Mät referens/signal",
+    "Reparera härva",
+    "Byt sensor"
+  ]
+},
+{
+  "code": "P0463",
+  "short": "Fuel Level Sensor Circuit High Input",
+  "description": "Bränslenivågivare hög insignal (öppen krets).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Avbrott i givare/arm",
+    "Korroderad kontakt",
+    "Kablagebrott"
+  ],
+  "symptoms": [
+    "Fel nivå i instrument",
+    "MIL kan tändas"
+  ],
+  "diagnostic_steps": [
+    "Mät givarmotstånd genom slaget",
+    "Kontrollera jordpunkt vid tank",
+    "Reparera härva/byt givare"
+  ]
+},
+{
+  "code": "P0496",
+  "short": "EVAP High Purge Flow",
+  "description": "För högt purge-flöde när det inte ska vara aktivt.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Purge-ventil läcker fast öppen",
+    "Fel styrning från PCM",
+    "Kolv i canister fastnar"
+  ],
+  "symptoms": [
+    "Svår varmstart efter tankning",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Rökprov EVAP",
+    "Aktivera och funktionstesta purge",
+    "Byt ventil om läckage"
+  ]
+},
+{
+  "code": "P0606",
+  "short": "ECM/PCM Processor",
+  "description": "Intern processorfel detekterat av ECM/PCM.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Internt styrdonfel",
+    "Spänningsfall/överspänning",
+    "Jordningsproblem"
+  ],
+  "symptoms": [
+    "Nödlägen, diverse koder",
+    "Stopp/intermittent",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Kontrollera matning/jord och laddsystem",
+    "Firmware/uppdatering om tillgänglig",
+    "Byt/omprogrammera ECM vid kvarstående fel"
+  ]
+},
+{
+  "code": "P0660",
+  "short": "Intake Manifold Tuning Valve (IMRC) Control Circuit/Open (Bank 1)",
+  "description": "Öppen/fel i IMRC/insugslängdsventil bank 1 styrkrets.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt ställdon/solenoid",
+    "Mekanism kärvar",
+    "Kablage/kontaktfel"
+  ],
+  "symptoms": [
+    "Dålig bottendrag/övervarvseffekt",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Aktivera IMRC och observera rörelse",
+    "Inspektera mekanik/vakuum",
+    "Mät resistans/matning – reparera eller byt"
+  ]
+},
+{
+  "code": "P0705",
+  "short": "Transmission Range Sensor Circuit Malfunction (PRNDL Input)",
+  "description": "Fel i lägesgivare för växellägen (PRNDL).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Justering fel/defekt TRS",
+    "Kablage/kontakt",
+    "Fukt/korrosion"
+  ],
+  "symptoms": [
+    "Startspärr i vissa lägen",
+    "Fel växlingsstrategi",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Justera/byta TRS",
+    "Mät utgångar från TRS mot TCM",
+    "Inspektera kontakt/kablage"
+  ]
+},
+{
+  "code": "P0715",
+  "short": "Input/Turbine Speed Sensor Circuit",
+  "description": "Kretsfel i ingående/turbinhastighetsgivare.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt hastighetsgivare",
+    "Kablage/kontakt",
+    "Metalldamm på givare (VR-typ)"
+  ],
+  "symptoms": [
+    "Nödläge, felaktiga växlingar",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Läs speed live-data",
+    "Mät sensor/ohm och signal",
+    "Rengör/byt givare"
+  ]
+},
+{
+  "code": "P0720",
+  "short": "Output Speed Sensor Circuit",
+  "description": "Kretsfel i utgående axelhastighetsgivare (OSS).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt OSS",
+    "Kablage/kontakt",
+    "Skadad tandkrans"
+  ],
+  "symptoms": [
+    "Fel hastighetsberäkning",
+    "Nödläge, hårda växlingar",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Jämför VSS/OSS live-data",
+    "Ohm/signaltest",
+    "Inspektera sensor/krans"
+  ]
+},
+{
+  "code": "P0730",
+  "short": "Incorrect Gear Ratio",
+  "description": "Fel växlingsförhållande detekterat (slir/koppling).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Intern låd-slip",
+    "Lågt oljetryck/fel olja",
+    "Solenoid/ventilfel"
+  ],
+  "symptoms": [
+    "Halkande växlingar",
+    "Nödläge",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Kontrollera ATF-nivå/typ/skick",
+    "Trycktest/road test",
+    "Solenoid/ventilhusdiagnostik"
+  ]
+},
+{
+  "code": "P0740",
+  "short": "Torque Converter Clutch Circuit/Open",
+  "description": "TCC-kopplingens styrkrets öppen/fel.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt TCC-solenoid",
+    "Kablage/kontaktfel",
+    "Ventilhusproblem"
+  ],
+  "symptoms": [
+    "Ingen lock-up, hög varv vid cruising",
+    "Ökad värme/förbrukning",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Aktivera TCC i tester",
+    "Mät solenoidresistans/styrning",
+    "Kontrollera tryck/ventilhus"
+  ]
+},
+{
+  "code": "P0750",
+  "short": "Shift Solenoid A Malfunction",
+  "description": "Fel i växlingssolenoid A (elektriskt/funktion).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt solenoid",
+    "Kablage/driverfel",
+    "Ventilhus föroreningar"
+  ],
+  "symptoms": [
+    "Fel växelval/nödläge",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Mät resistans, aktivera solenoid",
+    "Inspektera kablage",
+    "Rengör/renovera ventilhus"
+  ]
+},
+{
+  "code": "P0760",
+  "short": "Shift Solenoid C Malfunction",
+  "description": "Fel i växlingssolenoid C.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Solenoid defekt",
+    "Kablage/driver",
+    "Ventilhusproblem"
+  ],
+  "symptoms": [
+    "Nödläge/fel växling",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Aktivera solenoid i verktyg",
+    "Mät resistans/ledning",
+    "Hydraulisk kontroll"
+  ]
+},
+{
+  "code": "P0765",
+  "short": "Shift Solenoid D Malfunction",
+  "description": "Fel i växlingssolenoid D.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Defekt solenoid D",
+    "Kablagefel",
+    "Ventilhus/PCM"
+  ],
+  "symptoms": [
+    "Fel växel, nödläge",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Resistans/aktivering",
+    "Ledningsprov",
+    "Ventilhusdiagnostik"
+  ]
+},
+{
+  "code": "P0770",
+  "short": "Shift Solenoid E Malfunction",
+  "description": "Fel i växlingssolenoid E.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Solenoid E defekt",
+    "Kablage/driver",
+    "Ventilhusfel"
+  ],
+  "symptoms": [
+    "Växlingsproblem/nödläge",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Testa solenoid, mät resistans",
+    "Kontrollera kablage/PCM-styrning",
+    "Hydrauliska tester"
+  ]
+},
+{
+  "code": "P0302",
+  "short": "Cylinder 2 Misfire Detected",
+  "description": "Misständning upptäckt på cylinder 2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Tändspole/stift cyl 2",
+    "Spridare cyl 2",
+    "Kompressionsproblem cyl 2"
+  ],
+  "symptoms": [
+    "Skakningar",
+    "MIL blink vid kraftig miss"
+  ],
+  "diagnostic_steps": [
+    "Flytta spole/stift, se om felet flyttar",
+    "Injektorbalans/byta plats",
+    "Kompressions-/läcktest"
+  ]
+},
+{
+  "code": "P0303",
+  "short": "Cylinder 3 Misfire Detected",
+  "description": "Misständning på cylinder 3.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Tändspole/stift",
+    "Spridare",
+    "Kompression/timing"
+  ],
+  "symptoms": [
+    "Skakningar",
+    "MIL blink"
+  ],
+  "diagnostic_steps": [
+    "Byt plats spole/stift",
+    "Spridartest",
+    "Kompressionstest"
+  ]
+},
+{
+  "code": "P0304",
+  "short": "Cylinder 4 Misfire Detected",
+  "description": "Misständning på cylinder 4.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Tändsystem cyl 4",
+    "Bränsleinsprutning",
+    "Mekaniskt fel"
+  ],
+  "symptoms": [
+    "Skakningar",
+    "MIL blink"
+  ],
+  "diagnostic_steps": [
+    "Spole/stift swap-test",
+    "Injektorprov",
+    "Kompressions-/läcktest"
+  ]
+},
+{
+  "code": "P0200",
+  "short": "Injector Circuit Malfunction",
+  "description": "Allmänt kretsfel i bränslespridarkretsen (en eller flera).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Öppen/kortsluten spridarkrets",
+    "Defekt spridare",
+    "Drivsteg i ECM påverkat",
+    "Lågt systemspänning"
+  ],
+  "symptoms": [
+    "Misständning, ojämn gång",
+    "Hög/låg bränsletrim",
+    "MIL tänd"
+  ],
+  "diagnostic_steps": [
+    "Noid-light eller oscilloskop på spridarstyrning",
+    "Mät resistans på spridare",
+    "Kontrollera matning/jord",
+    "Kontinuitetstest ledningsnät"
+  ]
+},
+{
+  "code": "P0201",
+  "short": "Injector Circuit/Open – Cylinder 1",
+  "description": "Öppen/kort i spridarkrets för cylinder 1.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spridare cyl 1 defekt", "Ledningsbrott/kontaktfel", "ECM-drivsteg"],
+  "symptoms": ["Misständning cyl 1", "MIL tänd"],
+  "diagnostic_steps": ["Noid-light på cyl 1", "Ohm-mät spridare", "Kontinuitet ECM→spridare"]
+},
+{
+  "code": "P0202",
+  "short": "Injector Circuit/Open – Cylinder 2",
+  "description": "Öppen/kort i spridarkrets för cylinder 2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spridare cyl 2", "Kablage/kontakt", "ECM-drivsteg"],
+  "symptoms": ["Misständning cyl 2", "MIL tänd"],
+  "diagnostic_steps": ["Noid-light", "Ohm-mät", "Kontinuitet/härva"]
+},
+{
+  "code": "P0203",
+  "short": "Injector Circuit/Open – Cylinder 3",
+  "description": "Öppen/kort i spridarkrets för cylinder 3.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spridare cyl 3", "Kablage/kontakt", "ECM-drivsteg"],
+  "symptoms": ["Misständning cyl 3", "MIL tänd"],
+  "diagnostic_steps": ["Noid-light", "Ohm-mät", "Kontinuitet"]
+},
+{
+  "code": "P0204",
+  "short": "Injector Circuit/Open – Cylinder 4",
+  "description": "Öppen/kort i spridarkrets för cylinder 4.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spridare cyl 4", "Kablage/kontakt", "ECM-drivsteg"],
+  "symptoms": ["Misständning cyl 4", "MIL tänd"],
+  "diagnostic_steps": ["Noid-light", "Ohm-mät", "Kontinuitet"]
+},
+{
+  "code": "P0205",
+  "short": "Injector Circuit/Open – Cylinder 5",
+  "description": "Öppen/kort i spridarkrets för cylinder 5.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spridare cyl 5", "Kablage/kontakt", "ECM-drivsteg"],
+  "symptoms": ["Misständning cyl 5", "MIL tänd"],
+  "diagnostic_steps": ["Noid-light", "Ohm-mät", "Kontinuitet"]
+},
+{
+  "code": "P0206",
+  "short": "Injector Circuit/Open – Cylinder 6",
+  "description": "Öppen/kort i spridarkrets för cylinder 6.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spridare cyl 6", "Kablage/kontakt", "ECM-drivsteg"],
+  "symptoms": ["Misständning cyl 6", "MIL tänd"],
+  "diagnostic_steps": ["Noid-light", "Ohm-mät", "Kontinuitet"]
+},
+{
+  "code": "P0230",
+  "short": "Fuel Pump Primary Circuit",
+  "description": "Fel i bränslepumpens primärkrets (relä/driver).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Relä/driver fel", "Säkring/överström", "Kablage jord/matning"],
+  "symptoms": ["Ingen start/lågt tryck", "MIL tänd"],
+  "diagnostic_steps": ["Lyssna primning", "Mät spänning vid pump", "Relätest och strömmätning"]
+},
+{
+  "code": "P0231",
+  "short": "Fuel Pump Secondary Circuit Low",
+  "description": "Låg spänning i pumptillförsel (sekundär sida).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Korrosion/kontaktfall", "Svag jord", "Relä bränd"],
+  "symptoms": ["Lågt bränsletryck", "Startsvårigheter"],
+  "diagnostic_steps": ["Spänningsfallstest +/− ledning", "Inspektera kontakt vid pump", "Byt relä/kontakt"]
+},
+{
+  "code": "P0232",
+  "short": "Fuel Pump Secondary Circuit High",
+  "description": "Onormalt hög spänning på pumpmatning (felstyrning).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Relä fast", "ECM driver fel", "Kortslutning"],
+  "symptoms": ["Överhettad pump", "MIL tänd"],
+  "diagnostic_steps": ["Reläprov", "Kontrollera styrsignal", "Reparera kortslutning"]
+},
+{
+  "code": "P0243",
+  "short": "Turbocharger Wastegate Solenoid A",
+  "description": "Fel i styrkrets för wastegate-solenoid A (turbo).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Solenoid defekt", "Vakuumslang felkopplad/läcker", "Kablage/driver"],
+  "symptoms": ["Lågt/högt laddtryck", "MIL tänd"],
+  "diagnostic_steps": ["Aktivera solenoid", "Kontrollera vakuum/tryckledning", "Mät resistans/ PWM-signal"]
+},
+{
+  "code": "P0299",
+  "short": "Turbo/Supercharger Underboost",
+  "description": "För lågt uppmätt laddtryck mot mål.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": [
+    "Läckage i trycksystem/intercooler",
+    "Kärvande wastegate/aktuator",
+    "N75/boost-solenoid fel",
+    "Trasig turbo, sprucken slang"
+  ],
+  "symptoms": ["Dålig effekt, limp mode", "MIL tänd"],
+  "diagnostic_steps": ["Trycktest rör/slangar", "Kontrollera wastegate-rörelse", "Logga målt/uppnått ladd"]
+},
+{
+  "code": "P0325",
+  "short": "Knock Sensor Circuit (Bank 1)",
+  "description": "Kretsfel i knackningssensor bank 1.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Defekt sensor", "Fel åtdragning/montering", "Kablagefel"],
+  "symptoms": ["Nedsatt tändförställning (lägre effekt)", "MIL tänd"],
+  "diagnostic_steps": ["Inspektera moment/montage", "Mät signal/ohm", "Kontrollera kablage till ECM"]
+},
+{
+  "code": "P0330",
+  "short": "Knock Sensor Circuit (Bank 2)",
+  "description": "Kretsfel i knackningssensor bank 2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Sensor defekt", "Kablage/kontakt", "Motorresonans/monteringsfel"],
+  "symptoms": ["Reducerad tändning bank 2", "MIL tänd"],
+  "diagnostic_steps": ["Kontrollera åtdragning", "Ohm-mät/oscillera", "Reparera ledningsnät"]
+},
+{
+  "code": "P0350",
+  "short": "Ignition Coil Primary/Secondary Circuit",
+  "description": "Allmänt fel i tändspolans primär/sekundärkrets.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spole defekt", "Kablage/driver fel", "Kortslutning/öppen krets"],
+  "symptoms": ["Misständning", "MIL tänd"],
+  "diagnostic_steps": ["Mät primärström/driver", "Byt plats på spole", "Kontinuitet ECM→spole"]
+},
+{
+  "code": "P0351",
+  "short": "Ignition Coil A Primary/Secondary",
+  "description": "Fel i tändspole A-krets.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spole A defekt", "Kablage/kontakt", "ECM-driver"],
+  "symptoms": ["Misständning associerad cylinder", "MIL tänd"],
+  "diagnostic_steps": ["Swap-test spole", "Mät driver", "Kontinuitet"]
+},
+{
+  "code": "P0352",
+  "short": "Ignition Coil B Primary/Secondary",
+  "description": "Fel i tändspole B-krets.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spole B", "Kablage", "Driver"],
+  "symptoms": ["Misständning", "MIL tänd"],
+  "diagnostic_steps": ["Swap-test", "Mätning", "Reparera härva"]
+},
+{
+  "code": "P0353",
+  "short": "Ignition Coil C Primary/Secondary",
+  "description": "Fel i tändspole C-krets.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spole C", "Kablage", "Driver"],
+  "symptoms": ["Misständning", "MIL tänd"],
+  "diagnostic_steps": ["Swap-test", "Mätning", "Kontinuitet"]
+},
+{
+  "code": "P0354",
+  "short": "Ignition Coil D Primary/Secondary",
+  "description": "Fel i tändspole D-krets.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spole D", "Kablage", "Driver"],
+  "symptoms": ["Misständning", "MIL tänd"],
+  "diagnostic_steps": ["Swap-test", "Mätning", "Reparera"]
+},
+{
+  "code": "P0571",
+  "short": "Brake Switch A Circuit",
+  "description": "Fel i bromsljuskontakt A (cruise/inmatning).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Defekt brytare", "Feljusterad pedalbrytare", "Kablagefel"],
+  "symptoms": ["Cruise fungerar ej", "Start-/växlingslogik påverkas"],
+  "diagnostic_steps": ["Läs status i livedata", "Justera/byt brytare", "Kontrollera kablage"]
+},
+{
+  "code": "P0601",
+  "short": "Internal Control Module Memory Check Sum Error",
+  "description": "ECM intern minneskontroll misslyckas (CRC).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Korrupt minne", "Spänningsfall", "Felaktig flash"],
+  "symptoms": ["Nödläge", "Udda symtom", "MIL tänd"],
+  "diagnostic_steps": ["Spänningslogg", "Uppdatera/omprogrammera", "Byt ECM vid behov"]
+},
+{
+  "code": "P0602",
+  "short": "Control Module Programming Error",
+  "description": "Fel i programmering/kalibrering av ECM/PCM.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Fel kalibrering", "Avbruten flash", "ECM-fel"],
+  "symptoms": ["Diverse funktionsfel", "MIL tänd"],
+  "diagnostic_steps": ["Programmera om med rätt kalibrering", "Kontrollera batteristöd vid flash"]
+},
+{
+  "code": "P0603",
+  "short": "Internal Control Module Keep Alive Memory (KAM) Error",
+  "description": "Keep-Alive-minne tappar data (strömförlust).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Batteri frånkopplat/svagt", "KAM-matning saknas", "ECM-fel"],
+  "symptoms": ["Adaptionsdata nollas", "Oregelbunden gång efter batteriav"],
+  "diagnostic_steps": ["Kontrollera KAM-matning", "Batteri/klämmor", "ECM byte vid behov"]
+},
+{
+  "code": "P0620",
+  "short": "Generator Control Circuit",
+  "description": "Fel i generatorns styrkrets (LIN/PCM styrning).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Generator/regulator", "LIN-kommunikation", "Kablage/jord"],
+  "symptoms": ["Laddningsvarning", "Låg/hög spänning"],
+  "diagnostic_steps": ["Mät laddspänning", "LIN-diag", "Kontrollera jord/matning"]
+},
+{
+  "code": "P0685",
+  "short": "ECM/PCM Power Relay Control Circuit/Open",
+  "description": "ECM huvudrelä styrkrets öppen/fel.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Relä fel", "Kablage/IG-matning", "ECM driver"],
+  "symptoms": ["Ingen start/intermittent stopp", "MIL tänd"],
+  "diagnostic_steps": ["Byt/ testa relä", "Kontrollera styrsignal", "Spänningsfallstest"]
+},
+{
+  "code": "P0713",
+  "short": "Transmission Fluid Temperature Sensor Circuit High",
+  "description": "Hög insignal (öppen krets) i TFT-givare.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare/öppen krets", "Kablage/kontakt", "ECU-ingång"],
+  "symptoms": ["Fel växlingsstrategi", "MIL tänd"],
+  "diagnostic_steps": ["Jämför temp vs omgivning", "Ohm-mät givare", "Kontrollera ledningsnät"]
+},
+{
+  "code": "P0731",
+  "short": "Gear 1 Incorrect Ratio",
+  "description": "Fel växelförhållande i 1:an.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Slir i koppling/band", "Solenoid/ventilhus", "Låg ATF-tryck"],
+  "symptoms": ["Halkning, nödläge", "MIL tänd"],
+  "diagnostic_steps": ["Tryckmätning", "Solenoidtest", "ATF-nivå/typ/skick"]
+},
+{
+  "code": "P0741",
+  "short": "Torque Converter Clutch Performance/Stuck Off",
+  "description": "TCC uppnår inte låsning (slir).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["TCC-solenoid/ventilhus", "Låg tryck", "Sliten konverter"],
+  "symptoms": ["Hög varv i cruise", "Ökad temp/förbrukning"],
+  "diagnostic_steps": ["Aktivera TCC i test", "Trycktest", "Renovera ventilhus/konverter"]
+},
+{
+  "code": "P0791",
+  "short": "Intermediate Shaft Speed Sensor A Circuit",
+  "description": "Fel i mellanakselhastighetsgivare A (växellåda).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare defekt", "Kablage", "Metallpartiklar på sensor"],
+  "symptoms": ["Fel växling", "MIL tänd"],
+  "diagnostic_steps": ["Läs hastighetsdata", "Rengör/byt sensor", "Kontrollera krans"]
+},
+{
+  "code": "P0104",
+  "short": "MAF Circuit Intermittent",
+  "description": "Intermittent/ojämn signal från MAF-kretsen.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Löst kontaktstycke/korrosion", "Kablageskada", "MAF-sensor på väg att fallera"],
+  "symptoms": ["Ryckig gång vid last", "MIL tänd sporadiskt"],
+  "diagnostic_steps": ["Wiggle-test kablage/kontakt", "Logga MAF g/s vid provkörning", "Inspektera stift & täthet luftburk"]
+},
+{
+  "code": "P0112",
+  "short": "IAT Circuit Low",
+  "description": "Låg insignal från IAT (kallare än rimligt) – troligen kortslutning mot jord.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Kortslutning signal→jord", "Defekt IAT-sensor", "Felaktig referens/jord"],
+  "symptoms": ["Rik blandning kall", "MIL tänd"],
+  "diagnostic_steps": ["Ohm-mät sensor kontra temp-tabell", "Inspektera ledningsnät", "Mät 5V ref/signal"]
+},
+{
+  "code": "P0117",
+  "short": "ECT Circuit Low",
+  "description": "Motor­kyltemp-sensor (ECT) låg signal (mycket varmt) – kort mot jord misstänks.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Defekt ECT", "Kortslutning i härva", "ECM-ingång fel"],
+  "symptoms": ["Kylfläkt går konstant", "Dålig kallstart", "MIL tänd"],
+  "diagnostic_steps": ["Jämför ECT mot omgivning kal motor", "Ohm-mät givare", "Kontrollera kabel mot jord"]
+},
+{
+  "code": "P0120",
+  "short": "TPS/Pedal Position Sensor A",
+  "description": "Fel i spjälläges- eller pedalgivare krets A (range/performance).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare sliten", "Kablage/kontaktfel", "Spjällhusproblem (ETC)"],
+  "symptoms": ["Nödläge, dålig gasrespons", "MIL tänd"],
+  "diagnostic_steps": ["Läs % i livedata; jämn stigande kurva?", "Mät 5V ref/signal/jord", "Gör spjällinlärning"]
+},
+{
+  "code": "P0121",
+  "short": "TPS A Range/Performance",
+  "description": "TPS A utanför förväntad korrelation mot RPM/MAF/MAP.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givarslitage/brus", "Spjällhus kärvar", "Kablagefel"],
+  "symptoms": ["Ryck på delgas", "MIL tänd"],
+  "diagnostic_steps": ["Oscilloskopera TPS-signal", "Rengör spjällhus", "Kontrollera jord/spänningsfall"]
+},
+{
+  "code": "P0122",
+  "short": "TPS A Circuit Low",
+  "description": "Låg signalnivå från TPS A – ofta kort mot jord eller öppen krets.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Öppen signalledning", "Kort mot jord", "Defekt givare"],
+  "symptoms": ["Nödläge", "Seg gasrespons", "MIL tänd"],
+  "diagnostic_steps": ["Mät signalspänning tomgång/wot", "Kontinuitetstest till ECM", "Byt givare vid behov"]
+},
+{
+  "code": "P0123",
+  "short": "TPS A Circuit High",
+  "description": "Hög signalnivå från TPS A – ofta kort mot matning (5 V).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Kort mot 5V", "Givarfel", "ECM-ingång"],
+  "symptoms": ["Nödläge", "Orealistisk % i livedata", "MIL tänd"],
+  "diagnostic_steps": ["Kontroll av stift/skarv", "Ohm-/spänningsmätning", "Reparera kortslutning"]
+},
+{
+  "code": "P0125",
+  "short": "Insufficient Coolant Temperature for Closed Loop",
+  "description": "Motorn når inte temperatur för closed loop inom tidsfönster.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Termostat hänger öppen", "Fel ECT-signal", "Låg kylvätskenivå"],
+  "symptoms": ["Hög förbrukning", "Svag värme", "MIL tänd"],
+  "diagnostic_steps": ["Observera tempkurva från kallstart", "Byt termostat vid avvikelse", "Kontrollera ECT och nivå"]
+},
+{
+  "code": "P0130",
+  "short": "O2 Sensor Circuit (Bank 1 Sensor 1)",
+  "description": "Kretsfel/avvikelse i främre O2-sensor B1S1.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Sensor åldrad", "Kablage/kontakt", "Avgasläckage före sensor"],
+  "symptoms": ["Trim instabil", "MIL tänd"],
+  "diagnostic_steps": ["Waveformtest", "Kontrollera heaterkrets", "Inspektera läckage"]
+},
+{
+  "code": "P0133",
+  "short": "O2 Sensor Slow Response (B1S1)",
+  "description": "Långsam respons i främre O2 B1S1 (trög/växlar långsamt).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Åldrande sensor", "Vakuum-/avgassläckage", "Rik/mager bias"],
+  "symptoms": ["Sega trims", "MIL tänd"],
+  "diagnostic_steps": ["Prov med rik/mager inducering", "Kontrollera läckor", "Byt sensor vid behov"]
+},
+{
+  "code": "P0134",
+  "short": "O2 Sensor No Activity (B1S1)",
+  "description": "Ingen aktivitet detekterad från O2 B1S1 (flat line).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Signalledning öppen", "Ingen heater", "Sensor defekt"],
+  "symptoms": ["Open loop, hög förbrukning", "MIL tänd"],
+  "diagnostic_steps": ["Kontrollera spänningar", "Oscilloskopera", "Byt sensor"]
+},
+{
+  "code": "P0138",
+  "short": "O2 Sensor Circuit High Voltage (B1S2)",
+  "description": "Hög spänning/fast rik signal från bakre O2 B1S2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Sensor defekt", "Kort mot matning", "Rik gång/avgasläckage efter kat"],
+  "symptoms": ["Katalysövervakning fel", "MIL tänd"],
+  "diagnostic_steps": ["Kontrollera läckage", "Mät signal", "Byt sensor om fast hög"]
+},
+{
+  "code": "P0140",
+  "short": "O2 Sensor No Activity (B1S2)",
+  "description": "Ingen aktivitet från bakre O2-sensor (efter kat) bank 1.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Sensor/heater fel", "Kablage", "ECM-ingång"],
+  "symptoms": ["Kat-test misslyckas", "MIL tänd"],
+  "diagnostic_steps": ["Heaterkontroll", "Signalprov", "Byt sensor vid behov"]
+},
+{
+  "code": "P0141",
+  "short": "O2 Heater Circuit (B1S2)",
+  "description": "Heaterkrets fel i bakre O2 B1S2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Brunnen heater", "Säkring/relä", "Kablage"],
+  "symptoms": ["Lång monitorstart", "MIL tänd"],
+  "diagnostic_steps": ["Mät motstånd & matning", "Inspektera kablage", "Byt sensor"]
+},
+{
+  "code": "P0155",
+  "short": "O2 Heater Circuit (B2S1)",
+  "description": "Heaterkrets fel i främre O2 bank 2 sensor 1.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Heaterelement defekt", "Matning/säkring", "Kabelbrott"],
+  "symptoms": ["Lång closed loop bank 2", "MIL tänd"],
+  "diagnostic_steps": ["Mät motstånd/matning", "Byt sensor vid fel"]
+},
+{
+  "code": "P0161",
+  "short": "O2 Heater Circuit (B2S2)",
+  "description": "Heaterkrets fel i bakre O2 bank 2 sensor 2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Heater defekt", "Säkring", "Kablage"],
+  "symptoms": ["Kat-övervakning sen/failed", "MIL tänd"],
+  "diagnostic_steps": ["Mät heater", "Kontrollera matning", "Byt sensor"]
+},
+{
+  "code": "P0174",
+  "short": "System Too Lean (Bank 2)",
+  "description": "För mager blandning på bank 2 enligt trim/O2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Falskluft bank 2", "MAF smutsig", "Lågt bränsletryck", "O2 fel bank 2"],
+  "symptoms": ["Ryckig gång", "Hög LTFT B2", "MIL tänd"],
+  "diagnostic_steps": ["Rökprov", "MAF-kontroll", "Bränsletryck", "O2-vågform"]
+},
+{
+  "code": "P0207",
+  "short": "Injector Circuit/Open – Cylinder 7",
+  "description": "Fel i spridarkrets cylinder 7.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spridare 7", "Kablage/driver", "Kontaktfel"],
+  "symptoms": ["Misständning cyl 7", "MIL tänd"],
+  "diagnostic_steps": ["Noid-light", "Resistans", "Kontinuitet"]
+},
+{
+  "code": "P0208",
+  "short": "Injector Circuit/Open – Cylinder 8",
+  "description": "Fel i spridarkrets cylinder 8.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Spridare 8", "Kablage/driver", "Kontakt"],
+  "symptoms": ["Misständning cyl 8", "MIL tänd"],
+  "diagnostic_steps": ["Noid-light", "Ohm-mät", "Kontinuitet"]
+},
+{
+  "code": "P0220",
+  "short": "TPS/Pedal Position Sensor B Circuit",
+  "description": "Fel i TPS/APP krets B (redundant kanal).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Sensor B sliten", "Korrelation A/B fel", "Kablage"],
+  "symptoms": ["Nödläge", "Seg gasrespons"],
+  "diagnostic_steps": ["Jämför kanal A vs B", "Spänningsmätning", "Spjällinlärning"]
+},
+{
+  "code": "P0221",
+  "short": "TPS/Pedal B Range/Performance",
+  "description": "Kanal B utanför förväntad range/korr mot A.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givarfel", "Spjällhus", "Kablage"],
+  "symptoms": ["Nödläge", "MIL tänd"],
+  "diagnostic_steps": ["Oscillera signal", "Rengör spjäll", "Kontrollera härva"]
+},
+{
+  "code": "P0222",
+  "short": "TPS/Pedal B Circuit Low",
+  "description": "Låg signal kanal B (jord-kort/öppet).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Kort mot jord", "Öppen ledning", "Defekt sensor"],
+  "symptoms": ["Nödläge", "MIL tänd"],
+  "diagnostic_steps": ["Mät signal 0–5V", "Kontinuitet till ECM", "Byt sensor vid fel"]
+},
+{
+  "code": "P0223",
+  "short": "TPS/Pedal B Circuit High",
+  "description": "Hög signal kanal B (kort mot 5V).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Kort mot 5V", "Sensor fel", "ECM-ingång"],
+  "symptoms": ["Nödläge", "MIL tänd"],
+  "diagnostic_steps": ["Inspektera stift", "Mät spänning", "Reparera kortslutning"]
+},
+{
+  "code": "P0302",
+  "short": "Cylinder 2 Misfire Detected",
+  "description": "Misständning på cylinder 2.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Tändspole/stift cyl 2", "Spridare 2", "Kompressionsfel"],
+  "symptoms": ["Skakningar", "MIL blink vid hård misständning"],
+  "diagnostic_steps": ["Byt plats spole/stift", "Injektorbalans", "Kompressions-/läcktest"]
+},
+{
+  "code": "P0303",
+  "short": "Cylinder 3 Misfire Detected",
+  "description": "Misständning på cylinder 3.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Tändspole/stift 3", "Spridare 3", "Kompression 3"],
+  "symptoms": ["Skakningar", "MIL blink"],
+  "diagnostic_steps": ["Swap-test", "Balans", "Kompression"]
+},
+{
+  "code": "P0304",
+  "short": "Cylinder 4 Misfire Detected",
+  "description": "Misständning på cylinder 4.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Tändspole/stift 4", "Spridare 4", "Kompression 4"],
+  "symptoms": ["Skakningar", "MIL blink"],
+  "diagnostic_steps": ["Swap-test", "Balans", "Kompression"]
+},
+{
+  "code": "P0316",
+  "short": "Misfire Detected on Startup (First 1000 Revolutions)",
+  "description": "Misständning under uppstart första 1000 varv.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Tänd/Bränsle kallstart", "Läckande spridare", "Kompression"],
+  "symptoms": ["Skakig kallstart", "MIL tänd"],
+  "diagnostic_steps": ["Kallstart-logg", "Trycktest bränsle", "Kompressions-/läcktest"]
+},
+{
+  "code": "P0335",
+  "short": "Crankshaft Position Sensor A Circuit",
+  "description": "Kretsfel i vevaxelgivare (CKP) A.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare defekt", "Tandkrans skadad", "Kablage"],
+  "symptoms": ["Ingen start/stannar", "MIL tänd"],
+  "diagnostic_steps": ["Oscilloskopera CKP", "Inspektera krans", "Kontinuitet"]
+},
+{
+  "code": "P0336",
+  "short": "CKP Range/Performance",
+  "description": "Ologisk signal/korrelation från CKP.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Felsynk mot CMP", "Skadat hjul", "Monteringsspel"],
+  "symptoms": ["Startproblem", "Misständning", "MIL tänd"],
+  "diagnostic_steps": ["Synk-kontroll CKP/CMP", "Oscilloskop", "Inspektera givare/avstånd"]
+},
+{
+  "code": "P0340",
+  "short": "Camshaft Position Sensor A Circuit (Bank 1)",
+  "description": "Kretsfel i kamaxelgivare A bank 1.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["CMP A defekt", "Kablage/kontakt", "ECM-ingång"],
+  "symptoms": ["Lång vevning", "Nedsatt effekt", "MIL tänd"],
+  "diagnostic_steps": ["Oscilloskopera CMP", "Kontinuitet", "Byt sensor vid fel"]
+},
+{
+  "code": "P0341",
+  "short": "CMP A Range/Performance (Bank 1)",
+  "description": "CMP-signal utanför förväntad korrelation (bank 1).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare svag", "Timefel kedja/rem", "Skadat triggerhjul"],
+  "symptoms": ["Misständning", "Svag drag", "MIL tänd"],
+  "diagnostic_steps": ["Kontrollera kam/vev-synk", "Oscilloskop", "Mekanisk timing"]
+},
+{
+  "code": "P0401",
+  "short": "EGR Flow Insufficient",
+  "description": "För låg EGR-flöde detekterat (blockering/styrning).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Igensatt EGR-kanal/ventil", "Styrsolenoid fel", "Differenstryckgivare fel"],
+  "symptoms": ["Spikning/NOx", "MIL tänd"],
+  "diagnostic_steps": ["Aktivera EGR test", "Rengör/by t ventil/kanaler", "Kontrollera DP-givare"]
+},
+{
+  "code": "P0402",
+  "short": "EGR Flow Excessive",
+  "description": "För högt EGR-flöde (ventil fastnat öppen).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Ventil fastnar öppen", "Fel styrning", "DP-givare felaktig"],
+  "symptoms": ["Grov tomgång/stall", "MIL tänd"],
+  "diagnostic_steps": ["Stäng EGR och jämför gång", "Rengör/byt ventil", "Kontrollera givarsignal"]
+},
+{
+  "code": "P0410",
+  "short": "Secondary Air Injection System",
+  "description": "Fel i sekundärluftsystem (pump/ventil/ledning).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Pumpfel", "Backventil läcker", "Kablage/relä"],
+  "symptoms": ["Kallstart-utsläppsmonitor fail", "MIL tänd"],
+  "diagnostic_steps": ["Aktivera pump", "Kontrollera backventiler/slangar", "Mät ström/spänning"]
+},
+{
+  "code": "P0411",
+  "short": "Secondary Air Incorrect Flow",
+  "description": "Felaktigt flöde i sekundärluft (för lite/inget).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Slang/ventil blockerad", "Relä/pump fel", "Läckage"],
+  "symptoms": ["MIL tänd", "Monitor fail"],
+  "diagnostic_steps": ["Tryck/flödestest", "Kontrollera ventiler", "Byt/renovera pump"]
+},
+{
+  "code": "P0430",
+  "short": "Catalyst Efficiency Below Threshold (Bank 2)",
+  "description": "Kat-effektivitet under gräns bank 2 (B2).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Utmattad katalysator B2", "Misfire/rik historik", "Post-O2 trög", "Avgaslack före kat"],
+  "symptoms": ["MIL tänd", "Ev. lukt/hög förbrukning"],
+  "diagnostic_steps": ["Jämför pre/post O2 B2", "Kontrollera läckor/trim", "Tempdiff över kat"]
+},
+{
+  "code": "P0446",
+  "short": "EVAP Vent Control Circuit",
+  "description": "Fel i ventilationsventilens styrkrets (EVAP vent).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Ventventil defekt", "Kablage/relä", "Kolv fastnar"],
+  "symptoms": ["MIL tänd", "Monitor fail"],
+  "diagnostic_steps": ["Aktivera vent, känn/klick", "Ohm-mät", "Rökprov ventledning"]
+},
+{
+  "code": "P0452",
+  "short": "EVAP Pressure Sensor Low Input",
+  "description": "Låg signal från EVAP-tryckgivare (öppen/kort jord).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare fel", "Kablage", "5V/jord problem"],
+  "symptoms": ["EVAP monitor fail", "MIL tänd"],
+  "diagnostic_steps": ["Mät givarsignal mot vakuum", "Kontrollera ref/jord", "Byt givare vid fel"]
+},
+{
+  "code": "P0453",
+  "short": "EVAP Pressure Sensor High Input",
+  "description": "Hög signal från EVAP-tryckgivare (kort mot 5V).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Kort mot matning", "Givare fel", "ECM-ingång"],
+  "symptoms": ["Monitor fail", "MIL tänd"],
+  "diagnostic_steps": ["Spänningsmätning", "Inspektera stift/härva", "Byt givare"]
+},
+{
+  "code": "P0507",
+  "short": "Idle Control – RPM Higher Than Expected",
+  "description": "Tomgångsvarv högre än mål (läckage/adaption).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Falskluft", "Smutsigt spjällhus/IAC", "Fel adaption"],
+  "symptoms": ["Hög tomgång", "MIL tänd"],
+  "diagnostic_steps": ["Rökprov intag", "Rengör spjällhus/IAC", "Gör tomgångsinlärning"]
+},
+{
+  "code": "P0522",
+  "short": "Engine Oil Pressure Sensor Low",
+  "description": "Låg insignal från oljetrycksgivare (öppen/kort jord).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare fel", "Lågt verkligt oljetryck", "Kablage"],
+  "symptoms": ["Varningslampa", "Motorljud", "MIL"],
+  "diagnostic_steps": ["Mät mekaniskt oljetryck", "Byt givare vid normaltryck", "Kontrollera kablage"]
+},
+{
+  "code": "P0523",
+  "short": "Engine Oil Pressure Sensor High",
+  "description": "Hög insignal från oljetrycksgivare (kort mot 5V).",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare kort mot matning", "Kablage", "ECM-ingång"],
+  "symptoms": ["Felaktig varning", "MIL tänd"],
+  "diagnostic_steps": ["Spänningsmätning", "Inspektera härva", "Byt givare"]
+},
+{
+  "code": "P0550",
+  "short": "Power Steering Pressure Sensor Circuit",
+  "description": "Fel i servotryckgivare – påverkar tomgång/lastkompensering.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Givare fel", "Kablage", "Hydrauliskt problem"],
+  "symptoms": ["Varvtalsfall vid styrning", "MIL tänd"],
+  "diagnostic_steps": ["Läs givarsignal", "Kontrollera läckor/tryck", "Byt givare vid fel"]
+},
+{
+  "code": "P0722",
+  "short": "Output Speed Sensor No Signal",
+  "description": "Ingen signal från OSS.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Sensor död", "Hjul/tandproblem", "Kablage"],
+  "symptoms": ["Ingen/abnorm växling", "MIL tänd"],
+  "diagnostic_steps": ["Oscilloskopera", "Inspektera krans", "Byt sensor"]
+},
+{
+  "code": "P0755",
+  "short": "Shift Solenoid B",
+  "description": "Växlingssolenoid B fel.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Solenoid", "Ventilhus", "Kablage/TCM"],
+  "symptoms": ["Fel växling", "MIL tänd"],
+  "diagnostic_steps": ["Aktivera", "Ohm-mät", "Hydraulkontroll"]
+},
+{
+  "code": "P0766",
+  "short": "Shift Solenoid D Performance/Stuck Off",
+  "description": "Solenoid D prestanda/förblir av – växlingsproblem.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Solenoid kärvar", "Ventilhus/tryck", "Kablage/TCM"],
+  "symptoms": ["Nödläge", "Ryckiga växlingar"],
+  "diagnostic_steps": ["Aktivera & lyssna/ström", "Trycktest", "Rengör/byt solenoid"]
+},
+{
+  "code": "P0792",
+  "short": "Intermediate Shaft Speed Sensor A Range/Performance",
+  "description": "Mellanaxel-hastighetssensor A signal utanför range/prestanda.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Sensor smuts/skadad", "Kablage", "Krans/tandproblem"],
+  "symptoms": ["Fel ratio-detektering", "MIL tänd"],
+  "diagnostic_steps": ["Läs livedata", "Rengör/byt sensor", "Inspektera krans"]
+},
+{
+  "code": "P0894",
+  "short": "Transmission Component Slipping",
+  "description": "TCM/PCM detekterar slir i transmissionskomponenter.",
+  "system": "powertrain",
+  "generic": true,
+  "source": "SAE J2012",
+  "possible_causes": ["Slitna lameller/band", "Lågt tryck", "Ventilhus fel"],
+  "symptoms": ["Halkning, övervarv", "Nödläge", "MIL"],
+  "diagnostic_steps": ["Tryckprov", "ATF-status", "Renovering/ventilhusservice"]
+}
+]

@@ -3956,6 +3956,9 @@ app.get('/search', (req, res) => {
   res.render('search', { title: 'Sök', q, topics });
 });
 
+// Visa EJS-sidan (om ni behöver en separat vy/route)
+app.get('/dtc', (req, res) => res.render('dtc'));
+
 // Visa formulär
 app.get('/admin/new-topic', requireAdmin, (req, res) => {
   const categories = db.prepare(`
