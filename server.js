@@ -46,6 +46,7 @@ const db = new Database(DB_PATH);
 const DEALER_APIS = [
   { source: 'nms',   url: 'https://portal.nmstuning.se/api/dealers',        apiKey: 'jNtCK7Z5qR8sqnxN5LpkdF5hJQqJ9m' },
   { source: 'dynex', url: 'https://portal.dynexperformance.se/api/dealers', apiKey: '04d87a25-3711-11f0-88c2-ac1f6bad7482' },
+  { source: 'smt', url: 'https://portal.smtperformance.se/api/dealers',     apiKey: '27766a92-cea4-11f0-8c11-ac1f6bad7482 '}
 ];
 
 // Ord/fraser som triggar flagg (case-insensitive, hela ord)
@@ -56,6 +57,7 @@ const FLAG_WORDS = [
   'dynexperformance',
   'velox',
   'sedox',
+  'smt',
 ];
 
 // Bygg regexar för matchning
