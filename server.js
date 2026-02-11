@@ -46,8 +46,10 @@ const db = new Database(DB_PATH);
 const DEALER_APIS = [
   { source: 'nms',   url: 'https://portal.nmstuning.se/api/dealers',        apiKey: 'jNtCK7Z5qR8sqnxN5LpkdF5hJQqJ9m' },
   { source: 'dynex', url: 'https://portal.dynexperformance.se/api/dealers', apiKey: '04d87a25-3711-11f0-88c2-ac1f6bad7482' },
-  { source: 'smt', url: 'https://portal.smtperformance.se/api/dealers',     apiKey: '27766a92-cea4-11f0-8c11-ac1f6bad7482 '}
+  { source: 'smt',   url: 'https://portal.smtperformance.se/api/dealers',   apiKey: '27766a92-cea4-11f0-8c11-ac1f6bad7482' },
 ];
+const DEALER_SOURCES = DEALER_APIS.map(x => x.source);
+const DEALER_SOURCE_SET = new Set(DEALER_SOURCES);
 
 // Ord/fraser som triggar flagg (case-insensitive, hela ord)
 const FLAG_WORDS = [
@@ -361,7 +363,7 @@ for (const [col, ddl] of Object.entries(qCols)) {
 // --- Dealers schema (NMS/Dynex) ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS dealers (
-    source        TEXT NOT NULL,                  -- 'nms' | 'dynex'
+    source        TEXT NOT NULL,                  -- t.ex. 'nms' | 'dynex' | 'smt'
     dealer_id     TEXT NOT NULL,
     email         TEXT,
     username      TEXT,
@@ -965,14 +967,32 @@ app.put('/api/users/:id/role', requireAdmin, express.json(), (req, res) => {
   return res.json({ ok: true, id: uid, role });
 });
 
-// PUT /api/dealers/:dealer_id/role  -> skapa/hitta user via dealer.email och sätt roll
+// PUT /api/dealers/:dealer_id/role -> acceptera email (primärt) eller dealer_id (fallback)
 app.put('/api/dealers/:dealer_id/role', requireAdmin, express.json(), (req, res) => {
-  const dealerId = String(req.params.dealer_id);
+  const dealerRef = String(req.params.dealer_id || '').trim();
   const role = String(req.body.role || '').toLowerCase();
 
   if (!ALLOWED_ROLES.includes(role)) return res.status(400).json({ error: 'ogiltig roll' });
 
-  const dealer = db.prepare(`SELECT * FROM dealers WHERE dealer_id=?`).get(dealerId);
+  // UI skickar email; behåll dealer_id-stöd för bakåtkompatibilitet.
+  let dealer = db.prepare(`
+    SELECT *
+    FROM dealers
+    WHERE lower(email) = lower(?)
+    ORDER BY datetime(updated_at) DESC
+    LIMIT 1
+  `).get(dealerRef);
+
+  if (!dealer) {
+    dealer = db.prepare(`
+      SELECT *
+      FROM dealers
+      WHERE dealer_id = ?
+      ORDER BY datetime(updated_at) DESC
+      LIMIT 1
+    `).get(dealerRef);
+  }
+
   if (!dealer) return res.status(404).json({ error: 'dealer saknas' });
   if (!dealer.email) return res.status(422).json({ error: 'dealern saknar e-post' });
 
@@ -996,7 +1016,7 @@ app.put('/api/dealers/:dealer_id/role', requireAdmin, express.json(), (req, res)
   }
 
   db.prepare(`UPDATE users SET role=?, updated_at=datetime('now') WHERE id=?`).run(role, user.id);
-  return res.json({ ok: true, dealer_id: dealerId, user_id: user.id, role });
+  return res.json({ ok: true, dealer_id: dealer.dealer_id, user_id: user.id, role });
 });
 
 app.post('/api/auth/register', (req, res) => {
@@ -4322,7 +4342,7 @@ app.get('/admin-accounts', requireAdmin, (req, res) => {
   // --- Query params (dealers) ---
   const qRaw    = (req.query.q || '').trim();
   const q       = qRaw; // skickas till vyn
-  const source  = (req.query.source || '').trim();      // '' | 'nms' | 'dynex'
+  const source  = String(req.query.source || '').trim().toLowerCase();
   const perPage = Math.max(1, Number(req.query.perPage || 10)); // dealers per sida (default 10)
   const page    = Math.max(1, Number(req.query.page || 1));
 
@@ -4348,7 +4368,7 @@ app.get('/admin-accounts', requireAdmin, (req, res) => {
   const where = [];
   const params = [];
 
-  if (source === 'nms' || source === 'dynex') {
+  if (source && DEALER_SOURCE_SET.has(source)) {
     where.push(`source = ?`);
     params.push(source);
   }
@@ -4418,7 +4438,8 @@ app.get('/admin-accounts', requireAdmin, (req, res) => {
     page: safePage,
     q,
     source,
-    perPage
+    perPage,
+    dealerSources: DEALER_SOURCES
   });
 });
 

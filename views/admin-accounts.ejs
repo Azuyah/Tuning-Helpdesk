@@ -112,6 +112,17 @@
   </div>
 
   <!-- Filters for DEALERS -->
+  <%
+    const sourceList = (Array.isArray(dealerSources) && dealerSources.length)
+      ? dealerSources
+      : ['nms', 'dynex'];
+    const sourceLabel = sourceList.map(s => String(s || '').toUpperCase()).join(' / ');
+    const sourcePillClass = {
+      nms: 'border-emerald-300 bg-emerald-50 text-emerald-700',
+      dynex: 'border-indigo-300 bg-indigo-50 text-indigo-700',
+      smt: 'border-amber-300 bg-amber-50 text-amber-700'
+    };
+  %>
   <form method="get" action="/admin-accounts" class="mt-8">
     <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
       <input type="hidden" name="tab" value="dealers">
@@ -131,8 +142,9 @@
                   class="w-full rounded-lg border border-slate-300 px-3 py-2 shadow-sm
                          focus:border-sky-500 focus:ring-sky-500 sm:text-sm bg-white appearance-none">
             <option value=""     <%= !source ? 'selected' : '' %> >Alla</option>
-            <option value="nms"  <%= source==='nms'   ? 'selected' : '' %> >NMS</option>
-            <option value="dynex"<%= source==='dynex' ? 'selected' : '' %> >DYNEX</option>
+            <% sourceList.forEach(function(src){ %>
+              <option value="<%= src %>" <%= source===src ? 'selected' : '' %>><%= src.toUpperCase() %></option>
+            <% }) %>
           </select>
           <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
         </div>
@@ -168,7 +180,7 @@
   <!-- Dealers -->
   <div class="space-y-4">
     <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold text-slate-900">Dealers (NMS & Dynex)</h2>
+      <h2 class="text-xl font-semibold text-slate-900">Dealers (<%= sourceLabel %>)</h2>
       <div class="text-sm text-slate-600">Visar sida <%= page %> av <%= totalPages %></div>
     </div>
 
@@ -190,7 +202,12 @@
           <tbody class="divide-y divide-slate-200">
             <% dealers.forEach(d => { %>
               <tr class="hover:bg-slate-50">
-                <td class="px-4 py-2"><%= (d.source || '').toUpperCase() %></td>
+                <td class="px-4 py-2">
+                  <% const src = (d.source || '').toLowerCase(); %>
+                  <span class="rounded px-1.5 py-0.5 border text-[10px] <%= sourcePillClass[src] || 'border-slate-300 bg-slate-50 text-slate-700' %>">
+                    <%= (d.source || '').toUpperCase() %>
+                  </span>
+                </td>
                 <td class="px-4 py-2"><%= d.email || '-' %></td>
                 <td class="px-4 py-2"><%= [d.firstname, d.lastname].filter(Boolean).join(' ') || d.username || '-' %></td>
                 <td class="px-4 py-2"><%= d.company || '-' %></td>
